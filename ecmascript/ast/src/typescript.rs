@@ -527,6 +527,7 @@ pub enum TsTypeOperatorOp {
 #[ast_node("TsIndexedAccessType")]
 pub struct TsIndexedAccessType {
     pub span: Span,
+    pub readonly: bool,
     #[serde(rename = "objectType")]
     pub obj_type: Box<TsType>,
     pub index_type: Box<TsType>,
