@@ -143,7 +143,23 @@ impl<'a, I: Input> Iterator for Lexer<'a, I> {
 
             let c = match self.input.cur() {
                 Some(c) => c,
-                None => return Ok(None),
+                None => {
+                    if self
+                        .leading_comments_buffer
+                        .as_ref()
+                        .map(|v| !v.is_empty())
+                        .unwrap_or(false)
+                    {
+                        self.comments.as_mut().unwrap().add_leading(
+                            self.state.start,
+                            std::mem::replace(
+                                &mut self.leading_comments_buffer.as_mut().unwrap(),
+                                vec![],
+                            ),
+                        );
+                    }
+                    return Ok(None);
+                }
             };
 
             // println!(

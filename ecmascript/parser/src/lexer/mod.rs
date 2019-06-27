@@ -129,7 +129,9 @@ impl<'a, I: Input> Lexer<'a, I> {
     fn read_token(&mut self) -> LexResult<Option<Token>> {
         let c = match self.input.cur() {
             Some(c) => c,
-            None => return Ok(None),
+            None => {
+                return Ok(None);
+            }
         };
         let start = self.cur_pos();
 
