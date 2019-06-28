@@ -1920,7 +1920,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
     }
 
     /// `tsParseTypeArguments`
-    pub(super) fn parse_ts_type_args(&mut self) -> PResult<'a, TsTypeParamInstantiation> {
+    pub fn parse_ts_type_args(&mut self) -> PResult<'a, TsTypeParamInstantiation> {
         debug_assert!(self.input.syntax().typescript());
 
         let start = cur_pos!();
