@@ -588,10 +588,16 @@ impl<'a, I: Tokens> Parser<'a, I> {
         })
     }
 
+    pub fn parse_type(&mut self) -> PResult<'a, Box<TsType>> {
+        debug_assert!(self.input.syntax().typescript());
+
+        self.in_type().parse_ts_type()
+    }
+
     /// Be sure to be in a type context before calling self.
     ///
     /// `tsParseType`
-    pub fn parse_ts_type(&mut self) -> PResult<'a, Box<TsType>> {
+    pub(super) fn parse_ts_type(&mut self) -> PResult<'a, Box<TsType>> {
         debug_assert!(self.input.syntax().typescript());
 
         // Need to set `state.inType` so that we don't parse JSX in a type context.
