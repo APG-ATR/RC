@@ -1143,7 +1143,10 @@ impl Analyzer<'_, '_> {
                         _ => {}
                     }
 
-                    unimplemented!("Undefined type: {:#?}", ty);
+                    unimplemented!(
+                        "expand_type(): error reporting for type not found: {:#?}",
+                        ty
+                    );
                 }
 
                 TsType::TsTypeQuery(TsTypeQuery { ref expr_name, .. }) => match *expr_name {
