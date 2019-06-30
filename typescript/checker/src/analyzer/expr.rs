@@ -1079,6 +1079,20 @@ impl Analyzer<'_, '_> {
     ) -> Result<TypeRef<'t>, Error> {
         // println!("({}) expand({:?})", self.scope.depth(), ty);
 
+        macro_rules! verify {
+            ($ty:expr) => {{
+                if cfg!(debug_assertions) {
+                    match $ty.normalize() {
+                        Type::Simple(ref s) => match **s {
+                            TsType::TsTypeRef(..) => unreachable!(),
+                            _ => {}
+                        },
+                        _ => {}
+                    }
+                }
+            }};
+        }
+
         match *ty {
             Type::Static(s) => return self.expand_type(span, s.ty.static_cast()),
             Type::Simple(ref s_ty) => {
@@ -1092,6 +1106,7 @@ impl Analyzer<'_, '_> {
                             TsEntityName::Ident(ref i) => {
                                 // Check for builtin types
                                 if let Ok(ty) = builtin_types::get_type(self.libs, span, &i.sym) {
+                                    verify!(ty);
                                     return Ok(ty.owned());
                                 }
 
@@ -1102,6 +1117,7 @@ impl Analyzer<'_, '_> {
                                             if let Some(..) = *type_params {
                                                 return Err(Error::NotGeneric { span });
                                             }
+                                            verify!(ty);
                                             return Ok(ty.static_cast());
                                         }
 
@@ -1110,12 +1126,13 @@ impl Analyzer<'_, '_> {
                                                 return Err(Error::NotGeneric { span });
                                             }
 
+                                            verify!(ty);
                                             return Ok(ty.static_cast());
                                         }
 
                                         Type::Interface(..) | Type::Class(..) => {
                                             // TODO: Handle type parameters
-
+                                            verify!(ty);
                                             return Ok(ty.static_cast());
                                         }
 
@@ -1124,15 +1141,7 @@ impl Analyzer<'_, '_> {
                                             ref ty,
                                             ..
                                         }) => {
-                                            if cfg!(debug_assertions) {
-                                                match ty.normalize() {
-                                                    Type::Simple(ref s) => match **s {
-                                                        TsType::TsTypeRef(..) => unreachable!(),
-                                                        _ => {}
-                                                    },
-                                                    _ => {}
-                                                }
-                                            }
+                                            verify!(ty);
                                             return Ok(ty.static_cast());
                                         }
 
@@ -1148,6 +1157,7 @@ impl Analyzer<'_, '_> {
                                                 Cow::Borrowed(&**ty),
                                             )?;
 
+                                            verify!(ty);
                                             return Ok(ty.into_owned().owned());
                                         }
 
