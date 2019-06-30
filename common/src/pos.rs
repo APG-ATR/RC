@@ -2,8 +2,8 @@
 use fold::{FoldWith, VisitWith};
 use std::{borrow::Cow, sync::Arc};
 pub use syntax_pos::{
-    hygiene, BytePos, CharPos, ExpnInfo, FileName, Globals, Loc, LocWithOpt, Mark, MultiSpan,
-    SourceFile, SourceFileAndBytePos, SourceFileAndLine, Span, SpanData, SpanLinesError,
+    hygiene, BytePos, CharPos, ExpnInfo, FileName, Globals, LineInfo, Loc, LocWithOpt, Mark,
+    MultiSpan, SourceFile, SourceFileAndBytePos, SourceFileAndLine, Span, SpanData, SpanLinesError,
     SyntaxContext, CM, DUMMY_SP, GLOBALS, NO_EXPANSION,
 };
 
