@@ -1463,9 +1463,9 @@ impl Analyzer<'_, '_> {
         callee_span: Span,
         ret_type: &Type<'a>,
         param_decls: &[TsFnParam],
-        _ty_params_decl: Option<&TypeParamDecl>,
+        decl: Option<&TypeParamDecl>,
         args: &[ExprOrSpread],
-        _i: Option<&TsTypeParamInstantiation>,
+        i: Option<&TsTypeParamInstantiation>,
     ) -> Result<Type<'a>, Error> {
         {
             // TODO: Handle default parameters
@@ -1490,7 +1490,13 @@ impl Analyzer<'_, '_> {
             }
         }
 
-        Ok(ret_type.clone())
+        if let Some(ref decl) = decl {
+            Ok(self
+                .expand_type_params(i, decl, Cow::Borrowed(ret_type))?
+                .into_owned())
+        } else {
+            Ok(ret_type.clone())
+        }
     }
 
     /// Expands
