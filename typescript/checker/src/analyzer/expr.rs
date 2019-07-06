@@ -937,9 +937,7 @@ impl Analyzer<'_, '_> {
         // TODO: Handle recursive function.
 
         let mut tys = Vec::with_capacity(types.len());
-        let mut span = base_span;
         for ty in types {
-            span = ty.span();
             tys.push(ty);
         }
 
@@ -1446,7 +1444,7 @@ impl Analyzer<'_, '_> {
         param_decls: &[TsFnParam],
         decl: Option<&TypeParamDecl>,
         args: &[ExprOrSpread],
-        i: Option<&TsTypeParamInstantiation>,
+        _: Option<&TsTypeParamInstantiation>,
     ) -> Result<Type<'a>, Error> {
         {
             // TODO: Handle default parameters
@@ -1471,7 +1469,7 @@ impl Analyzer<'_, '_> {
             }
         }
 
-        if let Some(ref decl) = decl {
+        if let Some(..) = decl {
             unimplemented!(
                 "try_instantiate should be used instead of try_instantiate_simple as type \
                  parameter is deefined on the function"
