@@ -1,7 +1,7 @@
 use super::*;
 use either::Either;
 use lexer::TokenContexts;
-use swc_common::Spanned;
+use swc_common::{Spanned, SyntaxContext};
 
 #[parser]
 impl<'a, I: Tokens> Parser<'a, I> {
@@ -114,6 +114,26 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 break;
             }
 
+            match kind {
+                // Recover
+                //const CONST = 9000 % 2;
+                // const enum D {
+                //     d = 10
+                //     g = CONST
+                // }
+                ParsingContext::EnumMembers => {
+                    const TOKEN: &Token = &Token::Comma;
+                    let cur = format!("{:?}", cur!(false).ok());
+                    let span = Span::new(
+                        self.input.last_pos(),
+                        self.input.last_pos(),
+                        SyntaxContext::empty(),
+                    );
+                    make_error!(span, SyntaxError::Expected(TOKEN, cur)).emit();
+                    continue;
+                }
+                _ => {}
+            }
             // This will fail with an error about a missing comma
             expect!(',');
         }

@@ -290,17 +290,23 @@ macro_rules! span {
     }};
 }
 
+macro_rules! make_error {
+    ($p:expr, $span:expr, $err:expr) => {{
+        ::swc_common::errors::DiagnosticBuilder::from($crate::error::ErrorToDiag {
+            handler: $p.session.handler,
+            span: $span,
+            error: $err,
+        })
+    }};
+}
+
 macro_rules! syntax_error {
     ($p:expr, $err:expr) => {
         syntax_error!($p, $p.input.cur_span(), $err)
     };
 
     ($p:expr, $span:expr, $err:expr) => {{
-        let err = ::swc_common::errors::DiagnosticBuilder::from($crate::error::ErrorToDiag {
-            handler: $p.session.handler,
-            span: $span,
-            error: $err,
-        });
+        let err = make_error!($p, $span, $err);
         return Err(err.into());
     }};
 }

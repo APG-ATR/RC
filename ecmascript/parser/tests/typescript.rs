@@ -103,6 +103,7 @@ fn reference_tests(tests: &mut Vec<TestDescAndFn>, errors: bool) -> Result<(), i
             let path = dir.join(&file_name);
             if errors {
                 let module = with_parser(false, &path, |p| p.parse_module());
+
                 let err = module.expect_err("should fail, but parsed as");
                 if err
                     .compare_to_file(format!("{}.stderr", path.display()))
@@ -170,6 +171,10 @@ where
                 e.emit();
                 ()
             });
+
+            if handler.has_errors() {
+                return Err(());
+            }
 
             res
         })

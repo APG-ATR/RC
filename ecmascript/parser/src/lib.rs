@@ -16,6 +16,20 @@
 //!   |          ^^^^^
 //! ```
 //!
+//! ## Error recovery
+//!
+//! The parser can recover from some parsing erros. For example, parser returns
+//! `Ok(Module)` for the code below, while emitting error to handler.
+//!
+//! ```ts
+//! const CONST = 9000 % 2;
+//! const enum D {
+//!     // Comma is requied, but parser can recover because of the newline.
+//!     d = 10
+//!     g = CONST
+//! }
+//! ```
+//! 
 //! # Example (lexer)
 //!
 //! See `lexer.rs` in examples directory.
@@ -37,7 +51,8 @@
 //!     swc_common::GLOBALS.set(&swc_common::Globals::new(), || {
 //!         let cm: Arc<SourceMap> = Default::default();
 //!         let handler =
-//!             Handler::with_tty_emitter(ColorConfig::Auto, true, false, Some(cm.clone()));
+//!             Handler::with_tty_emitter(ColorConfig::Auto, true, false,
+//! Some(cm.clone()));
 //!
 //!         let session = Session { handler: &handler };
 //!
