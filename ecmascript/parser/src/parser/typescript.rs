@@ -138,7 +138,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 ParsingContext::EnumMembers => {
                     const TOKEN: &Token = &Token::Comma;
                     let cur = format!("{:?}", cur!(false).ok());
-                    make_error!(span!(start), SyntaxError::Expected(TOKEN, cur)).emit();
+                    make_error!(self.input.cur_span(), SyntaxError::Expected(TOKEN, cur)).emit();
                     continue;
                 }
                 _ => {}
@@ -476,7 +476,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
     }
 
     /// `tsParseEnumMember`
-    fn parse_ts_enum_member(&mut self) -> PResult<'a, (BytePos, TsEnumMember)> {
+    fn parse_ts_enum_member(&mut self) -> PResult<'a, (TsEnumMember)> {
         debug_assert!(self.input.syntax().typescript());
 
         let start = cur_pos!();
@@ -489,22 +489,17 @@ impl<'a, I: Tokens> Parser<'a, I> {
             })?,
             _ => self.parse_ident_name().map(TsEnumMemberId::from)?,
         };
-        let mut start_of_init = cur_pos!();
         let init = if eat!('=') {
-            start_of_init = cur_pos!();
             Some(self.parse_assignment_expr()?)
         } else {
             None
         };
 
-        Ok((
-            start_of_init,
-            TsEnumMember {
-                span: span!(start),
-                id,
-                init,
-            },
-        ))
+        Ok(TsEnumMember {
+            span: span!(start),
+            id,
+            init,
+        })
     }
 
     /// `tsParseEnumDeclaration`
@@ -517,9 +512,8 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
         let id = self.parse_ident_name()?;
         expect!('{');
-        let members = self.parse_ts_delimited_list_inner(ParsingContext::EnumMembers, |p| {
-            p.parse_ts_enum_member()
-        })?;
+        let members = self
+            .parse_ts_delimited_list(ParsingContext::EnumMembers, |p| p.parse_ts_enum_member())?;
         expect!('}');
 
         Ok(TsEnumDecl {
