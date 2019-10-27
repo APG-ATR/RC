@@ -728,7 +728,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         no_call: bool,
     ) -> PResult<'a, (Box<Expr>, bool)> {
         let _ = cur!(false);
-        let start = cur_pos!();
+        let start = obj.span().lo();
 
         if self.input.syntax().typescript() {
             if !self.input.had_line_break_before_cur() && is!('!') {
