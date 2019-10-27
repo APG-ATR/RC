@@ -94,6 +94,22 @@ impl<'a, I: Tokens> Parser<'a, I> {
     where
         F: FnMut(&mut Self) -> PResult<'a, T>,
     {
+        self.parse_ts_delimited_list_inner(kind, |p| {
+            let start = p.input.cur_pos();
+
+            Ok((start, parse_element(p)?))
+        })
+    }
+
+    /// `tsParseDelimitedList`
+    fn parse_ts_delimited_list_inner<T, F>(
+        &mut self,
+        kind: ParsingContext,
+        mut parse_element: F,
+    ) -> PResult<'a, Vec<T>>
+    where
+        F: FnMut(&mut Self) -> PResult<'a, (BytePos, T)>,
+    {
         debug_assert!(self.input.syntax().typescript());
 
         let mut buf = vec![];
@@ -102,8 +118,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
             if self.is_ts_list_terminator(kind)? {
                 break;
             }
-
-            let element = parse_element(self)?;
+            let (start, element) = parse_element(self)?;
             buf.push(element);
 
             if eat!(',') {
@@ -123,7 +138,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 ParsingContext::EnumMembers => {
                     const TOKEN: &Token = &Token::Comma;
                     let cur = format!("{:?}", cur!(false).ok());
-                    make_error!(self.input.prev_span(), SyntaxError::Expected(TOKEN, cur)).emit();
+                    make_error!(span!(start), SyntaxError::Expected(TOKEN, cur)).emit();
                     continue;
                 }
                 _ => {}
