@@ -1,6 +1,6 @@
 error: Expected Comma, got Some(Word(g))
- --> $DIR/tests/typescript-errors/custom/const-enum/input.ts:3:11
+ --> $DIR/tests/typescript-errors/custom/const-enum/input.ts:3:9
   |
 3 |     d = 10
-  |           ^
+  |         ^^
 
