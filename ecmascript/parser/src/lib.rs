@@ -29,7 +29,7 @@
 //!     g = CONST
 //! }
 //! ```
-//! 
+//!
 //! # Example (lexer)
 //!
 //! See `lexer.rs` in examples directory.
