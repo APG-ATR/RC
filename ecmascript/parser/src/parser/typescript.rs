@@ -691,10 +691,12 @@ impl<'a, I: Tokens> Parser<'a, I> {
     }
 
     /// `tsParseTypeAssertion`
-    pub(super) fn parse_ts_type_assertion(&mut self) -> PResult<'a, TsTypeAssertion> {
+    pub(super) fn parse_ts_type_assertion(
+        &mut self,
+        start: BytePos,
+    ) -> PResult<'a, TsTypeAssertion> {
         debug_assert!(self.input.syntax().typescript());
 
-        let start = cur_pos!();
         // Not actually necessary to set state.inType because we never reach here if JSX
         // plugin is enabled, but need `tsInType` to satisfy the assertion in
         // `tsParseType`.

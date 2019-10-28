@@ -53,13 +53,13 @@
         "expression": {
           "type": "TsTypeAssertion",
           "span": {
-            "start": 2,
+            "start": 1,
             "end": 6,
             "ctxt": 0,
             "loc": {
               "start": {
                 "line": 1,
-                "column": 2
+                "column": 1
               },
               "end": {
                 "line": 1,
