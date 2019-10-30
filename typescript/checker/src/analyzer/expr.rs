@@ -2182,11 +2182,11 @@ impl Analyzer<'_, '_> {
         let casted_ty = Type::from(to.clone());
         let casted_ty = self.expand_type(span, Cow::Owned(casted_ty))?;
 
-        match *casted_ty {
-            Type::Tuple(ref rt) => {
+        match *casted_ty.normalize() {
+            Type::Tuple(ref lt) => {
                 //
-                match *orig_ty {
-                    Type::Tuple(ref lt) => {
+                match *orig_ty.normalize() {
+                    Type::Tuple(ref rt) => {
                         //
                         if lt.types.len() != rt.types.len() {
                             return Err(Error::InvalidTupleCast {
@@ -2199,12 +2199,17 @@ impl Analyzer<'_, '_> {
                         let mut all_castable = true;
                         //
                         for (i, lty) in lt.types.iter().enumerate() {
+                            // if rt.types.len() >= i {
+                            //     all_castable = false;
+                            //     break;
+                            // }
                             let rty = &rt.types[i];
 
                             match *rty.normalize() {
                                 Type::Union(ref u) => {
                                     let castable =
                                         u.types.iter().any(|v| lty.eq_ignore_name_and_span(v));
+
                                     //
                                     if !castable {
                                         all_castable = false;
@@ -2213,7 +2218,9 @@ impl Analyzer<'_, '_> {
                                 }
 
                                 _ => {
-                                    all_castable = false;
+                                    if !lty.eq_ignore_name_and_span(&rty) {
+                                        all_castable = false;
+                                    }
                                 }
                             }
                         }
@@ -2227,11 +2234,11 @@ impl Analyzer<'_, '_> {
                 }
             }
 
-            Type::Array(ref rt) => {
+            Type::Array(ref lt) => {
                 //
                 match *orig_ty {
-                    Type::Tuple(ref lt) => {
-                        if lt.types[0].eq_ignore_name_and_span(&rt.elem_type) {
+                    Type::Tuple(ref rt) => {
+                        if rt.types[0].eq_ignore_name_and_span(&lt.elem_type) {
                             return Ok(());
                         }
                     }
@@ -2246,6 +2253,17 @@ impl Analyzer<'_, '_> {
         }
 
         self.assign(&casted_ty, &orig_ty, span)?;
+
+        match *casted_ty {
+            Type::Tuple(ref rt) => {
+                //
+                match *orig_ty {
+                    Type::Tuple(ref lt) => {}
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
 
         Ok(())
     }
