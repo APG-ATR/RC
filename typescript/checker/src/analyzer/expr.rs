@@ -1942,7 +1942,9 @@ impl Analyzer<'_, '_> {
                             _ => {}
                         }
 
-                        return Err(Error::NameNotFound { span });
+                        return Err(Error::NameNotFound {
+                            span: type_name.span(),
+                        });
                     }
 
                     TsType::TsTypeQuery(TsTypeQuery { ref expr_name, .. }) => match *expr_name {
