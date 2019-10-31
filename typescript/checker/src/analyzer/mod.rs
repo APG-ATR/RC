@@ -927,8 +927,6 @@ impl Analyzer<'_, '_> {
 }
 
 fn instantiate_class(ty: TypeRef) -> TypeRef {
-    println!("!!!!! {:?}", ty);
-
     let span = ty.span();
 
     match *ty.normalize() {
