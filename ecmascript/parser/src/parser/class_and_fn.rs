@@ -332,7 +332,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 unexpected!();
             }
             return self.make_method(
-                Parser::parse_unique_formal_params,
+                |p| p.parse_unique_formal_params(),
                 MakeMethodArgs {
                     start,
                     decorators,
@@ -453,6 +453,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         }
 
         let is_next_line_generator = self.input.had_line_break_before_cur() && is!('*');
+        let key_span = key.span();
         match key {
             // `get\n*` is an uninitialized property named 'get' followed by a generator.
             Either::Right(PropName::Ident(ref i))
@@ -468,7 +469,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
                 return match i.sym {
                     js_word!("get") => self.make_method(
-                        |_| Ok(vec![]),
+                        |_p| Ok(vec![]),
                         MakeMethodArgs {
                             decorators,
                             start,
@@ -483,7 +484,17 @@ impl<'a, I: Tokens> Parser<'a, I> {
                         },
                     ),
                     js_word!("set") => self.make_method(
-                        |p| p.parse_formal_param().map(|pat| vec![pat]),
+                        |p| match p.parse_formal_params() {
+                            Ok(params) => {
+                                if params.len() == 1 {
+                                    Ok(params)
+                                } else {
+                                    emit_error!(key_span, SyntaxError::TS1094);
+                                    Ok(params)
+                                }
+                            }
+                            Err(err) => Err(err),
+                        },
                         MakeMethodArgs {
                             decorators,
                             start,

@@ -64,23 +64,27 @@ impl Fold for InjectSelf {
     fn fold_expr_method_call(&mut self, i: ExprMethodCall) -> ExprMethodCall {
         /// Extract `p` from `self.parse_with(|p|{})`
         fn get_parser_arg(call: &ExprMethodCall) -> Ident {
-            assert_eq!(call.args.len(), 1);
+            //            assert_eq!(call.args.len(), 1);
             let expr = call.args.iter().next().unwrap();
 
             let inputs = match expr {
                 &Expr::Closure(ref c) => &c.inputs,
-                _ => unreachable!("Parser.parse_with and Parser.spanned accepts a closure"),
+                _ => unreachable!(
+                    "Parser.parse_with and Parser.spanned accepts a closure\n{:?}",
+                    expr
+                ),
             };
             assert_eq!(inputs.len(), 1);
 
             let p = inputs.clone().into_iter().next().unwrap();
             match p {
                 FnArg::Inferred(Pat::Ident(PatIdent { ident, .. })) => ident,
-                _ => unreachable!("Expected (|p| {..})"),
+                _ => unreachable!("Expected (|p| {{..}})\nGot {:?}", p),
             }
         }
 
         if i.method == "parse_with"
+            || i.method == "make_method"
             || i.method == "spanned"
             || i.method == "try_parse_ts"
             || i.method == "ts_in_no_context"
