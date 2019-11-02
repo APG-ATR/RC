@@ -159,6 +159,8 @@ pub enum SyntaxError {
     ExportNamespaceFrom,
 
     DotsWithoutIdentifier,
+
+    TS1183,
 }
 
 impl<'a> From<ErrorToDiag<'a>> for Error {
@@ -306,6 +308,9 @@ impl<'a> From<ErrorToDiag<'a>> for DiagnosticBuilder<'a> {
             DotsWithoutIdentifier => {
                 "`...` must be followed by an identifier in declaration contexts".into()
             }
+
+            // TODO:
+            TS1183 => "TS1183".into(),
         };
 
         let mut db = e.handler.struct_err(&msg);

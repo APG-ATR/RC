@@ -1,4 +1,5 @@
 use super::{ident::MaybeOptionalIdentParser, *};
+use crate::error::SyntaxError;
 use either::Either;
 use swc_common::Spanned;
 
@@ -783,6 +784,9 @@ impl<'a, I: Tokens> Parser<'a, I> {
     where
         Self: FnBodyParser<'a, T>,
     {
+        if self.ctx().in_declare && self.syntax().typescript() && is!('{') {
+            syntax_error!(self.input.cur_span(), SyntaxError::TS1183);
+        }
         let ctx = Context {
             in_async: is_async,
             in_generator: is_generator,
