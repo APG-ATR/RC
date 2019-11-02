@@ -65,10 +65,14 @@ impl Fold for InjectSelf {
         /// Extract `p` from `self.parse_with(|p|{})`
         fn get_parser_arg(call: &ExprMethodCall) -> Ident {
             //            assert_eq!(call.args.len(), 1);
-            let expr = call.args.iter().next().unwrap();
+            let expr = &call.args[if call.method == "parse_fn_args_body" {
+                2
+            } else {
+                0
+            }];
 
-            let inputs = match expr {
-                &Expr::Closure(ref c) => &c.inputs,
+            let inputs = match *expr {
+                Expr::Closure(ref c) => &c.inputs,
                 _ => unreachable!(
                     "Parser.parse_with and Parser.spanned accepts a closure\n{:?}",
                     expr
@@ -85,6 +89,7 @@ impl Fold for InjectSelf {
 
         if i.method == "parse_with"
             || i.method == "make_method"
+            || i.method == "parse_fn_args_body"
             || i.method == "spanned"
             || i.method == "try_parse_ts"
             || i.method == "ts_in_no_context"

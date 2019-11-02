@@ -112,7 +112,7 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
                     // no decorator in an object literal
                     vec![],
                     start,
-                    Parser::parse_unique_formal_params,
+                    |p| p.parse_unique_formal_params(),
                     false,
                     true,
                 )
@@ -145,7 +145,7 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
                     // no decorator in an object literal
                     vec![],
                     start,
-                    Parser::parse_unique_formal_params,
+                    |p| p.parse_unique_formal_params(),
                     false,
                     false,
                 )
@@ -183,6 +183,7 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
         match ident.sym {
             js_word!("get") | js_word!("set") | js_word!("async") => {
                 let key = self.parse_prop_name()?;
+                let key_span = key.span();
 
                 return match ident.sym {
                     js_word!("get") => self
@@ -190,7 +191,15 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
                             // no decorator in an object literal
                             vec![],
                             start,
-                            |_| Ok(vec![]),
+                            |p| {
+                                let params = p.parse_formal_params()?;
+
+                                if params.len() != 0 {
+                                    emit_error!(key_span, SyntaxError::TS1094);
+                                }
+
+                                Ok(params)
+                            },
                             false,
                             false,
                         )
@@ -214,7 +223,15 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
                             // no decorator in an object literal
                             vec![],
                             start,
-                            |p| p.parse_formal_param().map(|pat| vec![pat]),
+                            |p| {
+                                let params = p.parse_formal_params()?;
+
+                                if params.len() != 1 {
+                                    emit_error!(key_span, SyntaxError::TS1094);
+                                }
+
+                                Ok(params)
+                            },
                             false,
                             false,
                         )
@@ -243,7 +260,7 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
                             // no decorator in an object literal
                             vec![],
                             start,
-                            Parser::parse_unique_formal_params,
+                            |p| p.parse_unique_formal_params(),
                             true,
                             false,
                         )

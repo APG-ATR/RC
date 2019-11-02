@@ -745,6 +745,24 @@ impl<'a, I: Tokens> Parser<'a, I> {
         }
     }
 
+    pub(super) fn parse_fn_body<T>(&mut self, is_async: bool, is_generator: bool) -> PResult<'a, T>
+    where
+        Self: FnBodyParser<'a, T>,
+    {
+        if self.ctx().in_declare && self.syntax().typescript() && is!('{') {
+            syntax_error!(self.input.cur_span(), SyntaxError::TS1183);
+        }
+        let ctx = Context {
+            in_async: is_async,
+            in_generator: is_generator,
+            in_function: true,
+            ..self.ctx()
+        };
+        self.with_ctx(ctx).parse_fn_body_inner()
+    }
+}
+
+impl<'a, I: Input> Parser<'a, I> {
     fn make_method<F>(
         &mut self,
         parse_args: F,
@@ -769,7 +787,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
         match key {
             Either::Left(key) => Ok(PrivateMethod {
-                span: span!(start),
+                span: span!(self, start),
 
                 accessibility,
                 is_abstract,
@@ -782,7 +800,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
             }
             .into()),
             Either::Right(key) => Ok(ClassMethod {
-                span: span!(start),
+                span: span!(self, start),
 
                 accessibility,
                 is_abstract,
@@ -795,22 +813,6 @@ impl<'a, I: Tokens> Parser<'a, I> {
             }
             .into()),
         }
-    }
-
-    pub(super) fn parse_fn_body<T>(&mut self, is_async: bool, is_generator: bool) -> PResult<'a, T>
-    where
-        Self: FnBodyParser<'a, T>,
-    {
-        if self.ctx().in_declare && self.syntax().typescript() && is!('{') {
-            syntax_error!(self.input.cur_span(), SyntaxError::TS1183);
-        }
-        let ctx = Context {
-            in_async: is_async,
-            in_generator: is_generator,
-            in_function: true,
-            ..self.ctx()
-        };
-        self.with_ctx(ctx).parse_fn_body_inner()
     }
 }
 
