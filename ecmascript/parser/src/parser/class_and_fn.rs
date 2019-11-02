@@ -492,16 +492,14 @@ impl<'a, I: Tokens> Parser<'a, I> {
                         },
                     ),
                     js_word!("set") => self.make_method(
-                        |p| match p.parse_formal_params() {
-                            Ok(params) => {
-                                if params.len() == 1 {
-                                    Ok(params)
-                                } else {
-                                    emit_error!(key_span, SyntaxError::TS1094);
-                                    Ok(params)
-                                }
+                        |p| {
+                            let params = p.parse_formal_params()?;
+
+                            if params.len() != 1 {
+                                emit_error!(key_span, SyntaxError::TS1094);
                             }
-                            Err(err) => Err(err),
+
+                            Ok(params)
                         },
                         MakeMethodArgs {
                             decorators,
