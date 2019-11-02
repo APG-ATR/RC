@@ -166,7 +166,7 @@ impl Fold for InjectSelf {
             "assert_and_bump" | "bump" | "cur" | "cur_pos" | "eat" | "eof" | "eat_exact"
             | "expect" | "expect_exact" | "into_spanned" | "is" | "is_one_of" | "peeked_is"
             | "peek" | "peek_ahead" | "last_pos" | "return_if_arrow" | "span" | "syntax_error"
-            | "make_error" | "unexpected" => {
+            | "make_error" | "emit_error" | "unexpected" => {
                 let tts = if i.tts.is_empty() {
                     quote_spanned!(span => #parser).into()
                 } else {

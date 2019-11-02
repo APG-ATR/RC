@@ -161,6 +161,7 @@ pub enum SyntaxError {
     DotsWithoutIdentifier,
 
     TS1183,
+    TS1094,
 }
 
 impl<'a> From<ErrorToDiag<'a>> for Error {
@@ -311,6 +312,7 @@ impl<'a> From<ErrorToDiag<'a>> for DiagnosticBuilder<'a> {
 
             // TODO:
             TS1183 => "TS1183".into(),
+            TS1094 => "TS1094".into(),
         };
 
         let mut db = e.handler.struct_err(&msg);

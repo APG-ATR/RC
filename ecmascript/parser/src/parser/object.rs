@@ -194,13 +194,21 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
                             false,
                             false,
                         )
-                        .map(|Function { body, .. }| {
-                            PropOrSpread::Prop(Box::new(Prop::Getter(GetterProp {
-                                span: span!(start),
-                                key,
-                                body,
-                            })))
-                        }),
+                        .map(
+                            |Function {
+                                 body, type_params, ..
+                             }| {
+                                if type_params.is_some() {
+                                    emit_error!(type_params.unwrap().span(), SyntaxError::TS1094);
+                                }
+
+                                PropOrSpread::Prop(Box::new(Prop::Getter(GetterProp {
+                                    span: span!(start),
+                                    key,
+                                    body,
+                                })))
+                            },
+                        ),
                     js_word!("set") => self
                         .parse_fn_args_body(
                             // no decorator in an object literal
@@ -210,15 +218,26 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
                             false,
                             false,
                         )
-                        .map(|Function { params, body, .. }| {
-                            debug_assert_eq!(params.len(), 1);
-                            PropOrSpread::Prop(Box::new(Prop::Setter(SetterProp {
-                                span: span!(start),
-                                key,
-                                body,
-                                param: params.into_iter().next().unwrap(),
-                            })))
-                        }),
+                        .map(
+                            |Function {
+                                 params,
+                                 body,
+                                 type_params,
+                                 ..
+                             }| {
+                                if type_params.is_some() {
+                                    emit_error!(type_params.unwrap().span(), SyntaxError::TS1094);
+                                }
+
+                                debug_assert_eq!(params.len(), 1);
+                                PropOrSpread::Prop(Box::new(Prop::Setter(SetterProp {
+                                    span: span!(start),
+                                    key,
+                                    body,
+                                    param: params.into_iter().next().unwrap(),
+                                })))
+                            },
+                        ),
                     js_word!("async") => self
                         .parse_fn_args_body(
                             // no decorator in an object literal
