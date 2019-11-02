@@ -180,7 +180,6 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 }) => {
                     *type_ann = self.try_parse_ts_type_ann()?;
                 }
-                Pat::Invalid(..) => {}
                 _ => unreachable!("invalid syntax: Pat: {:?}", pat),
             }
         }
