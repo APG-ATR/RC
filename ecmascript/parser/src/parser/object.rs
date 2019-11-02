@@ -246,7 +246,7 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
                                     emit_error!(type_params.unwrap().span(), SyntaxError::TS1094);
                                 }
 
-                                debug_assert_eq!(params.len(), 1);
+                                // debug_assert_eq!(params.len(), 1);
                                 PropOrSpread::Prop(Box::new(Prop::Setter(SetterProp {
                                     span: span!(start),
                                     key,
