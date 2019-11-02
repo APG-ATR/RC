@@ -454,6 +454,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
         let is_next_line_generator = self.input.had_line_break_before_cur() && is!('*');
         let key_span = key.span();
+
         match key {
             // `get\n*` is an uninitialized property named 'get' followed by a generator.
             Either::Right(PropName::Ident(ref i))
@@ -750,7 +751,10 @@ impl<'a, I: Tokens> Parser<'a, I> {
         Self: FnBodyParser<'a, T>,
     {
         if self.ctx().in_declare && self.syntax().typescript() && is!('{') {
-            syntax_error!(self.input.cur_span(), SyntaxError::TS1183);
+            syntax_error!(
+                self.ctx().span_of_fn_name.expect("we are not in function"),
+                SyntaxError::TS1183
+            );
         }
         let ctx = Context {
             in_async: is_async,
@@ -782,6 +786,10 @@ impl<'a, I: Input> Parser<'a, I> {
     where
         F: FnOnce(&mut Self) -> PResult<'a, Vec<Pat>>,
     {
+        let ctx = Context {
+            span_of_fn_name: Some(key.span()),
+            ..self.ctx()
+        };
         let function =
             self.parse_fn_args_body(decorators, start, parse_args, is_async, is_generator)?;
 

@@ -1172,6 +1172,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                         ref mut type_ann, ..
                     }) => *type_ann = self.try_parse_ts_type_ann()?,
                     Pat::Expr(ref expr) => unreachable!("invalid pattern: Expr({:?})", expr),
+                    Pat::Invalid(ref i) => unreachable!("invalid pattern: {:?}", i.span),
                 }
 
                 if eat!('=') {

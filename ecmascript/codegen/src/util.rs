@@ -222,6 +222,7 @@ impl StartsWithAlphaNum for Pat {
             Pat::Assign(AssignPat { ref left, .. }) => left.starts_with_alpha_num(),
             Pat::Object(..) | Pat::Array(..) | Pat::Rest(..) => false,
             Pat::Expr(ref expr) => expr.starts_with_alpha_num(),
+            Pat::Invalid(..) => true,
         }
     }
 }

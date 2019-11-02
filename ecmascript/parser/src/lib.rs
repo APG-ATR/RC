@@ -119,12 +119,13 @@ extern crate env_logger;
 #[cfg(test)]
 extern crate test;
 extern crate unicode_xid;
+
 pub use self::{
     lexer::input::{Input, SourceFileInput},
     parser::*,
 };
 use serde::{Deserialize, Serialize};
-use swc_common::errors::Handler;
+use swc_common::{errors::Handler, Span};
 
 #[macro_use]
 mod macros;
@@ -349,6 +350,7 @@ pub struct Context {
     in_type: bool,
     /// Typescript extension.
     in_declare: bool,
+    span_of_fn_name: Option<Span>,
 
     /// If true, `:` should not be treated as a type annotation.
     in_cond_expr: bool,

@@ -504,7 +504,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 }) => {
                     *type_ann = type_annotation;
                 }
-                Pat::Expr(expr) => unreachable!("invalid syntax: Pat(expr): {:?}", expr),
+                _ => unreachable!("invalid syntax: Pat: {:?}", name),
             }
         }
 

@@ -70,6 +70,7 @@ pub use self::{
         TsUnionOrIntersectionType, TsUnionType,
     },
 };
+use swc_common::{ast_node, Span};
 
 #[macro_use]
 mod macros;
@@ -87,3 +88,10 @@ mod pat;
 mod prop;
 mod stmt;
 mod typescript;
+
+/// Represents a invalid node.
+#[ast_node("Invalid")]
+#[derive(Copy)]
+pub struct Invalid {
+    pub span: Span,
+}

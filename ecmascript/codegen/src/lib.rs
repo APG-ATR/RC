@@ -1446,6 +1446,7 @@ impl<'a> Emitter<'a> {
             Pat::Ident(ref n) => emit!(n),
             Pat::Object(ref n) => emit!(n),
             Pat::Rest(ref n) => emit!(n),
+            Pat::Invalid(..) => unimplemented!(),
         }
     }
 

@@ -251,7 +251,9 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
                                     span: span!(start),
                                     key,
                                     body,
-                                    param: params.into_iter().next().unwrap(),
+                                    param: params.into_iter().next().unwrap_or_else(|| {
+                                        Pat::Invalid(Invalid { span: key_span })
+                                    }),
                                 })))
                             },
                         ),
