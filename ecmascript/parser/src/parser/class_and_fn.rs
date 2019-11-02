@@ -469,7 +469,15 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
                 return match i.sym {
                     js_word!("get") => self.make_method(
-                        |_p| Ok(vec![]),
+                        |p| {
+                            let params = p.parse_formal_params()?;
+
+                            if params.len() != 0 {
+                                emit_error!(key_span, SyntaxError::TS1094);
+                            }
+
+                            Ok(params)
+                        },
                         MakeMethodArgs {
                             decorators,
                             start,
