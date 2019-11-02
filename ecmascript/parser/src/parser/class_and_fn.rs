@@ -790,8 +790,9 @@ impl<'a, I: Input> Parser<'a, I> {
             span_of_fn_name: Some(key.span()),
             ..self.ctx()
         };
-        let function =
-            self.parse_fn_args_body(decorators, start, parse_args, is_async, is_generator)?;
+        let function = self.with_ctx(ctx).parse_with(|p| {
+            p.parse_fn_args_body(decorators, start, parse_args, is_async, is_generator)
+        })?;
 
         match key {
             Either::Left(key) => Ok(PrivateMethod {
