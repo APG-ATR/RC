@@ -22,20 +22,23 @@ use std::{
     sync::Arc,
     thread,
 };
-use swc_common::{errors::Handler, FilePathMapping, Fold, FoldWith, SourceMap, Span, DUMMY_SP};
+use swc_common::{
+    errors::{Diagnostic, Handler},
+    FilePathMapping, Fold, FoldWith, SourceMap, Span, DUMMY_SP,
+};
 
 #[macro_use]
 mod macros;
-mod errors;
 mod output;
 mod paths;
+mod string_errors;
 
 pub fn run_test<F, Ret>(treat_err_as_bug: bool, op: F) -> Result<Ret, StdErr>
 where
     F: FnOnce(Arc<SourceMap>, &Handler) -> Result<Ret, ()>,
 {
     let cm = Arc::new(SourceMap::new(FilePathMapping::empty()));
-    let (handler, errors) = self::errors::new_handler(cm.clone(), treat_err_as_bug);
+    let (handler, errors) = self::string_errors::new_handler(cm.clone(), treat_err_as_bug);
     let result = swc_common::GLOBALS.set(&swc_common::Globals::new(), || op(cm, &handler));
 
     match result {
@@ -49,7 +52,7 @@ where
     F: FnOnce(Arc<SourceMap>, Handler) -> Result<Ret, ()>,
 {
     let cm = Arc::new(SourceMap::new(FilePathMapping::empty()));
-    let (handler, errors) = self::errors::new_handler(cm.clone(), treat_err_as_bug);
+    let (handler, errors) = self::string_errors::new_handler(cm.clone(), treat_err_as_bug);
     let result = swc_common::GLOBALS.set(&swc_common::Globals::new(), || op(cm, handler));
 
     match result {
