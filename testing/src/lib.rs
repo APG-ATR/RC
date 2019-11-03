@@ -29,10 +29,12 @@ use swc_common::{
 
 #[macro_use]
 mod macros;
+mod diag_errors;
 mod output;
 mod paths;
 mod string_errors;
 
+/// Run test and print errors.
 pub fn run_test<F, Ret>(treat_err_as_bug: bool, op: F) -> Result<Ret, StdErr>
 where
     F: FnOnce(Arc<SourceMap>, &Handler) -> Result<Ret, ()>,
@@ -47,12 +49,28 @@ where
     }
 }
 
+/// Run test and print errors.
 pub fn run_test2<F, Ret>(treat_err_as_bug: bool, op: F) -> Result<Ret, StdErr>
 where
     F: FnOnce(Arc<SourceMap>, Handler) -> Result<Ret, ()>,
 {
     let cm = Arc::new(SourceMap::new(FilePathMapping::empty()));
     let (handler, errors) = self::string_errors::new_handler(cm.clone(), treat_err_as_bug);
+    let result = swc_common::GLOBALS.set(&swc_common::Globals::new(), || op(cm, handler));
+
+    match result {
+        Ok(res) => Ok(res),
+        Err(()) => Err(errors.into()),
+    }
+}
+
+/// Run test and collect errors.
+pub fn errors<F, Ret>(op: F) -> Result<Ret, Vec<Diagnostic>>
+where
+    F: FnOnce(Arc<SourceMap>, Handler) -> Result<Ret, ()>,
+{
+    let cm = Arc::new(SourceMap::new(FilePathMapping::empty()));
+    let (handler, errors) = self::diag_errors::new_handler(cm.clone());
     let result = swc_common::GLOBALS.set(&swc_common::Globals::new(), || op(cm, handler));
 
     match result {
