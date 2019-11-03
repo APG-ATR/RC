@@ -1,7 +1,7 @@
 use super::*;
 use either::Either;
 use lexer::TokenContexts;
-use swc_common::Spanned;
+use swc_common::{Spanned, SyntaxContext};
 
 #[parser]
 impl<'a, I: Tokens> Parser<'a, I> {
@@ -517,9 +517,19 @@ impl<'a, I: Tokens> Parser<'a, I> {
             }
             _ => self.parse_ident_name().map(TsEnumMemberId::from)?,
         };
+
         let init = if eat!('=') {
             Some(self.parse_assignment_expr()?)
+        } else if is!(',') || is!('}') {
+            None
         } else {
+            let start = cur_pos!();
+            bump!();
+            store!(',');
+            emit_error!(
+                Span::new(start, start, SyntaxContext::empty()),
+                SyntaxError::TS1005
+            );
             None
         };
 
