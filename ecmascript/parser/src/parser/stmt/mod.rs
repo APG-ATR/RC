@@ -1,4 +1,5 @@
 use super::{pat::PatType, *};
+use crate::error::SyntaxError;
 use swc_common::Spanned;
 
 mod module_item;
@@ -390,6 +391,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         let catch_start = cur_pos!();
         let handler = if eat!("catch") {
             let param = self.parse_catch_param()?;
+
             self.parse_block(false)
                 .map(|body| CatchClause {
                     span: span!(catch_start),
@@ -419,10 +421,20 @@ impl<'a, I: Tokens> Parser<'a, I> {
         }))
     }
 
-    /// It's optinal since es2019
+    /// It's optional since es2019
     fn parse_catch_param(&mut self) -> PResult<'a, Option<Pat>> {
         if eat!('(') {
             let pat = self.parse_binding_pat_or_ident()?;
+
+            if self.syntax().typescript() && eat!(':') {
+                let ctx = Context {
+                    in_type: true,
+                    ..self.ctx()
+                };
+
+                let ty = self.with_ctx(ctx).parse_with(|p| p.parse_ts_type())?;
+                emit_error!(ty.span(), SyntaxError::TS1196);
+            }
             expect!(')');
             Ok(Some(pat))
         } else {
