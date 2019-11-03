@@ -160,6 +160,7 @@ pub enum SyntaxError {
 
     DotsWithoutIdentifier,
 
+    TS1038,
     TS1183,
     TS1094,
     TS1196,
@@ -313,6 +314,7 @@ impl<'a> From<ErrorToDiag<'a>> for DiagnosticBuilder<'a> {
             }
 
             // TODO:
+            TS1038 => "TS1038".into(),
             TS1183 => "TS1183".into(),
             TS1094 => "TS1094".into(),
             TS1196 => "TS1196".into(),

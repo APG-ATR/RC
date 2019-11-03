@@ -1744,6 +1744,11 @@ impl<'a, I: Tokens> Parser<'a, I> {
             "try_parse_ts_declare should be called after eating `declare`"
         );
 
+        if self.ctx().in_declare {
+            let span_of_declare = span!(start);
+            emit_error!(span_of_declare, SyntaxError::TS1038);
+        }
+
         let ctx = Context {
             in_declare: true,
             ..self.ctx()
