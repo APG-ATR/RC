@@ -65,8 +65,8 @@ where
 }
 
 pub struct Tester {
-    cm: Arc<SourceMap>,
-    globals: swc_common::Globals,
+    pub cm: Arc<SourceMap>,
+    pub globals: swc_common::Globals,
 }
 
 impl Tester {
