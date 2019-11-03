@@ -587,7 +587,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
     fn parse_with_stmt(&mut self) -> PResult<'a, Stmt> {
         if self.ctx().strict {
-            syntax_error!(SyntaxError::WithInStrict)
+            emit_error!(SyntaxError::WithInStrict);
         }
 
         let start = cur_pos!();
