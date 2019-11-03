@@ -492,7 +492,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
     }
 
     /// `tsParseEnumMember`
-    fn parse_ts_enum_member(&mut self) -> PResult<'a, (TsEnumMember)> {
+    fn parse_ts_enum_member(&mut self) -> PResult<'a, TsEnumMember> {
         debug_assert!(self.input.syntax().typescript());
 
         let start = cur_pos!();
@@ -503,6 +503,18 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 Lit::Str(s) => TsEnumMemberId::Str(s),
                 _ => unreachable!(),
             })?,
+            Token::Num(v) => {
+                bump!();
+                let span = span!(start);
+                // Recover from error
+                emit_error!(span, SyntaxError::TS2452);
+
+                TsEnumMemberId::Str(Str {
+                    span,
+                    value: v.to_string().into(),
+                    has_escape: false,
+                })
+            }
             _ => self.parse_ident_name().map(TsEnumMemberId::from)?,
         };
         let init = if eat!('=') {
