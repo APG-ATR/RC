@@ -163,6 +163,7 @@ pub enum SyntaxError {
     TS1183,
     TS1094,
     TS1196,
+    TS2410,
 }
 
 impl<'a> From<ErrorToDiag<'a>> for Error {
@@ -315,6 +316,7 @@ impl<'a> From<ErrorToDiag<'a>> for DiagnosticBuilder<'a> {
             TS1183 => "TS1183".into(),
             TS1094 => "TS1094".into(),
             TS1196 => "TS1196".into(),
+            TS2410 => "TS2410".into(),
         };
 
         let mut db = e.handler.struct_err(&msg);

@@ -590,6 +590,10 @@ impl<'a, I: Tokens> Parser<'a, I> {
             emit_error!(SyntaxError::WithInStrict);
         }
 
+        if self.syntax().typescript() {
+            emit_error!(SyntaxError::TS2410);
+        }
+
         let start = cur_pos!();
 
         assert_and_bump!("with");
