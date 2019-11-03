@@ -64,18 +64,45 @@ where
     }
 }
 
-/// Run test and collect errors.
-pub fn errors<F, Ret>(op: F) -> Result<Ret, Vec<Diagnostic>>
-where
-    F: FnOnce(Arc<SourceMap>, Handler) -> Result<Ret, ()>,
-{
-    let cm = Arc::new(SourceMap::new(FilePathMapping::empty()));
-    let (handler, errors) = self::diag_errors::new_handler(cm.clone());
-    let result = swc_common::GLOBALS.set(&swc_common::Globals::new(), || op(cm, handler));
+pub struct Tester {
+    cm: Arc<SourceMap>,
+    globals: swc_common::Globals,
+}
 
-    match result {
-        Ok(res) => Ok(res),
-        Err(()) => Err(errors.into()),
+impl Tester {
+    pub fn new() -> Self {
+        Tester {
+            cm: Arc::new(SourceMap::new(FilePathMapping::empty())),
+            globals: swc_common::Globals::new(),
+        }
+    }
+
+    /// Run test and print errors.
+    pub fn print_errors<F, Ret>(&self, op: F) -> Result<Ret, StdErr>
+    where
+        F: FnOnce(Arc<SourceMap>, Handler) -> Result<Ret, ()>,
+    {
+        let (handler, errors) = self::string_errors::new_handler(self.cm.clone(), false);
+        let result = swc_common::GLOBALS.set(&self.globals, || op(self.cm.clone(), handler));
+
+        match result {
+            Ok(res) => Ok(res),
+            Err(()) => Err(errors.into()),
+        }
+    }
+
+    /// Run test and collect errors.
+    pub fn errors<F, Ret>(&self, op: F) -> Result<Ret, Vec<Diagnostic>>
+    where
+        F: FnOnce(Arc<SourceMap>, Handler) -> Result<Ret, ()>,
+    {
+        let (handler, errors) = self::diag_errors::new_handler(self.cm.clone());
+        let result = swc_common::GLOBALS.set(&self.globals, || op(self.cm.clone(), handler));
+
+        match result {
+            Ok(res) => Ok(res),
+            Err(()) => Err(errors.into()),
+        }
     }
 }
 
