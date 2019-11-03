@@ -204,7 +204,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         debug_assert!(self.input.syntax().typescript());
 
         let start = cur_pos!();
-        let type_name = self.parse_ts_entity_name(/* allow_reserved_words */ false)?;
+        let type_name = self.parse_ts_entity_name(/* allow_reserved_words */ true)?;
         let type_params = if !self.input.had_line_break_before_cur() && is!('<') {
             Some(self.parse_ts_type_args()?)
         } else {
