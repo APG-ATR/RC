@@ -185,7 +185,23 @@ impl<'a, I: Tokens> Parser<'a, I> {
     fn parse_ts_entity_name(&mut self, allow_reserved_words: bool) -> PResult<'a, TsEntityName> {
         debug_assert!(self.input.syntax().typescript());
 
-        let mut entity = TsEntityName::Ident(self.parse_ident_name()?);
+        let init = self.parse_ident_name()?;
+        match init {
+            // Handle
+            //
+            // var a: void.x
+            //            ^
+            Ident {
+                sym: js_word!("void"),
+                ..
+            } => {
+                let dot_start = cur_pos!();
+                let dot_span = span!(dot_start);
+                emit_error!(dot_span, SyntaxError::TS1005)
+            }
+            _ => {}
+        }
+        let mut entity = TsEntityName::Ident(init);
         while eat!('.') {
             let left = entity;
             let right = if allow_reserved_words {
