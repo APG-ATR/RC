@@ -645,7 +645,6 @@ impl<'a, I: Tokens> Parser<'a, I> {
         let ctx = Context {
             in_async: is_async,
             in_generator: is_generator,
-            is_break_continue_allowed: false,
             ..self.ctx()
         };
 
@@ -761,9 +760,14 @@ impl<'a, I: Tokens> Parser<'a, I> {
             in_async: is_async,
             in_generator: is_generator,
             in_function: true,
+            is_break_continue_allowed: false,
             ..self.ctx()
         };
-        self.with_ctx(ctx).parse_fn_body_inner()
+        let state = State {
+            labels: vec![],
+            ..Default::default()
+        };
+        self.with_ctx(ctx).with_state(state).parse_fn_body_inner()
     }
 }
 

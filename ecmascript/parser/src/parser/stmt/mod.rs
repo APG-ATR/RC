@@ -115,6 +115,11 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 emit_error!(span, SyntaxError::TS1105);
             }
 
+            println!("LABEL: {:?}\nLABELS: {:?}", label, self.state.labels);
+            if label.is_some() && !self.state.labels.contains(&label.as_ref().unwrap().sym) {
+                emit_error!(span, SyntaxError::TS1116);
+            }
+
             return Ok(if is_break {
                 Stmt::Break(BreakStmt { span, label })
             } else {
@@ -587,7 +592,11 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
         assert_and_bump!("do");
 
-        let body = self.parse_stmt(false).map(Box::new)?;
+        let ctx = Context {
+            is_break_continue_allowed: true,
+            ..self.ctx()
+        };
+        let body = self.with_ctx(ctx).parse_stmt(false).map(Box::new)?;
         expect!("while");
         expect!('(');
         let test = self.include_in_expr(true).parse_expr()?;
@@ -609,7 +618,11 @@ impl<'a, I: Tokens> Parser<'a, I> {
         let test = self.include_in_expr(true).parse_expr()?;
         expect!(')');
 
-        let body = self.parse_stmt(false).map(Box::new)?;
+        let ctx = Context {
+            is_break_continue_allowed: true,
+            ..self.ctx()
+        };
+        let body = self.with_ctx(ctx).parse_stmt(false).map(Box::new)?;
 
         let span = span!(start);
         Ok(Stmt::While(WhileStmt { span, test, body }))
@@ -663,6 +676,8 @@ impl<'a, I: Tokens> Parser<'a, I> {
                     syntax_error!(SyntaxError::DuplicateLabel(label.sym.clone()));
                 }
             }
+            p.state.labels.push(label.sym.clone());
+
             let body = Box::new(if is!("function") {
                 let f = p.parse_fn_decl(vec![])?;
                 match f {
