@@ -787,25 +787,28 @@ impl<'a, I: Tokens> Parser<'a, I> {
                     for d in decl.decls.iter().skip(1) {
                         self.emit_err(d.name.span(), SyntaxError::TooManyVarInForInHead);
                     }
-                }
-                if decl.decls[0].init.is_some() {
-                    self.emit_err(
-                        decl.decls[0].name.span(),
-                        SyntaxError::VarInitializerInForInHead,
-                    );
-                }
+                } else {
+                    if decl.decls[0].init.is_some() {
+                        self.emit_err(
+                            decl.decls[0].name.span(),
+                            SyntaxError::VarInitializerInForInHead,
+                        );
+                    }
 
-                let type_ann = match decl.decls[0].name {
-                    Pat::Ident(ref v) => Some(&v.type_ann),
-                    Pat::Array(ref v) => Some(&v.type_ann),
-                    Pat::Assign(ref v) => Some(&v.type_ann),
-                    Pat::Rest(ref v) => Some(&v.type_ann),
-                    Pat::Object(ref v) => Some(&v.type_ann),
-                    _ => None,
-                };
-                if let Some(type_ann) = type_ann {
-                    if type_ann.is_some() {
-                        self.emit_err(decl.decls[0].name.span(), SyntaxError::TS2483);
+                    {
+                        let type_ann = match decl.decls[0].name {
+                            Pat::Ident(ref v) => Some(&v.type_ann),
+                            Pat::Array(ref v) => Some(&v.type_ann),
+                            Pat::Assign(ref v) => Some(&v.type_ann),
+                            Pat::Rest(ref v) => Some(&v.type_ann),
+                            Pat::Object(ref v) => Some(&v.type_ann),
+                            _ => None,
+                        };
+                        if let Some(type_ann) = type_ann {
+                            if type_ann.is_some() {
+                                self.emit_err(decl.decls[0].name.span(), SyntaxError::TS2483);
+                            }
+                        }
                     }
                 }
 
