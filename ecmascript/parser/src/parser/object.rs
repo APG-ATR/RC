@@ -211,6 +211,10 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
                                     self.emit_err(type_params.unwrap().span(), SyntaxError::TS1094);
                                 }
 
+                                if self.target <= JscTarget::Es3 {
+                                    self.emit_err(key_span, SyntaxError::TS1056);
+                                }
+
                                 PropOrSpread::Prop(Box::new(Prop::Getter(GetterProp {
                                     span: span!(start),
                                     key,
@@ -228,6 +232,10 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
 
                                 if params.len() != 1 {
                                     p.emit_err(key_span, SyntaxError::TS1094);
+                                }
+
+                                if p.target <= JscTarget::Es3 {
+                                    p.emit_err(key_span, SyntaxError::TS1056);
                                 }
 
                                 Ok(params)
