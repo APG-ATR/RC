@@ -112,7 +112,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
             let span = span!(start);
             if is_break {
-                if !self.ctx().is_break_continue_allowed {
+                if !self.ctx().is_break_allowed {
                     emit_error!(span, SyntaxError::TS1105);
                 }
 
@@ -120,6 +120,11 @@ impl<'a, I: Tokens> Parser<'a, I> {
                     emit_error!(span, SyntaxError::TS1116);
                 }
             } else {
+                if !self.ctx().is_break_allowed {
+                    //                    emit_error!(span,
+                    // SyntaxError::TS1105);
+                }
+
                 if label.is_some() && !self.state.labels.contains(&label.as_ref().unwrap().sym) {
                     emit_error!(span, SyntaxError::TS1107);
                 }
@@ -336,7 +341,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         while !eof!() && !is!('}') {
             let case_start = cur_pos!();
             let ctx = Context {
-                is_break_continue_allowed: true,
+                is_break_allowed: true,
                 ..self.ctx()
             };
 
@@ -598,7 +603,8 @@ impl<'a, I: Tokens> Parser<'a, I> {
         assert_and_bump!("do");
 
         let ctx = Context {
-            is_break_continue_allowed: true,
+            is_break_allowed: true,
+            is_continue_allowed: true,
             ..self.ctx()
         };
         let body = self.with_ctx(ctx).parse_stmt(false).map(Box::new)?;
@@ -624,7 +630,8 @@ impl<'a, I: Tokens> Parser<'a, I> {
         expect!(')');
 
         let ctx = Context {
-            is_break_continue_allowed: true,
+            is_break_allowed: true,
+            is_continue_allowed: true,
             ..self.ctx()
         };
         let body = self.with_ctx(ctx).parse_stmt(false).map(Box::new)?;
@@ -669,7 +676,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
     fn parse_labelled_stmt(&mut self, label: Ident) -> PResult<'a, Stmt> {
         let ctx = Context {
-            is_break_continue_allowed: true,
+            is_break_allowed: true,
             ..self.ctx()
         };
 
@@ -724,7 +731,8 @@ impl<'a, I: Tokens> Parser<'a, I> {
         let head = self.parse_for_head()?;
         expect!(')');
         let ctx = Context {
-            is_break_continue_allowed: true,
+            is_break_allowed: true,
+            is_continue_allowed: true,
             ..self.ctx()
         };
         let body = self.with_ctx(ctx).parse_stmt(false).map(Box::new)?;

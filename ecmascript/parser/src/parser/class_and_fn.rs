@@ -760,7 +760,8 @@ impl<'a, I: Tokens> Parser<'a, I> {
             in_async: is_async,
             in_generator: is_generator,
             in_function: true,
-            is_break_continue_allowed: false,
+            is_break_allowed: false,
+            is_continue_allowed: false,
             ..self.ctx()
         };
         let state = State {

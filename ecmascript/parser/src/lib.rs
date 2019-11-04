@@ -347,7 +347,8 @@ pub struct Context {
     /// keyword.
     in_generator: bool,
 
-    is_break_continue_allowed: bool,
+    is_continue_allowed: bool,
+    is_break_allowed: bool,
 
     in_type: bool,
     /// Typescript extension.
