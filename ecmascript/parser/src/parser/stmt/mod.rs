@@ -784,11 +784,13 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
             if is_one_of!("of", "in") {
                 if decl.decls.len() != 1 {
-                    syntax_error!(decl.span, SyntaxError::TooManyVarInForInHead);
+                    for d in decl.decls.iter().skip(1) {
+                        self.emit_err(d.name.span(), SyntaxError::TooManyVarInForInHead);
+                    }
                 }
-                if decl.decls[0].init.is_some() {
-                    syntax_error!(decl.span, SyntaxError::VarInitializerInForInHead);
-                }
+                //                if decl.decls[0].init.is_some() {
+                //                    self.emit_err(decl.span,
+                // SyntaxError::VarInitializerInForInHead);                }
 
                 return self.parse_for_each_head(VarDeclOrPat::VarDecl(decl));
             }
