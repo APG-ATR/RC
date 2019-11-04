@@ -203,6 +203,15 @@ impl<'a, I: Tokens> Parser<'a, I> {
         }
         let mut entity = TsEntityName::Ident(init);
         while eat!('.') {
+            let dot_start = cur_pos!();
+            if !is!('#') && !is!(IdentName) {
+                emit_error!(
+                    Span::new(dot_start, dot_start, Default::default()),
+                    SyntaxError::TS1003
+                );
+                return Ok(entity);
+            }
+
             let left = entity;
             let right = if allow_reserved_words {
                 self.parse_ident_name()?
