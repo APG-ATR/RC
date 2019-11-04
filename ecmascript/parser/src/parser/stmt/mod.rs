@@ -111,12 +111,18 @@ impl<'a, I: Tokens> Parser<'a, I> {
             };
 
             let span = span!(start);
-            if !self.ctx().is_break_continue_allowed {
-                emit_error!(span, SyntaxError::TS1105);
-            }
+            if is_break {
+                if !self.ctx().is_break_continue_allowed {
+                    emit_error!(span, SyntaxError::TS1105);
+                }
 
-            if label.is_some() && !self.state.labels.contains(&label.as_ref().unwrap().sym) {
-                emit_error!(span, SyntaxError::TS1116);
+                if label.is_some() && !self.state.labels.contains(&label.as_ref().unwrap().sym) {
+                    emit_error!(span, SyntaxError::TS1116);
+                }
+            } else {
+                if label.is_some() && !self.state.labels.contains(&label.as_ref().unwrap().sym) {
+                    emit_error!(span, SyntaxError::TS1107);
+                }
             }
 
             return Ok(if is_break {
