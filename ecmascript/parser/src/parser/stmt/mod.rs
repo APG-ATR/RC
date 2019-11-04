@@ -111,6 +111,10 @@ impl<'a, I: Tokens> Parser<'a, I> {
             };
 
             let span = span!(start);
+            if !self.ctx().is_break_continue_allowed {
+                emit_error!(span, SyntaxError::TS1105);
+            }
+
             return Ok(if is_break {
                 Stmt::Break(BreakStmt { span, label })
             } else {
@@ -321,36 +325,45 @@ impl<'a, I: Tokens> Parser<'a, I> {
         expect!('{');
         while !eof!() && !is!('}') {
             let case_start = cur_pos!();
-            if is_one_of!("case", "default") {
-                let is_case = is!("case");
-                let start_of_case = cur_pos!();
-                bump!();
-                cases.extend(cur.take());
-                let test = if is_case {
-                    self.include_in_expr(true).parse_expr().map(Some)?
+            let ctx = Context {
+                is_break_continue_allowed: true,
+                ..self.ctx()
+            };
+
+            self.with_ctx(ctx).parse_with(|p| {
+                if is_one_of!("case", "default") {
+                    let is_case = is!("case");
+                    let start_of_case = cur_pos!();
+                    bump!();
+                    cases.extend(cur.take());
+                    let test = if is_case {
+                        p.include_in_expr(true).parse_expr().map(Some)?
+                    } else {
+                        if let Some(previous) = span_of_previous_default {
+                            syntax_error!(SyntaxError::MultipleDefault { previous });
+                        }
+                        span_of_previous_default = Some(span!(start_of_case));
+
+                        None
+                    };
+                    expect!(':');
+
+                    cur = Some(SwitchCase {
+                        span: span!(case_start),
+                        test,
+                        cons: vec![],
+                    });
                 } else {
-                    if let Some(previous) = span_of_previous_default {
-                        syntax_error!(SyntaxError::MultipleDefault { previous });
+                    match cur {
+                        Some(ref mut cur) => {
+                            cur.cons.push(p.parse_stmt_list_item(false)?);
+                        }
+                        None => unexpected!(),
                     }
-                    span_of_previous_default = Some(span!(start_of_case));
-
-                    None
-                };
-                expect!(':');
-
-                cur = Some(SwitchCase {
-                    span: span!(case_start),
-                    test,
-                    cons: vec![],
-                });
-            } else {
-                match cur {
-                    Some(ref mut cur) => {
-                        cur.cons.push(self.parse_stmt_list_item(false)?);
-                    }
-                    None => unexpected!(),
                 }
-            }
+
+                Ok(())
+            })?
         }
 
         // eof or rbrace
@@ -683,7 +696,11 @@ impl<'a, I: Tokens> Parser<'a, I> {
         expect!('(');
         let head = self.parse_for_head()?;
         expect!(')');
-        let body = self.parse_stmt(false).map(Box::new)?;
+        let ctx = Context {
+            is_break_continue_allowed: true,
+            ..self.ctx()
+        };
+        let body = self.with_ctx(ctx).parse_stmt(false).map(Box::new)?;
 
         let span = span!(start);
         Ok(match head {
