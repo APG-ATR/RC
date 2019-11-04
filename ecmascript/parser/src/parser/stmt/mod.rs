@@ -115,7 +115,6 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 emit_error!(span, SyntaxError::TS1105);
             }
 
-            println!("LABEL: {:?}\nLABELS: {:?}", label, self.state.labels);
             if label.is_some() && !self.state.labels.contains(&label.as_ref().unwrap().sym) {
                 emit_error!(span, SyntaxError::TS1116);
             }
