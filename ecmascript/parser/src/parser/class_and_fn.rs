@@ -645,6 +645,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         let ctx = Context {
             in_async: is_async,
             in_generator: is_generator,
+            is_break_continue_allowed: false,
             ..self.ctx()
         };
 
