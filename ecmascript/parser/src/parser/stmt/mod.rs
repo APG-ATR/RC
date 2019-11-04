@@ -299,10 +299,10 @@ impl<'a, I: Tokens> Parser<'a, I> {
         });
 
         if !self.ctx().in_function {
-            syntax_error!(span!(start), SyntaxError::ReturnNotAllowed)
-        } else {
-            stmt
+            emit_error!(span!(start), SyntaxError::ReturnNotAllowed);
         }
+
+        stmt
     }
 
     fn parse_switch_stmt(&mut self) -> PResult<'a, Stmt> {
