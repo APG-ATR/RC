@@ -450,6 +450,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
             tok!("var") => VarDeclKind::Var,
             _ => unreachable!(),
         };
+        let var_span = span!(start);
         let should_include_in = kind != VarDeclKind::Var || !for_loop;
 
         let mut decls = vec![];
@@ -467,6 +468,22 @@ impl<'a, I: Tokens> Parser<'a, I> {
             } else {
                 self.ctx()
             };
+
+            // Handle
+            //      var a,;
+            //
+            // NewLine is ok
+            if is_exact!(';') || eof!() {
+                let prev_span = self.input.prev_span();
+                let span = if prev_span == var_span {
+                    Span::new(prev_span.hi(), prev_span.hi(), Default::default())
+                } else {
+                    prev_span
+                };
+                emit_error!(span, SyntaxError::TS1009);
+                break;
+            }
+
             decls.push(self.with_ctx(ctx).parse_var_declarator(for_loop)?);
         }
         if !for_loop {

@@ -162,6 +162,7 @@ pub enum SyntaxError {
 
     TS1003,
     TS1005,
+    TS1009,
     TS1038,
     TS1183,
     TS1094,
@@ -319,6 +320,7 @@ impl<'a> From<ErrorToDiag<'a>> for DiagnosticBuilder<'a> {
             // TODO:
             TS1003 => "TS1003".into(),
             TS1005 => "TS1005".into(),
+            TS1009 => "TS1009".into(),
             TS1038 => "TS1038".into(),
             TS1183 => "TS1183".into(),
             TS1094 => "TS1094".into(),
