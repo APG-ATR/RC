@@ -195,7 +195,7 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
                                 let params = p.parse_formal_params()?;
 
                                 if params.len() != 0 {
-                                    emit_error!(key_span, SyntaxError::TS1094);
+                                    p.emit_err(key_span, SyntaxError::TS1094);
                                 }
 
                                 Ok(params)
@@ -208,7 +208,7 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
                                  body, type_params, ..
                              }| {
                                 if type_params.is_some() {
-                                    emit_error!(type_params.unwrap().span(), SyntaxError::TS1094);
+                                    self.emit_err(type_params.unwrap().span(), SyntaxError::TS1094);
                                 }
 
                                 PropOrSpread::Prop(Box::new(Prop::Getter(GetterProp {
@@ -227,7 +227,7 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
                                 let params = p.parse_formal_params()?;
 
                                 if params.len() != 1 {
-                                    emit_error!(key_span, SyntaxError::TS1094);
+                                    p.emit_err(key_span, SyntaxError::TS1094);
                                 }
 
                                 Ok(params)
@@ -243,7 +243,7 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
                                  ..
                              }| {
                                 if type_params.is_some() {
-                                    emit_error!(type_params.unwrap().span(), SyntaxError::TS1094);
+                                    self.emit_err(type_params.unwrap().span(), SyntaxError::TS1094);
                                 }
 
                                 // debug_assert_eq!(params.len(), 1);

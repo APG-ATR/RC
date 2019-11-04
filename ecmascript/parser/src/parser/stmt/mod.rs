@@ -113,19 +113,19 @@ impl<'a, I: Tokens> Parser<'a, I> {
             let span = span!(start);
             if is_break {
                 if !self.ctx().is_break_allowed {
-                    emit_error!(span, SyntaxError::TS1105);
+                    self.emit_err(span, SyntaxError::TS1105);
                 }
 
                 if label.is_some() && !self.state.labels.contains(&label.as_ref().unwrap().sym) {
-                    emit_error!(span, SyntaxError::TS1116);
+                    self.emit_err(span, SyntaxError::TS1116);
                 }
             } else {
                 if !self.ctx().is_continue_allowed {
-                    emit_error!(span, SyntaxError::TS1115);
+                    self.emit_err(span, SyntaxError::TS1115);
                 } else if label.is_some()
                     && !self.state.labels.contains(&label.as_ref().unwrap().sym)
                 {
-                    emit_error!(span, SyntaxError::TS1107);
+                    self.emit_err(span, SyntaxError::TS1107);
                 }
             }
 
@@ -317,7 +317,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         });
 
         if !self.ctx().in_function {
-            emit_error!(span!(start), SyntaxError::ReturnNotAllowed);
+            self.emit_err(span!(start), SyntaxError::ReturnNotAllowed);
         }
 
         stmt
@@ -460,7 +460,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 };
 
                 let ty = self.with_ctx(ctx).parse_with(|p| p.parse_ts_type())?;
-                emit_error!(ty.span(), SyntaxError::TS1196);
+                self.emit_err(ty.span(), SyntaxError::TS1196);
             }
             expect!(')');
             Ok(Some(pat))
@@ -507,7 +507,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 } else {
                     prev_span
                 };
-                emit_error!(span, SyntaxError::TS1009);
+                self.emit_err(span, SyntaxError::TS1009);
                 break;
             }
 
@@ -641,11 +641,13 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
     fn parse_with_stmt(&mut self) -> PResult<'a, Stmt> {
         if self.ctx().strict {
-            emit_error!(SyntaxError::WithInStrict);
+            let span = self.input.cur_span();
+            self.emit_err(span, SyntaxError::WithInStrict);
         }
 
         if self.syntax().typescript() {
-            emit_error!(SyntaxError::TS2410);
+            let span = self.input.cur_span();
+            self.emit_err(span, SyntaxError::TS2410);
         }
 
         let start = cur_pos!();

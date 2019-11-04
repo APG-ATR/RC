@@ -474,7 +474,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                             let params = p.parse_formal_params()?;
 
                             if params.len() != 0 {
-                                emit_error!(key_span, SyntaxError::TS1094);
+                                p.emit_err(key_span, SyntaxError::TS1094);
                             }
 
                             Ok(params)
@@ -497,7 +497,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                             let params = p.parse_formal_params()?;
 
                             if params.len() != 1 {
-                                emit_error!(key_span, SyntaxError::TS1094);
+                                p.emit_err(key_span, SyntaxError::TS1094);
                             }
 
                             Ok(params)
@@ -799,6 +799,13 @@ impl<'a, I: Input> Parser<'a, I> {
         let function = self.with_ctx(ctx).parse_with(|p| {
             p.parse_fn_args_body(decorators, start, parse_args, is_async, is_generator)
         })?;
+
+        match kind {
+            MethodKind::Getter | MethodKind::Setter if self.target <= JscTarget::Es3 => {
+                self.emit_err(key.span(), SyntaxError::TS1056);
+            }
+            _ => {}
+        }
 
         match key {
             Either::Left(key) => Ok(PrivateMethod {

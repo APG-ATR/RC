@@ -3,7 +3,8 @@
 pub use self::input::{Capturing, Tokens, TokensInput};
 use self::{input::Buffer, util::ParseObject};
 use crate::{
-    error::SyntaxError,
+    error::{ErrorToDiag, SyntaxError},
+    lexer::{Input, Lexer},
     parser_macros::parser,
     token::{Token, Word},
     Context, JscTarget, Session, Syntax,
@@ -133,6 +134,15 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
     fn ctx(&self) -> Context {
         self.input.get_ctx()
+    }
+
+    fn emit_err(&self, span: Span, error: SyntaxError) {
+        DiagnosticBuilder::from(ErrorToDiag {
+            handler: self.session.handler,
+            span,
+            error,
+        })
+        .emit();
     }
 }
 

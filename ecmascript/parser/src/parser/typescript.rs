@@ -197,7 +197,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
             } => {
                 let dot_start = cur_pos!();
                 let dot_span = span!(dot_start);
-                emit_error!(dot_span, SyntaxError::TS1005)
+                self.emit_err(dot_span, SyntaxError::TS1005)
             }
             _ => {}
         }
@@ -205,9 +205,9 @@ impl<'a, I: Tokens> Parser<'a, I> {
         while eat!('.') {
             let dot_start = cur_pos!();
             if !is!('#') && !is!(IdentName) {
-                emit_error!(
+                self.emit_err(
                     Span::new(dot_start, dot_start, Default::default()),
-                    SyntaxError::TS1003
+                    SyntaxError::TS1003,
                 );
                 return Ok(entity);
             }
@@ -516,7 +516,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 bump!();
                 let span = span!(start);
                 // Recover from error
-                emit_error!(span, SyntaxError::TS2452);
+                self.emit_err(span, SyntaxError::TS2452);
 
                 TsEnumMemberId::Str(Str {
                     span,
@@ -535,9 +535,9 @@ impl<'a, I: Tokens> Parser<'a, I> {
             let start = cur_pos!();
             bump!();
             store!(',');
-            emit_error!(
+            self.emit_err(
                 Span::new(start, start, SyntaxContext::empty()),
-                SyntaxError::TS1005
+                SyntaxError::TS1005,
             );
             None
         };
@@ -1793,7 +1793,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
         if self.ctx().in_declare {
             let span_of_declare = span!(start);
-            emit_error!(span_of_declare, SyntaxError::TS1038);
+            self.emit_err(span_of_declare, SyntaxError::TS1038);
         }
 
         let ctx = Context {
