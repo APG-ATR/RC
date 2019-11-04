@@ -650,38 +650,45 @@ impl<'a, I: Tokens> Parser<'a, I> {
     }
 
     fn parse_labelled_stmt(&mut self, label: Ident) -> PResult<'a, Stmt> {
-        let start = label.span.lo();
+        let ctx = Context {
+            is_break_continue_allowed: true,
+            ..self.ctx()
+        };
 
-        for l in &self.state.labels {
-            if label.sym == *l {
-                syntax_error!(SyntaxError::DuplicateLabel(label.sym.clone()));
+        self.with_ctx(ctx).parse_with(|p| {
+            let start = label.span.lo();
+
+            for l in &p.state.labels {
+                if label.sym == *l {
+                    syntax_error!(SyntaxError::DuplicateLabel(label.sym.clone()));
+                }
             }
-        }
-        let body = Box::new(if is!("function") {
-            let f = self.parse_fn_decl(vec![])?;
-            match f {
-                Decl::Fn(FnDecl {
-                    function:
-                        Function {
-                            span,
-                            is_generator: true,
-                            ..
-                        },
-                    ..
-                }) => syntax_error!(span, SyntaxError::LabelledGenerator),
-                _ => {}
-            }
+            let body = Box::new(if is!("function") {
+                let f = p.parse_fn_decl(vec![])?;
+                match f {
+                    Decl::Fn(FnDecl {
+                        function:
+                            Function {
+                                span,
+                                is_generator: true,
+                                ..
+                            },
+                        ..
+                    }) => syntax_error!(span, SyntaxError::LabelledGenerator),
+                    _ => {}
+                }
 
-            f.into()
-        } else {
-            self.parse_stmt(false)?
-        });
+                f.into()
+            } else {
+                p.parse_stmt(false)?
+            });
 
-        Ok(Stmt::Labeled(LabeledStmt {
-            span: span!(start),
-            label,
-            body,
-        }))
+            Ok(Stmt::Labeled(LabeledStmt {
+                span: span!(start),
+                label,
+                body,
+            }))
+        })
     }
 
     fn parse_for_stmt(&mut self) -> PResult<'a, Stmt> {
