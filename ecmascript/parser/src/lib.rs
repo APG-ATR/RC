@@ -285,6 +285,30 @@ pub struct TsConfig {
     pub dynamic_import: bool,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord, PartialEq, Eq)]
+pub enum JscTarget {
+    #[serde(rename = "es3")]
+    Es3,
+    #[serde(rename = "es5")]
+    Es5,
+    #[serde(rename = "es2015")]
+    Es2015,
+    #[serde(rename = "es2016")]
+    Es2016,
+    #[serde(rename = "es2017")]
+    Es2017,
+    #[serde(rename = "es2018")]
+    Es2018,
+    #[serde(rename = "es2019")]
+    Es2019,
+}
+
+impl Default for JscTarget {
+    fn default() -> Self {
+        JscTarget::Es3
+    }
+}
+
 #[derive(Clone, Copy, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct EsConfig {

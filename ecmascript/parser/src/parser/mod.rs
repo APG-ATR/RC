@@ -6,7 +6,7 @@ use crate::{
     error::SyntaxError,
     parser_macros::parser,
     token::{Token, Word},
-    Context, Session, Syntax,
+    Context, JscTarget, Session, Syntax,
 };
 use ast::*;
 use lexer::Lexer;
@@ -36,6 +36,7 @@ pub struct Parser<'a, I: Tokens> {
     session: Session<'a>,
     state: State,
     input: Buffer<I>,
+    target: JscTarget,
 }
 
 #[derive(Clone, Default)]
@@ -63,6 +64,22 @@ impl<'a, I: Tokens> Parser<'a, I> {
             session,
             input: Buffer::new(input),
             state: Default::default(),
+            target: Default::default(),
+        }
+    }
+
+    pub fn new2(
+        session: Session<'a>,
+        syntax: Syntax,
+        input: I,
+        comments: Option<&'a Comments>,
+        target: JscTarget,
+    ) -> Self {
+        Parser {
+            session,
+            input: ParserInput::new(Lexer::new(session, syntax, input, comments)),
+            state: Default::default(),
+            target,
         }
     }
 
