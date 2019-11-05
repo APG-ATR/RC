@@ -686,10 +686,9 @@ impl<'a, I: Tokens> Parser<'a, I> {
             let start = l.span.lo();
 
             for lb in &p.state.labels {
-                //                if label.sym == *lb {
-                //
-                // syntax_error!(SyntaxError::DuplicateLabel(label.sym.
-                // clone()));                }
+                if l.sym == *lb {
+                    p.emit_err(l.span, SyntaxError::DuplicateLabel(l.sym.clone()));
+                }
             }
             p.state.labels.push(l.sym.clone());
 
@@ -713,18 +712,11 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 p.parse_stmt(false)?
             });
 
-            match *body {
-                Stmt::Labeled(LabeledStmt { ref label, .. }) => {
-                    // Deny labeled statements like
-                    //
-                    // target:
-                    // target:
-                    //      while(true){}
-                    if l.sym == label.sym {
-                        p.emit_err(label.span(), SyntaxError::TS1114);
-                    }
+            {
+                let pos = p.state.labels.iter().position(|v| v == &l.sym);
+                if let Some(pos) = pos {
+                    p.state.labels.remove(pos);
                 }
-                _ => {}
             }
 
             Ok(Stmt::Labeled(LabeledStmt {
