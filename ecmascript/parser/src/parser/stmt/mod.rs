@@ -783,6 +783,8 @@ impl<'a, I: Tokens> Parser<'a, I> {
             let decl = self.parse_var_stmt(true)?;
 
             if is_one_of!("of", "in") {
+                let is_in = is!("in");
+
                 if decl.decls.len() != 1 {
                     for d in decl.decls.iter().skip(1) {
                         self.emit_err(d.name.span(), SyntaxError::TooManyVarInForInHead);
@@ -827,7 +829,18 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
         // for (a of b)
         if is_one_of!("of", "in") {
+            let is_in = is!("in");
+
             let pat = self.reparse_expr_as_pat(PatType::AssignPat, init)?;
+
+            // for ({} in foo) is invalid
+            if is_in {
+                match pat {
+                    Pat::Ident(ref v) => {}
+                    Pat::Expr(..) => {}
+                    ref v => self.emit_err(v.span(), SyntaxError::TS2491),
+                }
+            }
             return self.parse_for_each_head(VarDeclOrPat::Pat(pat));
         }
 
