@@ -480,6 +480,19 @@ impl<'a, I: Tokens> Parser<'a, I> {
         let var_span = span!(start);
         let should_include_in = kind != VarDeclKind::Var || !for_loop;
 
+        if for_loop
+            && is_one_of!("of", "in")
+            && !(peeked_is!('=') || peeked_is!("of") || peeked_is!("in"))
+        {
+            self.emit_err(var_span, SyntaxError::TS1123);
+            return Ok(VarDecl {
+                span: span!(start),
+                declare: self.ctx().in_declare,
+                kind,
+                decls: vec![],
+            });
+        }
+
         let mut decls = vec![];
         let mut first = true;
         while first || eat!(',') {
