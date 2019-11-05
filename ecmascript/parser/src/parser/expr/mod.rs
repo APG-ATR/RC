@@ -286,6 +286,14 @@ impl<'a, I: Tokens> Parser<'a, I> {
         if is!("let") || (self.input.syntax().typescript() && is!(IdentName)) || is!(IdentRef) {
             // TODO: Handle [Yield, Await]
             let id = self.parse_ident_name()?;
+            if self.ctx().strict {
+                match id.sym {
+                    js_word!("eval") | js_word!("arguments") => {
+                        self.emit_err(id.span, SyntaxError::EvalAndArgumentsInStrict)
+                    }
+                    _ => {}
+                }
+            }
             if can_be_arrow && id.sym == js_word!("async") && is!(BindingIdent) {
                 // async a => body
                 let arg = self.parse_binding_ident().map(Pat::from)?;
