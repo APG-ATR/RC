@@ -230,7 +230,7 @@ impl<'a> From<ErrorToDiag<'a>> for DiagnosticBuilder<'a> {
                                      as an identifier in strict mode"
                 .into(),
             EvalAndArgumentsInStrict => "'eval' and 'arguments' cannot be used as a binding \
-                                         identifier in string mode"
+                                         identifier in strict mode"
                 .into(),
             UnaryInExp { .. } => "** cannot be applied to unary expression".into(),
             Hash => "Unexpected token '#'".into(),
