@@ -673,21 +673,21 @@ impl<'a, I: Tokens> Parser<'a, I> {
         Ok(BlockStmt { span, stmts })
     }
 
-    fn parse_labelled_stmt(&mut self, label: Ident) -> PResult<'a, Stmt> {
+    fn parse_labelled_stmt(&mut self, l: Ident) -> PResult<'a, Stmt> {
         let ctx = Context {
             is_break_allowed: true,
             ..self.ctx()
         };
-
         self.with_ctx(ctx).parse_with(|p| {
-            let start = label.span.lo();
+            let start = l.span.lo();
 
-            for l in &p.state.labels {
-                if label.sym == *l {
-                    syntax_error!(SyntaxError::DuplicateLabel(label.sym.clone()));
-                }
+            for lb in &p.state.labels {
+                //                if label.sym == *lb {
+                //
+                // syntax_error!(SyntaxError::DuplicateLabel(label.sym.
+                // clone()));                }
             }
-            p.state.labels.push(label.sym.clone());
+            p.state.labels.push(l.sym.clone());
 
             let body = Box::new(if is!("function") {
                 let f = p.parse_fn_decl(vec![])?;
@@ -709,9 +709,23 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 p.parse_stmt(false)?
             });
 
+            match *body {
+                Stmt::Labeled(LabeledStmt { ref label, .. }) => {
+                    // Deny labeled statements like
+                    //
+                    // target:
+                    // target:
+                    //      while(true){}
+                    if l.sym == label.sym {
+                        p.emit_err(label.span(), SyntaxError::TS1114);
+                    }
+                }
+                _ => {}
+            }
+
             Ok(Stmt::Labeled(LabeledStmt {
                 span: span!(start),
-                label,
+                label: l,
                 body,
             }))
         })
