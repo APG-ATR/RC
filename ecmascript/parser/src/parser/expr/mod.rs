@@ -291,9 +291,21 @@ impl<'a, I: Tokens> Parser<'a, I> {
                     js_word!("eval") | js_word!("arguments") => {
                         self.emit_err(id.span, SyntaxError::EvalAndArgumentsInStrict)
                     }
+
+                    js_word!("yield")
+                    | js_word!("static")
+                    | js_word!("implements")
+                    | js_word!("let")
+                    | js_word!("package")
+                    | js_word!("private")
+                    | js_word!("protected")
+                    | js_word!("public") => {
+                        self.emit_err(self.input.prev_span(), SyntaxError::InvalidIdentInStrict);
+                    }
                     _ => {}
                 }
             }
+
             if can_be_arrow && id.sym == js_word!("async") && is!(BindingIdent) {
                 // async a => body
                 let arg = self.parse_binding_ident().map(Pat::from)?;

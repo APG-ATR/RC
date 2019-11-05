@@ -259,6 +259,18 @@ impl<'a, I: Tokens> Parser<'a, I> {
             _ => {}
         }
 
+        if self.ctx().strict {
+            match *expr {
+                Expr::Ident(Ident { ref sym, span, .. }) => match sym {
+                    js_word!("enum") | js_word!("interface") => {
+                        self.emit_err(span, SyntaxError::InvalidIdentInStrict);
+                    }
+                    _ => {}
+                },
+                _ => {}
+            }
+        }
+
         if eat!(';') {
             Ok(Stmt::Expr(expr))
         } else {
