@@ -482,7 +482,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
         if for_loop
             && is_one_of!("of", "in")
-            && !(peeked_is!('=') || peeked_is!("of") || peeked_is!("in") || peeked_is!(';'))
+            && !(peeked_is!('=') || peeked_is!("of") || peeked_is!("in"))
         {
             self.emit_err(var_span, SyntaxError::TS1123);
             return Ok(VarDecl {
