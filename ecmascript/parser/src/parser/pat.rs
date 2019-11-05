@@ -22,14 +22,14 @@ impl<'a, I: Tokens> Parser<'a, I> {
         let ident = self.parse_ident(true, true)?;
         if self.ctx().strict {
             if &*ident.sym == "arguments" || &*ident.sym == "eval" {
-                syntax_error!(SyntaxError::EvalAndArgumentsInStrict);
+                self.emit_err(ident.span, SyntaxError::EvalAndArgumentsInStrict);
             }
         }
         if self.ctx().in_async && ident.sym == js_word!("await") {
-            syntax_error!(ident.span, SyntaxError::ExpectedIdent)
+            self.emit_err(ident.span, SyntaxError::ExpectedIdent);
         }
         if self.ctx().in_generator && ident.sym == js_word!("yield") {
-            syntax_error!(ident.span, SyntaxError::ExpectedIdent)
+            self.emit_err(ident.span, SyntaxError::ExpectedIdent);
         }
 
         Ok(ident)
