@@ -182,7 +182,28 @@ impl<'a, I: Tokens> Parser<'a, I> {
             };
             let arg = self.parse_unary_expr()?;
             let span = Span::new(start, arg.span().hi(), Default::default());
-            return Ok(Box::new(Expr::Unary(UnaryExpr { span, op, arg })));
+
+            if self.ctx().strict {
+                if op == op!("delete") {
+                    match *arg {
+                        Expr::Ident(ref i) => self.emit_err(i.span, SyntaxError::TS1102),
+                        _ => {}
+                    }
+                }
+            }
+
+            if op == op!("delete") {
+                match *arg {
+                    Expr::Member(..) => {}
+                    _ => self.emit_err(arg.span(), SyntaxError::TS2703),
+                }
+            }
+
+            return Ok(Box::new(Expr::Unary(UnaryExpr {
+                span: span!(start),
+                op,
+                arg,
+            })));
         }
 
         if self.ctx().in_async && is!("await") {
