@@ -480,6 +480,7 @@ impl<'a> Emitter<'a> {
             Expr::TsConstAssertion(ref n) => emit!(n),
             Expr::TsTypeCast(ref n) => emit!(n),
             Expr::TsOptChain(ref n) => emit!(n),
+            Expr::Invalid(..) => unimplemented!("emit Expr::Invalid"),
         }
     }
 
@@ -1446,7 +1447,7 @@ impl<'a> Emitter<'a> {
             Pat::Ident(ref n) => emit!(n),
             Pat::Object(ref n) => emit!(n),
             Pat::Rest(ref n) => emit!(n),
-            Pat::Invalid(..) => unimplemented!(),
+            Pat::Invalid(..) => unimplemented!("emit Pat::Invalid"),
         }
     }
 
