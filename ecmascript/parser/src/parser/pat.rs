@@ -319,8 +319,6 @@ impl<'a, I: Tokens> Parser<'a, I> {
         pat_ty: PatType,
         expr: Box<Expr>,
     ) -> PResult<'a, Pat> {
-        let span = expr.span();
-
         if pat_ty == PatType::AssignPat {
             match *expr {
                 Expr::Object(..) | Expr::Array(..) => {
@@ -332,22 +330,43 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
                 _ => {
                     self.check_assign_target(&expr);
-
-                    match *expr {
-                        // It is a Syntax Error if the LeftHandSideExpression is
-                        // CoverParenthesizedExpressionAndArrowParameterList:(Expression) and
-                        // Expression derives a phrase that would produce a Syntax Error according
-                        // to these rules if that phrase were substituted for
-                        // LeftHandSideExpression. This rule is recursively applied.
-                        Expr::Paren(ParenExpr { expr, .. }) => {
-                            return self.reparse_expr_as_pat(pat_ty, expr);
-                        }
-                        Expr::Ident(i) => return Ok(i.into()),
-                        _ => {
-                            return Ok(Pat::Expr(expr));
-                        }
-                    }
                 }
+            }
+        }
+
+        self.reparse_expr_as_pat_inner(pat_ty, expr)
+    }
+
+    pub(super) fn reparse_expr_as_pat_inner(
+        &mut self,
+        pat_ty: PatType,
+        expr: Box<Expr>,
+    ) -> PResult<'a, Pat> {
+        let span = expr.span();
+
+        if pat_ty == PatType::AssignPat {
+            match *expr {
+                Expr::Object(..) | Expr::Array(..) => {
+                    // It is a Syntax Error if LeftHandSideExpression is either
+                    // an ObjectLiteral or an ArrayLiteral
+                    // and LeftHandSideExpression cannot
+                    // be reparsed as an AssignmentPattern.
+                }
+
+                _ => match *expr {
+                    // It is a Syntax Error if the LeftHandSideExpression is
+                    // CoverParenthesizedExpressionAndArrowParameterList:(Expression) and
+                    // Expression derives a phrase that would produce a Syntax Error according
+                    // to these rules if that phrase were substituted for
+                    // LeftHandSideExpression. This rule is recursively applied.
+                    Expr::Paren(ParenExpr { expr, .. }) => {
+                        return self.reparse_expr_as_pat_inner(pat_ty, expr);
+                    }
+                    Expr::Ident(i) => return Ok(i.into()),
+                    _ => {
+                        return Ok(Pat::Expr(expr));
+                    }
+                },
             }
         }
 
