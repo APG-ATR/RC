@@ -102,6 +102,28 @@ impl<'a, I: Tokens> Parser<'a, I> {
         })
     }
 
+    pub fn parse_typescript_module(&mut self) -> PResult<'a, Module> {
+        assert!(self.syntax().typescript());
+
+        //TODO: parse() -> PResult<'a, Program>
+        let ctx = Context {
+            module: true,
+            //            strict: true,
+            ..self.ctx()
+        };
+        // Module code is always in strict mode
+        self.set_ctx(ctx);
+
+        let start = cur_pos!();
+        let shebang = self.parse_shebang()?;
+
+        self.parse_block_body(true, true, None).map(|body| Module {
+            span: span!(start),
+            body,
+            shebang,
+        })
+    }
+
     pub fn parse_module(&mut self) -> PResult<'a, Module> {
         //TODO: parse() -> PResult<'a, Program>
         let ctx = Context {
