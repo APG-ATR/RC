@@ -1,5 +1,5 @@
 //! Parser for unary operations and binary operations.
-use super::{util::ExprExt, *};
+use super::*;
 use crate::token::Keyword;
 use swc_common::Spanned;
 
@@ -220,10 +220,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         }
 
         if is_one_of!("++", "--") {
-            if !expr.is_valid_simple_assignment_target(self.ctx().strict) {
-                // This is early ReferenceError
-                self.emit_err(expr.span(), SyntaxError::NotSimpleAssign)
-            }
+            self.check_assign_target(&expr);
 
             let start = cur_pos!();
             let op = if bump!() == tok!("++") {

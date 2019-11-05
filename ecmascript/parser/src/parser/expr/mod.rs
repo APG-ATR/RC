@@ -1368,6 +1368,20 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
         self.parse_subscripts(ExprOrSuper::Expr(import), true)
     }
+
+    pub(super) fn check_assign_target(&mut self, expr: &Expr) {
+        let is_eval_or_arguments = match *expr {
+            Expr::Ident(ref i) => i.sym == js_word!("eval") || i.sym == js_word!("arguments"),
+            _ => false,
+        };
+
+        // It is an early Reference Error if LeftHandSideExpression is neither
+        // an ObjectLiteral nor an ArrayLiteral and
+        // IsValidSimpleAssignmentTarget of LeftHandSideExpression is false.
+        if !is_eval_or_arguments && !expr.is_valid_simple_assignment_target(self.ctx().strict) {
+            self.emit_err(expr.span(), SyntaxError::TS2406);
+        }
+    }
 }
 
 fn is_import(obj: &ExprOrSuper) -> bool {
