@@ -7,7 +7,39 @@ use swc_common::Spanned;
 impl<'a, I: Tokens> Parser<'a, I> {
     /// Name from spec: 'LogicalORExpression'
     pub(super) fn parse_bin_expr(&mut self) -> PResult<'a, (Box<Expr>)> {
-        let left = self.parse_unary_expr()?;
+        let ctx = self.ctx();
+
+        let left = match self.parse_unary_expr() {
+            Ok(v) => v,
+            Err(mut err) => {
+                match {
+                    match cur!(false) {
+                        Ok(cur) => cur,
+                        Err(..) => return Err(err),
+                    }
+                } {
+                    &Word(Word::Keyword(Keyword::In)) if ctx.include_in_expr => {
+                        err.cancel();
+
+                        self.emit_err(self.input.cur_span(), SyntaxError::TS1109);
+
+                        Box::new(Expr::Invalid(Invalid {
+                            span: err.span.primary_span().unwrap(),
+                        }))
+                    }
+                    &Word(Word::Keyword(Keyword::InstanceOf)) | &Token::BinOp(..) => {
+                        err.cancel();
+
+                        self.emit_err(self.input.cur_span(), SyntaxError::TS1109);
+
+                        Box::new(Expr::Invalid(Invalid {
+                            span: err.span.primary_span().unwrap(),
+                        }))
+                    }
+                    _ => return Err(err),
+                }
+            }
+        };
 
         return_if_arrow!(left);
         self.parse_bin_op_recursively(left, 0)
