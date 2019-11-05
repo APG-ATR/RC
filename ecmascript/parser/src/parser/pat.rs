@@ -335,7 +335,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                     // an ObjectLiteral nor an ArrayLiteral and
                     // IsValidSimpleAssignmentTarget of LeftHandSideExpression is false.
                     if !expr.is_valid_simple_assignment_target(self.ctx().strict) {
-                        syntax_error!(span, SyntaxError::NotSimpleAssign)
+                        self.emit_err(span, SyntaxError::TS2406);
                     }
                     match *expr {
                         // It is a Syntax Error if the LeftHandSideExpression is
