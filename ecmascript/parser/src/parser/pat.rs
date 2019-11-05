@@ -373,7 +373,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 | Expr::Class(..)
                 | Expr::Tpl(..) => {
                     if !expr.is_valid_simple_assignment_target(self.ctx().strict) {
-                        syntax_error!(span, SyntaxError::NotSimpleAssign)
+                        self.emit_err(span, SyntaxError::NotSimpleAssign)
                     }
                     match *expr {
                         Expr::Ident(i) => return Ok(i.into()),

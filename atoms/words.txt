@@ -576,6 +576,7 @@ abstract
 any
 apply
 arguments
+arguments
 as
 async
 await
@@ -601,6 +602,7 @@ do
 else
 enum
 env
+eval
 export
 extends
 false

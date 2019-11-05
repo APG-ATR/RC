@@ -129,7 +129,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                     //It is an early Reference Error if IsValidSimpleAssignmentTarget of
                     // LeftHandSideExpression is false.
                     if !cond.is_valid_simple_assignment_target(self.ctx().strict) {
-                        syntax_error!(cond.span(), SyntaxError::NotSimpleAssign)
+                        self.emit_err(cond.span(), SyntaxError::NotSimpleAssign)
                     }
 
                     // TODO

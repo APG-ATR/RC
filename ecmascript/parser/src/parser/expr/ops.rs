@@ -157,7 +157,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
             let arg = self.parse_unary_expr()?;
             if !arg.is_valid_simple_assignment_target(self.ctx().strict) {
                 // This is early ReferenceError
-                syntax_error!(arg.span(), SyntaxError::NotSimpleAssign)
+                self.emit_err(arg.span(), SyntaxError::NotSimpleAssign)
             }
             let span = Span::new(start, arg.span().hi(), Default::default());
             return Ok(Box::new(Expr::Update(UpdateExpr {
@@ -200,8 +200,8 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
         if is_one_of!("++", "--") {
             if !expr.is_valid_simple_assignment_target(self.ctx().strict) {
-                // This is eary ReferenceError
-                syntax_error!(expr.span(), SyntaxError::NotSimpleAssign)
+                // This is early ReferenceError
+                self.emit_err(expr.span(), SyntaxError::NotSimpleAssign)
             }
 
             let start = cur_pos!();
