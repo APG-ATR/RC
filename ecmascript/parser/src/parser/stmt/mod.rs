@@ -656,7 +656,11 @@ impl<'a, I: Tokens> Parser<'a, I> {
         let obj = self.include_in_expr(true).parse_expr()?;
         expect!(')');
 
-        let body = self.parse_stmt(false).map(Box::new)?;
+        let ctx = Context {
+            in_function: true,
+            ..self.ctx()
+        };
+        let body = self.with_ctx(ctx).parse_stmt(false).map(Box::new)?;
 
         let span = span!(start);
         Ok(Stmt::With(WithStmt { span, obj, body }))
