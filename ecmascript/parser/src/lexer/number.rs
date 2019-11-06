@@ -108,7 +108,10 @@ impl<'a, I: Input> Lexer<'a, I> {
         if self.eat('e') || self.eat('E') {
             let next = match self.cur() {
                 Some(next) => next,
-                None => self.error(start, SyntaxError::NumLitTerminatedWithExp)?,
+                None => {
+                    let pos = self.cur_pos();
+                    self.error(pos, SyntaxError::NumLitTerminatedWithExp)?
+                }
             };
 
             let positive = if next == '+' || next == '-' {
