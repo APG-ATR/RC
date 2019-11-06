@@ -247,12 +247,20 @@ impl<'a, I: Tokens> Parser<'a, I> {
     pub(super) fn parse_formal_params(&mut self) -> PResult<'a, Vec<Pat>> {
         let mut first = true;
         let mut params = vec![];
+        let mut dot3_token = Span::default();
 
         while !eof!() && !is!(')') {
             if first {
                 first = false;
             } else {
-                expect!(',');
+                if dot3_token.is_dummy() {
+                    expect!(',');
+                } else {
+                    // We are handling error.
+
+                    eat!(',');
+                }
+
                 // Handle trailing comma.
                 if is!(')') {
                     break;
@@ -261,8 +269,12 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
             let start = cur_pos!();
 
+            if !dot3_token.is_dummy() {
+                self.emit_err(dot3_token, SyntaxError::TS1014);
+            }
+
             if eat!("...") {
-                let dot3_token = span!(start);
+                dot3_token = span!(start);
 
                 let pat = self.parse_binding_pat_or_ident()?;
                 let type_ann = if self.input.syntax().typescript() && is!(':') {
@@ -278,10 +290,13 @@ impl<'a, I: Tokens> Parser<'a, I> {
                     type_ann,
                 });
                 params.push(pat);
-                break;
-            } else {
-                params.push(self.parse_formal_param()?);
+                // continue instead of break to recover from
+                //
+                //      function foo(...A, B) { }
+                continue;
             }
+
+            params.push(self.parse_formal_param()?);
         }
 
         Ok(params)
