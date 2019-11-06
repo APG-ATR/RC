@@ -280,17 +280,6 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 let type_ann = if self.input.syntax().typescript() && is!(':') {
                     let cur_pos = cur_pos!();
                     let ty = self.parse_ts_type_ann(/* eat_colon */ true, cur_pos)?;
-
-                    match *ty.type_ann {
-                        TsType::TsArrayType(..)
-                        | TsType::TsKeywordType(TsKeywordType {
-                            kind: TsKeywordTypeKind::TsAnyKeyword,
-                            ..
-                        }) => {}
-
-                        _ => self.emit_err(dot3_token, SyntaxError::TS2370),
-                    }
-
                     Some(ty)
                 } else {
                     None
