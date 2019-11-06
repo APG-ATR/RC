@@ -772,7 +772,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
     }
 }
 
-impl<'a, I: Input> Parser<'a, I> {
+impl<'a, I: Tokens> Parser<'a, I> {
     fn make_method<F>(
         &mut self,
         parse_args: F,

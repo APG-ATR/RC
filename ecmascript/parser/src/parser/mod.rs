@@ -4,13 +4,12 @@ pub use self::input::{Capturing, Tokens, TokensInput};
 use self::{input::Buffer, util::ParseObject};
 use crate::{
     error::{ErrorToDiag, SyntaxError},
-    lexer::{Input, Lexer},
+    lexer::Lexer,
     parser_macros::parser,
     token::{Token, Word},
     Context, JscTarget, Session, Syntax,
 };
 use ast::*;
-use lexer::Lexer;
 use std::ops::{Deref, DerefMut};
 use swc_atoms::JsWord;
 use swc_common::{comments::Comments, errors::DiagnosticBuilder, input::Input, BytePos, Span};
@@ -61,24 +60,13 @@ impl<'a, I: Input> Parser<'a, Lexer<'a, I>> {
 #[parser]
 impl<'a, I: Tokens> Parser<'a, I> {
     pub fn new_from(session: Session<'a>, input: I) -> Self {
+        Self::new_with(session, input, Default::default(), Default::default())
+    }
+
+    pub fn new_with(session: Session<'a>, input: I, syntax: Syntax, target: JscTarget) -> Self {
         Parser {
             session,
             input: Buffer::new(input),
-            state: Default::default(),
-            target: Default::default(),
-        }
-    }
-
-    pub fn new2(
-        session: Session<'a>,
-        syntax: Syntax,
-        input: I,
-        comments: Option<&'a Comments>,
-        target: JscTarget,
-    ) -> Self {
-        Parser {
-            session,
-            input: ParserInput::new(Lexer::new(session, syntax, input, comments)),
             state: Default::default(),
             target,
         }
