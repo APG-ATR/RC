@@ -165,6 +165,7 @@ pub enum SyntaxError {
     TS1009,
     TS1014,
     TS1038,
+    TS1047,
     TS1056,
     TS1102,
     TS1105,

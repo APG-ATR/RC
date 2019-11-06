@@ -291,6 +291,12 @@ impl<'a, I: Tokens> Parser<'a, I> {
                     type_ann,
                 });
                 params.push(pat);
+
+                if self.syntax().typescript() && eat!('?') {
+                    self.emit_err(self.input.prev_span(), SyntaxError::TS1047);
+                    //
+                }
+
                 // continue instead of break to recover from
                 //
                 //      function foo(...A, B) { }
