@@ -590,7 +590,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                         PropName::Ident(i) => Box::new(Expr::Ident(i)),
                         PropName::Str(s) => Box::new(Expr::Lit(Lit::Str(s))),
                         PropName::Num(n) => Box::new(Expr::Lit(Lit::Num(n))),
-                        PropName::Computed(e) => e,
+                        PropName::Computed(e) => e.expr,
                     },
                     value,
                     is_static,

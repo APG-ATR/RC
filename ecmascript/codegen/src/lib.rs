@@ -817,12 +817,15 @@ impl<'a> Emitter<'a> {
             PropName::Ident(ref n) => emit!(n),
             PropName::Str(ref n) => emit!(n),
             PropName::Num(ref n) => emit!(n),
-            PropName::Computed(ref n) => {
-                punct!("[");
-                emit!(n);
-                punct!("]");
-            }
+            PropName::Computed(ref n) => emit!(n),
         }
+    }
+
+    #[emitter]
+    pub fn emit_computed_prop_name(&mut self, node: &ComputedPropName) -> Result {
+        punct!("[");
+        emit!(node.expr);
+        punct!("]");
     }
 
     #[emitter]

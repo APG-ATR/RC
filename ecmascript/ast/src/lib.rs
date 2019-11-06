@@ -47,7 +47,10 @@ pub use self::{
     pat::{
         ArrayPat, AssignPat, AssignPatProp, KeyValuePatProp, ObjectPat, ObjectPatProp, Pat, RestPat,
     },
-    prop::{AssignProp, GetterProp, KeyValueProp, MethodProp, Prop, PropName, SetterProp},
+    prop::{
+        AssignProp, ComputedPropName, GetterProp, KeyValueProp, MethodProp, Prop, PropName,
+        SetterProp,
+    },
     stmt::{
         BlockStmt, BreakStmt, CatchClause, ContinueStmt, DebuggerStmt, DoWhileStmt, EmptyStmt,
         ForInStmt, ForOfStmt, ForStmt, IfStmt, LabeledStmt, ReturnStmt, Stmt, SwitchCase,

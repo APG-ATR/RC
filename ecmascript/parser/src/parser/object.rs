@@ -66,12 +66,14 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 },
                 tok!('[') => {
                     bump!();
-                    let expr = p
-                        .include_in_expr(true)
-                        .parse_assignment_expr()
-                        .map(PropName::Computed)?;
+                    let expr = p.include_in_expr(true).parse_assignment_expr()?;
+
                     expect!(']');
-                    expr
+
+                    PropName::Computed(ComputedPropName {
+                        span: span!(start),
+                        expr,
+                    })
                 }
                 _ => unexpected!(),
             };
