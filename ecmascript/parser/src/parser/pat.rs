@@ -121,7 +121,20 @@ impl<'a, I: Tokens> Parser<'a, I> {
     pub(super) fn parse_formal_param(&mut self) -> PResult<'a, Pat> {
         let start = cur_pos!();
 
+        let has_modifier = self.syntax().typescript()
+            && match *cur!(false)? {
+                Word(Word::Ident(js_word!("public")))
+                | Word(Word::Ident(js_word!("protected")))
+                | Word(Word::Ident(js_word!("private")))
+                | Word(Word::Ident(js_word!("readonly"))) => true,
+                _ => false,
+            }
+            && (peeked_is!(IdentName) || peeked_is!('{') || peeked_is!('['));
+        if has_modifier {
+            let _ = self.parse_ts_modifier(&["public", "protected", "private", "readonly"]);
+        }
         let mut pat = self.parse_binding_element()?;
+
         if self.input.syntax().typescript() {
             if eat!('?') {
                 match pat {
@@ -155,20 +168,29 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 }) => {
                     *type_ann = self.try_parse_ts_type_ann()?;
                 }
+                Pat::Invalid(..) => {}
                 _ => unreachable!("invalid syntax: Pat: {:?}", pat),
             }
         }
-        if eat!('=') {
+
+        let pat = if eat!('=') {
             let right = self.parse_assignment_expr()?;
-            Ok(Pat::Assign(AssignPat {
+            Pat::Assign(AssignPat {
                 span: span!(start),
                 left: Box::new(pat),
                 type_ann: None,
                 right,
-            }))
+            })
         } else {
-            Ok(pat)
+            pat
+        };
+
+        if has_modifier {
+            self.emit_err(span!(start), SyntaxError::TS2369);
+            return Ok(pat);
         }
+
+        Ok(pat)
     }
 
     pub(super) fn parse_constructor_params(&mut self) -> PResult<'a, Vec<PatOrTsParamProp>> {
