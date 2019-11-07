@@ -312,7 +312,20 @@ impl<'a, I: Tokens> Parser<'a, I> {
             if eat!("...") {
                 dot3_token = span!(start);
 
-                let pat = self.parse_binding_pat_or_ident()?;
+                let mut pat = self.parse_binding_pat_or_ident()?;
+
+                if eat!('=') {
+                    let right = self.parse_assignment_expr()?;
+                    self.emit_err(pat.span(), SyntaxError::TS1048);
+                    pat = AssignPat {
+                        span: span!(start),
+                        left: Box::new(pat),
+                        right,
+                        type_ann: None,
+                    }
+                    .into();
+                }
+
                 let type_ann = if self.input.syntax().typescript() && is!(':') {
                     let cur_pos = cur_pos!();
                     let ty = self.parse_ts_type_ann(/* eat_colon */ true, cur_pos)?;
