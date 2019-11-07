@@ -1109,7 +1109,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
             let optional = if self.input.syntax().typescript() {
                 if is!('?') {
                     if peeked_is!(',') || peeked_is!(':') || peeked_is!(')') || peeked_is!('=') {
-                        bump!();
+                        assert_and_bump!('?');
                         let _ = cur!(false);
                         match *arg.expr {
                             Expr::Ident(..) => {}
