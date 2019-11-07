@@ -552,7 +552,9 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
             match res {
                 Ok(true) => {
-                    self.emit_err(var_span, SyntaxError::TS1123);
+                    let pos = var_span.hi();
+                    let span = Span::new(pos, pos, Default::default());
+                    self.emit_err(span, SyntaxError::TS1123);
 
                     return Ok(VarDecl {
                         span: span!(start),
