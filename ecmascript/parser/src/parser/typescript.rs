@@ -245,12 +245,20 @@ impl<'a, I: Tokens> Parser<'a, I> {
         debug_assert!(self.input.syntax().typescript());
 
         let start = cur_pos!();
+
+        let has_modifier = self.eat_any_ts_modifier()?;
+
         let type_name = self.parse_ts_entity_name(/* allow_reserved_words */ true)?;
         let type_params = if !self.input.had_line_break_before_cur() && is!('<') {
             Some(self.parse_ts_type_args()?)
         } else {
             None
         };
+
+        if has_modifier {
+            self.emit_err(span!(start), SyntaxError::TS2369);
+        }
+
         Ok(TsTypeRef {
             span: span!(start),
             type_name,
@@ -973,6 +981,8 @@ impl<'a, I: Tokens> Parser<'a, I> {
     /// `tsSkipParameterStart`
     fn skip_ts_parameter_start(&mut self) -> PResult<'a, bool> {
         debug_assert!(self.input.syntax().typescript());
+
+        let _ = self.eat_any_ts_modifier()?;
 
         if is_one_of!(IdentRef, "this") {
             bump!();
