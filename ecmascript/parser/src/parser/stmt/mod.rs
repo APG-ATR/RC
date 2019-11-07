@@ -537,6 +537,37 @@ impl<'a, I: Tokens> Parser<'a, I> {
         let var_span = span!(start);
         let should_include_in = kind != VarDeclKind::Var || !for_loop;
 
+        if self.syntax().typescript() && for_loop {
+            let res = self.ts_look_ahead(|p| {
+                //
+                if !eat!("of") && !eat!("in") {
+                    return Ok(false);
+                }
+
+                p.parse_assignment_expr()?;
+                expect!(')');
+
+                Ok(true)
+            });
+
+            match res {
+                Ok(true) => {
+                    self.emit_err(var_span, SyntaxError::TS1123);
+
+                    return Ok(VarDecl {
+                        span: span!(start),
+                        kind,
+                        declare: false,
+                        decls: vec![],
+                    });
+                }
+                Err(mut err) => {
+                    err.cancel();
+                }
+                _ => {}
+            }
+        }
+
         let mut decls = vec![];
         let mut first = true;
         while first || eat!(',') {

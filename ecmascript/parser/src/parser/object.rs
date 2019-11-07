@@ -66,7 +66,27 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 },
                 tok!('[') => {
                     bump!();
-                    let expr = p.include_in_expr(true).parse_assignment_expr()?;
+                    let inner_start = cur_pos!();
+
+                    let mut expr = p.include_in_expr(true).parse_assignment_expr()?;
+
+                    if p.syntax().typescript() && is!(',') {
+                        let mut exprs = vec![expr];
+
+                        while eat!(',') {
+                            exprs.push(p.include_in_expr(true).parse_assignment_expr()?);
+                        }
+
+                        p.emit_err(span!(inner_start), SyntaxError::TS1171);
+
+                        expr = Box::new(
+                            SeqExpr {
+                                span: span!(inner_start),
+                                exprs,
+                            }
+                            .into(),
+                        );
+                    }
 
                     expect!(']');
 
