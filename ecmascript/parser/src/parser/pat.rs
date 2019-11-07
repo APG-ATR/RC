@@ -115,12 +115,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         }))
     }
 
-    /// spec: 'FormalParameter'
-    ///
-    /// babel: `parseAssignableListItem`
-    pub(super) fn parse_formal_param(&mut self) -> PResult<'a, Pat> {
-        let start = cur_pos!();
-
+    pub(super) fn eat_any_ts_modifier(&mut self) -> PResult<'a, bool> {
         let has_modifier = self.syntax().typescript()
             && match *cur!(false)? {
                 Word(Word::Ident(js_word!("public")))
@@ -133,6 +128,18 @@ impl<'a, I: Tokens> Parser<'a, I> {
         if has_modifier {
             let _ = self.parse_ts_modifier(&["public", "protected", "private", "readonly"]);
         }
+
+        return Ok(has_modifier);
+    }
+
+    /// spec: 'FormalParameter'
+    ///
+    /// babel: `parseAssignableListItem`
+    pub(super) fn parse_formal_param(&mut self) -> PResult<'a, Pat> {
+        let start = cur_pos!();
+
+        let has_modifier = self.eat_any_ts_modifier()?;
+
         let mut pat = self.parse_binding_element()?;
 
         if self.input.syntax().typescript() {

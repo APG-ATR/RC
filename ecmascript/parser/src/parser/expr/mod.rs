@@ -1067,7 +1067,11 @@ impl<'a, I: Tokens> Parser<'a, I> {
                     break;
                 }
             }
+
             let start = cur_pos!();
+            let modifier_start = start;
+
+            let has_modifier = self.eat_any_ts_modifier()?;
 
             let mut arg = {
                 if self.input.syntax().typescript()
@@ -1101,6 +1105,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                     self.include_in_expr(true).parse_expr_or_spread()?
                 }
             };
+
             let optional = if self.input.syntax().typescript() {
                 if is!('?') {
                     if peeked_is!(',') || peeked_is!(':') || peeked_is!(')') || peeked_is!('=') {
@@ -1205,8 +1210,16 @@ impl<'a, I: Tokens> Parser<'a, I> {
                     });
                 }
 
+                if has_modifier {
+                    self.emit_err(span!(modifier_start), SyntaxError::TS2369);
+                }
+
                 items.push(PatOrExprOrSpread::Pat(pat))
             } else {
+                if has_modifier {
+                    self.emit_err(span!(modifier_start), SyntaxError::TS2369);
+                }
+
                 items.push(PatOrExprOrSpread::ExprOrSpread(arg));
             }
 
