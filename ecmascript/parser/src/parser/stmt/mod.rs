@@ -179,6 +179,26 @@ impl<'a, I: Tokens> Parser<'a, I> {
             return self.parse_throw_stmt();
         }
 
+        // Error
+        if is!("catch") {
+            let span = self.input.cur_span();
+            self.emit_err(span, SyntaxError::TS1005);
+
+            let _ = self.parse_catch_clause();
+            let _ = self.parse_finally_block();
+
+            return Ok(Stmt::Expr(Box::new(Expr::Invalid(Invalid { span }))));
+        }
+
+        if is!("finally") {
+            let span = self.input.cur_span();
+            self.emit_err(span, SyntaxError::TS1005);
+
+            let _ = self.parse_finally_block();
+
+            return Ok(Stmt::Expr(Box::new(Expr::Invalid(Invalid { span }))));
+        }
+
         if is!("try") {
             return self.parse_try_stmt();
         }
@@ -438,34 +458,17 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
     fn parse_try_stmt(&mut self) -> PResult<'a, Stmt> {
         let start = cur_pos!();
-
         assert_and_bump!("try");
 
         let block = self.parse_block(false)?;
 
         let catch_start = cur_pos!();
-        let handler = if eat!("catch") {
-            let param = self.parse_catch_param()?;
+        let handler = self.parse_catch_clause()?;
+        let finalizer = self.parse_finally_block()?;
 
-            self.parse_block(false)
-                .map(|body| CatchClause {
-                    span: span!(catch_start),
-                    param,
-                    body,
-                })
-                .map(Some)?
-        } else {
-            None
-        };
-
-        let finalizer = if eat!("finally") {
-            self.parse_block(false).map(Some)?
-        } else {
-            if handler.is_none() {
-                unexpected!();
-            }
-            None
-        };
+        if handler.is_none() && finalizer.is_none() {
+            self.emit_err(span!(catch_start), SyntaxError::TS1005);
+        }
 
         let span = span!(start);
         Ok(Stmt::Try(TryStmt {
@@ -474,6 +477,32 @@ impl<'a, I: Tokens> Parser<'a, I> {
             handler,
             finalizer,
         }))
+    }
+
+    fn parse_catch_clause(&mut self) -> PResult<'a, Option<CatchClause>> {
+        let start = cur_pos!();
+
+        Ok(if eat!("catch") {
+            let param = self.parse_catch_param()?;
+
+            self.parse_block(false)
+                .map(|body| CatchClause {
+                    span: span!(start),
+                    param,
+                    body,
+                })
+                .map(Some)?
+        } else {
+            None
+        })
+    }
+
+    fn parse_finally_block(&mut self) -> PResult<'a, Option<BlockStmt>> {
+        Ok(if eat!("finally") {
+            self.parse_block(false).map(Some)?
+        } else {
+            None
+        })
     }
 
     /// It's optional since es2019
