@@ -93,6 +93,7 @@ impl Fold for InjectSelf {
             || i.method == "spanned"
             || i.method == "try_parse_ts"
             || i.method == "ts_in_no_context"
+            || i.method == "ts_look_ahead"
         {
             //TODO
             let parser = get_parser_arg(&i);

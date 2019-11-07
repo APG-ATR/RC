@@ -940,7 +940,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         })
     }
 
-    fn ts_look_ahead<T, F>(&mut self, op: F) -> PResult<'a, T>
+    pub(super) fn ts_look_ahead<T, F>(&mut self, op: F) -> PResult<'a, T>
     where
         F: FnOnce(&mut Self) -> PResult<'a, T>,
     {
