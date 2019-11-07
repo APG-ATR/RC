@@ -183,12 +183,16 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
             _ => unexpected!(),
         };
 
+        if eat!('?') {
+            self.emit_err(self.input.prev_span(), SyntaxError::TS1162);
+        }
+
         // `ident` from parse_prop_name is parsed as 'IdentifierName'
         // It means we should check for invalid expressions like { for, }
         if is_one_of!('=', ',', '}') {
             let is_reserved_word = { self.ctx().is_reserved_word(&ident.sym) };
             if is_reserved_word {
-                syntax_error!(ident.span, SyntaxError::ReservedWordInObjShorthandOrPat);
+                self.emit_err(ident.span, SyntaxError::ReservedWordInObjShorthandOrPat);
             }
 
             if eat!('=') {
@@ -198,6 +202,7 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
                     value,
                 }))));
             }
+
             return Ok(PropOrSpread::Prop(Box::new(Prop::from(ident))));
         }
 
@@ -379,7 +384,7 @@ impl<'a, I: Tokens> ParseObject<'a, Pat> for Parser<'a, I> {
                 .map(Some)?
         } else {
             if self.ctx().is_reserved_word(&key.sym) {
-                syntax_error!(key.span, SyntaxError::ReservedWordInObjShorthandOrPat);
+                self.emit_err(key.span, SyntaxError::ReservedWordInObjShorthandOrPat);
             }
 
             None
