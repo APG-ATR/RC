@@ -372,7 +372,27 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 expect!('(');
                 let params = self.parse_constructor_params()?;
                 expect!(')');
-                let body = self.parse_fn_body(false, false)?;
+                let body: Option<_> = self.parse_fn_body(false, false)?;
+
+                if self.syntax().typescript() && body.is_none() {
+                    // Declare constructors cannot have assignment pattern in parameters
+                    for p in &params {
+                        // TODO: Search deeply for assignment pattern using a Visitor
+
+                        let span = match *p {
+                            PatOrTsParamProp::Pat(Pat::Assign(ref p)) => Some(p.span()),
+                            PatOrTsParamProp::TsParamProp(TsParamProp {
+                                param: TsParamPropParam::Assign(ref p),
+                                ..
+                            }) => Some(p.span()),
+                            _ => None,
+                        };
+
+                        if let Some(span) = span {
+                            self.emit_err(span, SyntaxError::TS2371)
+                        }
+                    }
+                }
 
                 // TODO: check for duplicate constructors
                 return Ok(ClassMember::Constructor(Constructor {
