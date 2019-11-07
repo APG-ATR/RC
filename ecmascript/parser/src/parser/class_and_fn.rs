@@ -743,7 +743,23 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 None
             };
 
-            let body = p.parse_fn_body(is_async, is_generator)?;
+            let body: Option<_> = p.parse_fn_body(is_async, is_generator)?;
+
+            if p.syntax().typescript() && body.is_none() {
+                // Declare functions cannot have assignment pattern in parameters
+                for pat in &params {
+                    // TODO: Search deeply for assignment pattern using a Visitor
+
+                    let span = match *pat {
+                        Pat::Assign(ref p) => Some(p.span()),
+                        _ => None,
+                    };
+
+                    if let Some(span) = span {
+                        p.emit_err(span, SyntaxError::TS2371)
+                    }
+                }
+            }
 
             Ok(Function {
                 span: span!(start),
