@@ -126,6 +126,9 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
                 });
         }
 
+        let has_modifiers = self.eat_any_ts_modifier()?;
+        let modifiers_span = self.input.prev_span();
+
         let key = self.parse_prop_name()?;
         //
         // {[computed()]: a,}
@@ -184,6 +187,10 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
 
         match ident.sym {
             js_word!("get") | js_word!("set") | js_word!("async") => {
+                if has_modifiers {
+                    self.emit_err(modifiers_span, SyntaxError::TS1042);
+                }
+
                 let key = self.parse_prop_name()?;
                 let key_span = key.span();
 
