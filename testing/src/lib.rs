@@ -99,9 +99,20 @@ impl Tester {
         let (handler, errors) = self::diag_errors::new_handler(self.cm.clone());
         let result = swc_common::GLOBALS.set(&self.globals, || op(self.cm.clone(), handler));
 
+        let mut errs: Vec<_> = errors.into();
+        errs.sort_by_key(|d| {
+            let span = d.span.primary_span().unwrap();
+            let cp = self.cm.lookup_char_pos(span.lo());
+
+            let line = cp.line;
+            let column = cp.col.0 + 1;
+
+            line * 10000 + column
+        });
+
         match result {
             Ok(res) => Ok(res),
-            Err(()) => Err(errors.into()),
+            Err(()) => Err(errs),
         }
     }
 }
