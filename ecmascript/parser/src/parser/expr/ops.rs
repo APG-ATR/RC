@@ -225,9 +225,15 @@ impl<'a, I: Tokens> Parser<'a, I> {
             }
 
             if op == op!("delete") {
+                fn unwrap_paren(e: &Expr) -> &Expr {
+                    match *e {
+                        Expr::Paren(ref p) => unwrap_paren(&p.expr),
+                        _ => e,
+                    }
+                }
                 match *arg {
                     Expr::Member(..) => {}
-                    _ => self.emit_err(arg.span(), SyntaxError::TS2703),
+                    _ => self.emit_err(unwrap_paren(&arg).span(), SyntaxError::TS2703),
                 }
             }
 
