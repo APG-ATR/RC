@@ -608,11 +608,13 @@ impl<'a, I: Tokens> Parser<'a, I> {
             if !eat!(';') {
                 self.emit_err(self.input.cur_span(), SyntaxError::TS1005);
 
+                let _ = self.parse_expr().map_err(|mut e| {
+                    e.emit();
+                    ()
+                });
+
                 while !eat!(';') {
-                    let _ = self.parse_expr().map_err(|mut e| {
-                        e.emit();
-                        ()
-                    });
+                    bump!();
                 }
             }
         }
