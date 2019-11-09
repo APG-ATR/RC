@@ -603,8 +603,18 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
             decls.push(self.with_ctx(ctx).parse_var_declarator(for_loop)?);
         }
+
         if !for_loop {
-            expect!(';');
+            if !eat!(';') {
+                self.emit_err(self.input.cur_span(), SyntaxError::TS1005);
+
+                while !eat!(';') {
+                    let _ = self.parse_expr().map_err(|mut e| {
+                        e.emit();
+                        ()
+                    });
+                }
+            }
         }
 
         Ok(VarDecl {
