@@ -407,7 +407,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 }
 
                 _ => {
-                    self.check_assign_target(&expr);
+                    self.check_assign_target(&expr, true);
                 }
             }
         }

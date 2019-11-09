@@ -144,7 +144,7 @@ pub enum Expr {
 
     #[tag("TsOptionalChainingExpression")]
     TsOptChain(TsOptChain),
-    
+
     #[tag("Invalid")]
     Invalid(Invalid),
 }

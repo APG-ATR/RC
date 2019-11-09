@@ -187,11 +187,9 @@ impl<'a, I: Tokens> Parser<'a, I> {
             };
 
             let arg = self.parse_unary_expr()?;
-            if !arg.is_valid_simple_assignment_target(self.ctx().strict) {
-                // This is early ReferenceError
-                self.emit_err(arg.span(), SyntaxError::NotSimpleAssign)
-            }
             let span = Span::new(start, arg.span().hi(), Default::default());
+            self.check_assign_target(&arg, false);
+
             return Ok(Box::new(Expr::Update(UpdateExpr {
                 span,
                 prefix: true,
@@ -267,7 +265,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         }
 
         if is_one_of!("++", "--") {
-            self.check_assign_target(&expr);
+            self.check_assign_target(&expr, false);
 
             let start = cur_pos!();
             let op = if bump!() == tok!("++") {
