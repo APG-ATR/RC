@@ -212,7 +212,15 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 tok!('!') => op!("!"),
                 _ => unreachable!(),
             };
-            let arg = self.parse_unary_expr()?;
+            let arg = match self.parse_unary_expr() {
+                Ok(expr) => expr,
+                Err(mut err) => {
+                    err.emit();
+                    Box::new(Expr::Invalid(Invalid {
+                        span: self.input.cur_span(),
+                    }))
+                }
+            };
             let span = Span::new(start, arg.span().hi(), Default::default());
 
             if self.ctx().strict {
@@ -232,7 +240,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                     }
                 }
                 match *arg {
-                    Expr::Member(..) => {}
+                    Expr::Invalid(..) | Expr::Member(..) => {}
                     _ => self.emit_err(unwrap_paren(&arg).span(), SyntaxError::TS2703),
                 }
             }
