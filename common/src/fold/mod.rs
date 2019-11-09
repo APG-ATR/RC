@@ -1,7 +1,7 @@
 use self::and_then::AndThen;
 use crate::util::{map::Map, move_map::MoveMap};
 use either::Either;
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::Arc};
 use string_cache::{Atom, StaticAtomSet};
 
 pub mod and_then;
@@ -281,6 +281,16 @@ where
             Either::Left(ref a) => f.visit(a),
             Either::Right(ref b) => f.visit(b),
         }
+    }
+}
+
+impl<T, F> VisitWith<F> for Arc<T>
+where
+    T: ?Sized,
+    F: Visit<T>,
+{
+    fn visit_children(&self, f: &mut F) {
+        f.visit(&**self)
     }
 }
 
