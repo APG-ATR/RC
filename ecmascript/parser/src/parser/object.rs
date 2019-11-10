@@ -150,6 +150,21 @@ impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
         let modifiers_span = self.input.prev_span();
 
         let key = self.parse_prop_name()?;
+
+        if !is_one_of!('(', '[', ':', ',', '?', IdentName)
+            && !(self.input.syntax().typescript() && is!('<'))
+            && !(is!('}')
+                && match key {
+                    PropName::Ident(..) => true,
+                    _ => false,
+                })
+        {
+            self.emit_err(self.input.cur_span(), SyntaxError::TS1005);
+            return Ok(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                key,
+                value: Box::new(Expr::Invalid(Invalid { span: span!(start) })),
+            }))));
+        }
         //
         // {[computed()]: a,}
         // { 'a': a, }
