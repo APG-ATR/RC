@@ -582,7 +582,9 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 None
             };
 
-            expect!(';');
+            if !eat!(';') {
+                p.emit_err(p.input.cur_span(), SyntaxError::TS1005);
+            }
 
             Ok(match key {
                 Either::Left(key) => PrivateProp {
