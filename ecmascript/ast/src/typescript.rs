@@ -688,6 +688,8 @@ pub struct TsEnumMember {
     pub init: Option<Box<Expr>>,
 }
 
+///
+/// - Invalid: [Ident] with empty symbol.
 #[ast_node]
 pub enum TsEnumMemberId {
     #[tag("Identifier")]

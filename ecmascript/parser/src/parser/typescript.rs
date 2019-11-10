@@ -548,6 +548,16 @@ impl<'a, I: Tokens> Parser<'a, I> {
                     has_escape: false,
                 })
             }
+            Token::LBracket => {
+                assert_and_bump!('[');
+                let _ = self.parse_expr()?;
+
+                self.emit_err(span!(start), SyntaxError::TS1164);
+
+                expect!(']');
+
+                TsEnumMemberId::Ident(Ident::new(js_word!(""), span!(start)))
+            }
             _ => self.parse_ident_name().map(TsEnumMemberId::from)?,
         };
 
