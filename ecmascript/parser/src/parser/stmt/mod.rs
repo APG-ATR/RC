@@ -310,6 +310,15 @@ impl<'a, I: Tokens> Parser<'a, I> {
         if eat!(';') {
             Ok(Stmt::Expr(expr))
         } else {
+            match *cur!(false)? {
+                Token::BinOp(..) => {
+                    self.emit_err(self.input.cur_span(), SyntaxError::TS1005);
+                    return self.parse_bin_op_recursively(expr, 0).map(Stmt::Expr);
+                }
+
+                _ => {}
+            }
+
             syntax_error!(SyntaxError::ExpectedSemiForExprStmt { expr: expr.span() });
         }
     }

@@ -52,7 +52,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
     /// operator that has a lower precedence than the set it is parsing.
     ///
     /// `parseExprOp`
-    fn parse_bin_op_recursively(
+    pub(in crate::parser) fn parse_bin_op_recursively(
         &mut self,
         left: Box<Expr>,
         min_prec: u8,
