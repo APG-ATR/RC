@@ -102,11 +102,21 @@ impl<'a, I: Tokens> Parser<'a, I> {
                     };
                 };
             }
+
             let implements = if p.input.syntax().typescript() && eat!("implements") {
                 p.parse_ts_heritage_clause()?
             } else {
                 vec![]
             };
+
+            {
+                // Handle TS1175
+                if p.input.syntax().typescript() && eat!("implements") {
+                    p.emit_err(p.input.prev_span(), SyntaxError::TS1175);
+
+                    p.parse_ts_heritage_clause()?;
+                }
+            }
 
             expect!('{');
             let body = p.parse_class_body()?;
