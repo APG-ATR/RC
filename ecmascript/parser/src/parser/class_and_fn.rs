@@ -89,6 +89,19 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 (None, None)
             };
 
+            {
+                // Handle TS1172
+                if eat!("extends") {
+                    p.emit_err(p.input.prev_span(), SyntaxError::TS1172);
+
+                    p.parse_lhs_expr().map(Some)?;
+                    if p.input.syntax().typescript() && is!('<') {
+                        Some(p.parse_ts_type_args()?)
+                    } else {
+                        None
+                    };
+                };
+            }
             let implements = if p.input.syntax().typescript() && eat!("implements") {
                 p.parse_ts_heritage_clause()?
             } else {
