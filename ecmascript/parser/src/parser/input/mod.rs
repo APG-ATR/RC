@@ -206,7 +206,6 @@ impl<I: Tokens> Buffer<I> {
         prev.token
     }
 
-    #[inline(always)]
     pub fn knows_cur(&self) -> bool {
         self.cur.is_some()
     }

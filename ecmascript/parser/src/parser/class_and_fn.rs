@@ -629,12 +629,10 @@ impl<'a, I: Tokens> Parser<'a, I> {
         })
     }
 
-    #[inline(always)]
     fn is_class_method(&mut self) -> PResult<'a, bool> {
         Ok(is!('(') || (self.input.syntax().typescript() && is!('<')))
     }
 
-    #[inline(always)]
     fn is_class_property(&mut self) -> PResult<'a, bool> {
         Ok((self.input.syntax().typescript() && is_one_of!('!', ':')) || is_one_of!('=', ';', '}'))
     }

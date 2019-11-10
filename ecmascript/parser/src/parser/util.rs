@@ -149,13 +149,12 @@ pub struct WithState<'w, 'a: 'w, I: 'w + Tokens> {
 }
 impl<'w, 'a, I: Tokens> Deref for WithState<'w, 'a, I> {
     type Target = Parser<'a, I>;
-    #[inline(always)]
+
     fn deref(&self) -> &Parser<'a, I> {
         &self.inner
     }
 }
 impl<'w, 'a, I: Tokens> DerefMut for WithState<'w, 'a, I> {
-    #[inline(always)]
     fn deref_mut(&mut self) -> &mut Parser<'a, I> {
         &mut self.inner
     }
@@ -172,13 +171,12 @@ pub struct WithCtx<'w, 'a: 'w, I: 'w + Tokens> {
 }
 impl<'w, 'a, I: Tokens> Deref for WithCtx<'w, 'a, I> {
     type Target = Parser<'a, I>;
-    #[inline(always)]
+
     fn deref(&self) -> &Parser<'a, I> {
         &self.inner
     }
 }
 impl<'w, 'a, I: Tokens> DerefMut for WithCtx<'w, 'a, I> {
-    #[inline(always)]
     fn deref_mut(&mut self) -> &mut Parser<'a, I> {
         &mut self.inner
     }
