@@ -22,7 +22,7 @@ use crate::{
 use hashbrown::HashSet;
 use std::{
     borrow::Cow,
-    cell::{Cell, RefCell},
+    cell::RefCell,
     error, fmt, panic,
     sync::{
         atomic::{AtomicUsize, Ordering::SeqCst},
