@@ -834,10 +834,11 @@ impl<'a, I: Tokens> Parser<'a, I> {
         Self: FnBodyParser<'a, T>,
     {
         if self.ctx().in_declare && self.syntax().typescript() && is!('{') {
-            self.emit_err(
-                self.ctx().span_of_fn_name.expect("we are not in function"),
-                SyntaxError::TS1183,
-            );
+            //            self.emit_err(
+            //                self.ctx().span_of_fn_name.expect("we are not in function"),
+            //                SyntaxError::TS1183,
+            //            );
+            self.emit_err(self.input.cur_span(), SyntaxError::TS1183);
         }
 
         let ctx = Context {
