@@ -410,7 +410,11 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 expect!('(');
                 let params = self.parse_constructor_params()?;
                 expect!(')');
-                let body: Option<_> = self.parse_fn_body(false, false)?;
+                let ctx = Context {
+                    span_of_fn_name: Some(key.span()),
+                    ..self.ctx()
+                };
+                let body: Option<_> = self.with_ctx(ctx).parse_fn_body(false, false)?;
 
                 if self.syntax().typescript() && body.is_none() {
                     // Declare constructors cannot have assignment pattern in parameters
@@ -825,11 +829,12 @@ impl<'a, I: Tokens> Parser<'a, I> {
         Self: FnBodyParser<'a, T>,
     {
         if self.ctx().in_declare && self.syntax().typescript() && is!('{') {
-            syntax_error!(
+            self.emit_err(
                 self.ctx().span_of_fn_name.expect("we are not in function"),
-                SyntaxError::TS1183
+                SyntaxError::TS1183,
             );
         }
+
         let ctx = Context {
             in_async: is_async,
             in_generator: is_generator,
