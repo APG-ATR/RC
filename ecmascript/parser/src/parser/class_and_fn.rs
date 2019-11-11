@@ -687,6 +687,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
     where
         T: OutputType,
         Self: MaybeOptionalIdentParser<'a, T::Ident>,
+        T::Ident: Spanned,
     {
         let start = start_of_async.unwrap_or(cur_pos!());
         assert_and_bump!("function");
@@ -716,6 +717,10 @@ impl<'a, I: Tokens> Parser<'a, I> {
         } else {
             // function declaration does not change context for `BindingIdentifier`.
             self.parse_maybe_opt_binding_ident()?
+        };
+        let ctx = Context {
+            span_of_fn_name: Some(ident.span()),
+            ..ctx
         };
         let is_constructor = T::is_constructor(&ident);
 
