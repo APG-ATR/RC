@@ -133,8 +133,6 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 }
             }
 
-            println!("Super: {:?}", super_class);
-
             expect!('{');
             let body = p.parse_class_body()?;
             expect!('}');
