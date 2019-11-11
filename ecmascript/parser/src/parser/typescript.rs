@@ -59,7 +59,9 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
         Ok(match kind {
             ParsingContext::EnumMembers | ParsingContext::TypeMembers => is!('}'),
-            ParsingContext::HeritageClauseElement => is!('{') || is!("implements"),
+            ParsingContext::HeritageClauseElement => {
+                is!('{') || is!("implements") || is!("extends")
+            }
             ParsingContext::TupleElementTypes => is!(']'),
             ParsingContext::TypeParametersOrArguments => is!('>'),
         })

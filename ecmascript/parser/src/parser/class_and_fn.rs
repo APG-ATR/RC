@@ -77,7 +77,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 None
             };
 
-            let (super_class, super_type_params) = if eat!("extends") {
+            let (mut super_class, mut super_type_params) = if eat!("extends") {
                 let super_class = p.parse_lhs_expr().map(Some)?;
                 let super_type_params = if p.input.syntax().typescript() && is!('<') {
                     Some(p.parse_ts_type_args()?)
@@ -89,19 +89,15 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 (None, None)
             };
 
-            {
-                // Handle TS1172
-                if eat!("extends") {
-                    p.emit_err(p.input.prev_span(), SyntaxError::TS1172);
+            // Handle TS1172
+            if eat!("extends") {
+                p.emit_err(p.input.prev_span(), SyntaxError::TS1172);
 
-                    p.parse_lhs_expr().map(Some)?;
-                    if p.input.syntax().typescript() && is!('<') {
-                        Some(p.parse_ts_type_args()?)
-                    } else {
-                        None
-                    };
-                };
-            }
+                p.parse_lhs_expr()?;
+                if p.input.syntax().typescript() && is!('<') {
+                    p.parse_ts_type_args()?;
+                }
+            };
 
             let implements = if p.input.syntax().typescript() && eat!("implements") {
                 p.parse_ts_heritage_clause()?
@@ -117,6 +113,27 @@ impl<'a, I: Tokens> Parser<'a, I> {
                     p.parse_ts_heritage_clause()?;
                 }
             }
+
+            // Handle TS1175
+            if eat!("extends") {
+                p.emit_err(p.input.prev_span(), SyntaxError::TS1175);
+
+                let sc = p.parse_lhs_expr()?;
+                let type_params = if p.input.syntax().typescript() && is!('<') {
+                    p.parse_ts_type_args().map(Some)?
+                } else {
+                    None
+                };
+
+                if super_class.is_none() {
+                    super_class = Some(sc);
+                    if let Some(tp) = type_params {
+                        super_type_params = Some(tp);
+                    }
+                }
+            }
+
+            println!("Super: {:?}", super_class);
 
             expect!('{');
             let body = p.parse_class_body()?;
