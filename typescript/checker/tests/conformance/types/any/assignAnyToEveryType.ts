@@ -38,7 +38,7 @@ module M {
     export var foo = 1;
 }
 
-M = x; // error
+M = x;
 
 function k<T>(a: T) {
     a = x;
