@@ -420,6 +420,16 @@ impl<'a, I: Tokens> Parser<'a, I> {
             let is_constructor = is_constructor(&key);
 
             if is_constructor {
+                if self.syntax().typescript() && is!('<') {
+                    let type_params = self.try_parse_ts_type_params()?;
+
+                    if let Some(type_params) = type_params {
+                        for param in type_params.params {
+                            self.emit_err(param.span(), SyntaxError::TS1092);
+                        }
+                    }
+                }
+
                 expect!('(');
                 let params = self.parse_constructor_params()?;
                 expect!(')');
