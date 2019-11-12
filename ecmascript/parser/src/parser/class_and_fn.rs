@@ -71,6 +71,10 @@ impl<'a, I: Tokens> Parser<'a, I> {
             expect!("class");
 
             let ident = p.parse_maybe_opt_binding_ident()?;
+            if let Some(span) = ident.invalid_class_name() {
+                p.emit_err(span, SyntaxError::TS2414);
+            }
+
             let type_params = if p.input.syntax().typescript() {
                 p.try_parse_ts_type_params()?
             } else {
@@ -932,8 +936,30 @@ impl<'a, I: Tokens> Parser<'a, I> {
     }
 }
 
+trait IsInvalidClassName {
+    fn invalid_class_name(&self) -> Option<Span>;
+}
+
+impl IsInvalidClassName for Ident {
+    fn invalid_class_name(&self) -> Option<Span> {
+        match self.sym {
+            js_word!("any") => Some(self.span),
+            _ => None,
+        }
+    }
+}
+impl IsInvalidClassName for Option<Ident> {
+    fn invalid_class_name(&self) -> Option<Span> {
+        if let Some(ref i) = self.as_ref() {
+            return i.invalid_class_name();
+        }
+
+        None
+    }
+}
+
 trait OutputType {
-    type Ident;
+    type Ident: IsInvalidClassName;
 
     fn is_constructor(ident: &Self::Ident) -> bool;
 
