@@ -84,6 +84,15 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 } else {
                     None
                 };
+
+                if p.syntax().typescript() && eat!(',') {
+                    let exprs = p.parse_ts_heritage_clause()?;
+
+                    for e in &exprs {
+                        p.emit_err(e.span(), SyntaxError::TS1174);
+                    }
+                }
+
                 (super_class, super_type_params)
             } else {
                 (None, None)
