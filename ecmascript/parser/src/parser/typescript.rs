@@ -59,7 +59,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
         Ok(match kind {
             ParsingContext::EnumMembers | ParsingContext::TypeMembers => is!('}'),
-            ParsingContext::HeritageClauseElement => {
+            ParsingContext::HeritageClauseElement { .. } => {
                 is!('{') || is!("implements") || is!("extends")
             }
             ParsingContext::TupleElementTypes => is!(']'),
@@ -125,22 +125,6 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
             if eat!(',') {
                 continue;
-            }
-
-            match kind {
-                ParsingContext::HeritageClauseElement => {
-                    // Recover
-                    //
-                    //     interface I extends A extends B {}
-                    if is!("extends") {
-                        self.emit_err(self.input.cur_span(), SyntaxError::TS1172);
-
-                        while !eof!() && !is!('{') {
-                            bump!();
-                        }
-                    }
-                }
-                _ => {}
             }
 
             if self.is_ts_list_terminator(kind)? {
@@ -853,6 +837,17 @@ impl<'a, I: Tokens> Parser<'a, I> {
         } else {
             vec![]
         };
+
+        // Recover from
+        //
+        //     interface I extends A extends B {}
+        if is!("extends") {
+            self.emit_err(self.input.cur_span(), SyntaxError::TS1172);
+
+            while !eof!() && !is!('{') {
+                bump!();
+            }
+        }
 
         let body_start = cur_pos!();
         let body = self

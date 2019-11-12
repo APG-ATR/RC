@@ -115,7 +115,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
             }
 
             // Handle TS1175
-            if eat!("extends") {
+            if p.input.syntax().typescript() && eat!("extends") {
                 p.emit_err(p.input.prev_span(), SyntaxError::TS1175);
 
                 let sc = p.parse_lhs_expr()?;
