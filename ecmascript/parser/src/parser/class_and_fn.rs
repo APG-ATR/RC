@@ -425,11 +425,21 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
             if is_constructor {
                 if self.syntax().typescript() && is!('<') {
-                    let type_params = self.try_parse_ts_type_params()?;
+                    let start = cur_pos!();
+                    if peeked_is!('>') {
+                        assert_and_bump!('<');
+                        let start2 = cur_pos!();
+                        assert_and_bump!('>');
 
-                    if let Some(type_params) = type_params {
-                        for param in type_params.params {
-                            self.emit_err(param.span(), SyntaxError::TS1092);
+                        self.emit_err(span!(start), SyntaxError::TS1098);
+                        self.emit_err(span!(start2), SyntaxError::TS1092);
+                    } else {
+                        let type_params = self.try_parse_ts_type_params()?;
+
+                        if let Some(type_params) = type_params {
+                            for param in type_params.params {
+                                self.emit_err(param.span(), SyntaxError::TS1092);
+                            }
                         }
                     }
                 }
