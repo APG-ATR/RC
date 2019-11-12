@@ -60,10 +60,10 @@ impl<'a, I: Input> Parser<'a, Lexer<'a, I>> {
 #[parser]
 impl<'a, I: Tokens> Parser<'a, I> {
     pub fn new_from(session: Session<'a>, input: I) -> Self {
-        Self::new_with(session, input, Default::default(), Default::default())
+        Self::new_with(session, input, Default::default())
     }
 
-    pub fn new_with(session: Session<'a>, input: I, syntax: Syntax, target: JscTarget) -> Self {
+    pub fn new_with(session: Session<'a>, input: I, target: JscTarget) -> Self {
         Parser {
             session,
             input: Buffer::new(input),
