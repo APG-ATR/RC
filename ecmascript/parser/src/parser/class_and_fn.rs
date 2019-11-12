@@ -437,6 +437,14 @@ impl<'a, I: Tokens> Parser<'a, I> {
                 expect!('(');
                 let params = self.parse_constructor_params()?;
                 expect!(')');
+
+                if self.syntax().typescript() && is!(':') {
+                    let start = cur_pos!();
+                    let type_ann = self.parse_ts_type_ann(true, start)?;
+
+                    self.emit_err(type_ann.type_ann.span(), SyntaxError::TS1093);
+                }
+
                 let ctx = Context {
                     span_of_fn_name: Some(key.span()),
                     ..self.ctx()
