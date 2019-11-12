@@ -285,6 +285,10 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
         let start = cur_pos!();
 
+        if eat!("declare") {
+            self.emit_err(self.input.prev_span(), SyntaxError::TS1031);
+        }
+
         let accessibility = if self.input.syntax().typescript() {
             self.parse_access_modifier()?
         } else {
