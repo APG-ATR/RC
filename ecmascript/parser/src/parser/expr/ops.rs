@@ -6,7 +6,7 @@ use swc_common::Spanned;
 #[parser]
 impl<'a, I: Tokens> Parser<'a, I> {
     /// Name from spec: 'LogicalORExpression'
-    pub(super) fn parse_bin_expr(&mut self) -> PResult<'a, (Box<Expr>)> {
+    pub(super) fn parse_bin_expr(&mut self) -> PResult<'a, Box<Expr>> {
         let ctx = self.ctx();
 
         let left = match self.parse_unary_expr() {
@@ -159,7 +159,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
     /// Parse unary expression and update expression.
     ///
     /// spec: 'UnaryExpression'
-    pub(in crate::parser) fn parse_unary_expr(&mut self) -> PResult<'a, (Box<Expr>)> {
+    pub(in crate::parser) fn parse_unary_expr(&mut self) -> PResult<'a, Box<Expr>> {
         let start = cur_pos!();
 
         if !self.input.syntax().jsx() && self.input.syntax().typescript() && eat!('<') {
@@ -284,7 +284,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         Ok(expr)
     }
 
-    fn parse_await_expr(&mut self) -> PResult<'a, (Box<Expr>)> {
+    fn parse_await_expr(&mut self) -> PResult<'a, Box<Expr>> {
         let start = cur_pos!();
 
         assert_and_bump!("await");

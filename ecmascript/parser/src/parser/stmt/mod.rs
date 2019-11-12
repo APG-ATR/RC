@@ -1004,8 +1004,8 @@ impl<'a, I: Tokens> Parser<'a, I> {
 enum ForHead {
     For {
         init: Option<VarDeclOrExpr>,
-        test: Option<(Box<Expr>)>,
-        update: Option<(Box<Expr>)>,
+        test: Option<Box<Expr>>,
+        update: Option<Box<Expr>>,
     },
     ForIn {
         left: VarDeclOrPat,

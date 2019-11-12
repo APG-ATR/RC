@@ -6,14 +6,14 @@ use swc_common::Spanned;
 #[parser]
 /// Parser for function expression and function declaration.
 impl<'a, I: Tokens> Parser<'a, I> {
-    pub(super) fn parse_async_fn_expr(&mut self) -> PResult<'a, (Box<Expr>)> {
+    pub(super) fn parse_async_fn_expr(&mut self) -> PResult<'a, Box<Expr>> {
         let start = cur_pos!();
         expect!("async");
         self.parse_fn(Some(start), vec![])
     }
 
     /// Parse function expression
-    pub(super) fn parse_fn_expr(&mut self) -> PResult<'a, (Box<Expr>)> {
+    pub(super) fn parse_fn_expr(&mut self) -> PResult<'a, Box<Expr>> {
         self.parse_fn(None, vec![])
     }
 

@@ -10,7 +10,7 @@ mod verifier;
 
 #[parser]
 impl<'a, I: Tokens> Parser<'a, I> {
-    pub fn parse_expr(&mut self) -> PResult<'a, (Box<Expr>)> {
+    pub fn parse_expr(&mut self) -> PResult<'a, Box<Expr>> {
         let expr = self.parse_assignment_expr()?;
         let start = expr.span().lo();
 
@@ -30,7 +30,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
     }
 
     ///`parseMaybeAssign` (overrided)
-    pub(super) fn parse_assignment_expr(&mut self) -> PResult<'a, (Box<Expr>)> {
+    pub(super) fn parse_assignment_expr(&mut self) -> PResult<'a, Box<Expr>> {
         if self.input.syntax().typescript() {
             // Note: When the JSX plugin is on, type assertions (`<T> x`) aren't valid
             // syntax.
@@ -87,7 +87,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
     /// operators like `+=`.
     ///
     /// `parseMaybeAssign`
-    fn parse_assignment_expr_base(&mut self) -> PResult<'a, (Box<Expr>)> {
+    fn parse_assignment_expr_base(&mut self) -> PResult<'a, Box<Expr>> {
         if self.ctx().in_generator && is!("yield") {
             return self.parse_yield_expr();
         }
@@ -151,7 +151,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
     }
 
     /// Spec: 'ConditionalExpression'
-    fn parse_cond_expr(&mut self) -> PResult<'a, (Box<Expr>)> {
+    fn parse_cond_expr(&mut self) -> PResult<'a, Box<Expr>> {
         let start = cur_pos!();
 
         let test = self.parse_bin_expr()?;
@@ -183,7 +183,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
     }
 
     /// Parse a primary expression or arrow function
-    pub(super) fn parse_primary_expr(&mut self) -> PResult<'a, (Box<Expr>)> {
+    pub(super) fn parse_primary_expr(&mut self) -> PResult<'a, Box<Expr>> {
         let _ = cur!(false);
         let start = cur_pos!();
 
@@ -344,7 +344,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         unexpected!()
     }
 
-    fn parse_array_lit(&mut self) -> PResult<'a, (Box<Expr>)> {
+    fn parse_array_lit(&mut self) -> PResult<'a, Box<Expr>> {
         let start = cur_pos!();
 
         assert_and_bump!('[');
@@ -372,12 +372,12 @@ impl<'a, I: Tokens> Parser<'a, I> {
         Ok(Box::new(Expr::Array(ArrayLit { span, elems })))
     }
 
-    fn parse_member_expr(&mut self) -> PResult<'a, (Box<Expr>)> {
+    fn parse_member_expr(&mut self) -> PResult<'a, Box<Expr>> {
         self.parse_member_expr_or_new_expr(false)
     }
 
     /// `is_new_expr`: true iff we are parsing production 'NewExpression'.
-    fn parse_member_expr_or_new_expr(&mut self, is_new_expr: bool) -> PResult<'a, (Box<Expr>)> {
+    fn parse_member_expr_or_new_expr(&mut self, is_new_expr: bool) -> PResult<'a, Box<Expr>> {
         let start = cur_pos!();
         if eat!("new") {
             let span_of_new = span!(start);
@@ -447,7 +447,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
     /// Parse `NewExpresion`.
     /// This includes `MemberExpression`.
-    pub(super) fn parse_new_expr(&mut self) -> PResult<'a, (Box<Expr>)> {
+    pub(super) fn parse_new_expr(&mut self) -> PResult<'a, Box<Expr>> {
         self.parse_member_expr_or_new_expr(true)
     }
 
@@ -505,7 +505,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         &mut self,
         can_be_arrow: bool,
         async_span: Option<Span>,
-    ) -> PResult<'a, (Box<Expr>)> {
+    ) -> PResult<'a, Box<Expr>> {
         let start = cur_pos!();
 
         // At this point, we can't know if it's parenthesized
@@ -728,11 +728,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         })
     }
 
-    fn parse_subscripts(
-        &mut self,
-        mut obj: ExprOrSuper,
-        no_call: bool,
-    ) -> PResult<'a, (Box<Expr>)> {
+    fn parse_subscripts(&mut self, mut obj: ExprOrSuper, no_call: bool) -> PResult<'a, Box<Expr>> {
         loop {
             obj = match self.parse_subscript(obj, no_call)? {
                 (expr, false) => return Ok(expr),
@@ -931,7 +927,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         }
     }
     /// Parse call, dot, and `[]`-subscript expressions.
-    pub(super) fn parse_lhs_expr(&mut self) -> PResult<'a, (Box<Expr>)> {
+    pub(super) fn parse_lhs_expr(&mut self) -> PResult<'a, Box<Expr>> {
         let start = cur_pos!();
 
         // parse jsx
@@ -1035,7 +1031,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
         Ok(callee)
     }
 
-    pub(super) fn parse_expr_or_pat(&mut self) -> PResult<'a, (Box<Expr>)> {
+    pub(super) fn parse_expr_or_pat(&mut self) -> PResult<'a, Box<Expr>> {
         self.parse_expr()
     }
 
@@ -1285,7 +1281,7 @@ pub(in crate::parser) enum PatOrExprOrSpread {
 /// simple leaf methods.
 #[parser]
 impl<'a, I: Tokens> Parser<'a, I> {
-    fn parse_yield_expr(&mut self) -> PResult<'a, (Box<Expr>)> {
+    fn parse_yield_expr(&mut self) -> PResult<'a, Box<Expr>> {
         let start = cur_pos!();
 
         assert_and_bump!("yield");

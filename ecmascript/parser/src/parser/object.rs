@@ -104,7 +104,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
 }
 
 #[parser]
-impl<'a, I: Tokens> ParseObject<'a, (Box<Expr>)> for Parser<'a, I> {
+impl<'a, I: Tokens> ParseObject<'a, Box<Expr>> for Parser<'a, I> {
     type Prop = PropOrSpread;
 
     fn make_object(&mut self, span: Span, props: Vec<Self::Prop>) -> PResult<'a, Box<Expr>> {
