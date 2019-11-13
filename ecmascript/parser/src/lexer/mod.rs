@@ -12,7 +12,7 @@ use self::{state::State, util::*};
 use crate::{
     error::{Error, SyntaxError},
     token::*,
-    Context, Session, Syntax,
+    Context, JscTarget, Session, Syntax,
 };
 use ast::Str;
 use either::Either;
@@ -101,12 +101,14 @@ pub struct Lexer<'a, I: Input> {
     input: I,
     state: State,
     pub(crate) syntax: Syntax,
+    pub(crate) target: JscTarget,
 }
 
 impl<'a, I: Input> Lexer<'a, I> {
     pub fn new(
         session: Session<'a>,
         syntax: Syntax,
+        target: JscTarget,
         input: I,
         comments: Option<&'a Comments>,
     ) -> Self {
@@ -122,6 +124,7 @@ impl<'a, I: Input> Lexer<'a, I> {
             state: State::new(syntax),
             ctx: Default::default(),
             syntax,
+            target,
         }
     }
 

@@ -36,7 +36,6 @@ pub struct Parser<'a, I: Tokens> {
     session: Session<'a>,
     state: State,
     input: Buffer<I>,
-    target: JscTarget,
 }
 
 #[derive(Clone, Default)]
@@ -53,23 +52,29 @@ impl<'a, I: Input> Parser<'a, Lexer<'a, I>> {
         input: I,
         comments: Option<&'a Comments>,
     ) -> Self {
-        Self::new_from(session, Lexer::new(session, syntax, input, comments))
+        Self::new_from(
+            session,
+            Lexer::new(session, syntax, Default::default(), input, comments),
+        )
     }
 }
 
 #[parser]
 impl<'a, I: Tokens> Parser<'a, I> {
     pub fn new_from(session: Session<'a>, input: I) -> Self {
-        Self::new_with(session, input, Default::default())
+        Self::new_with(session, input)
     }
 
-    pub fn new_with(session: Session<'a>, input: I, target: JscTarget) -> Self {
+    pub fn new_with(session: Session<'a>, input: I) -> Self {
         Parser {
             session,
             input: Buffer::new(input),
             state: Default::default(),
-            target,
         }
+    }
+
+    pub(crate) fn target(&self) -> JscTarget {
+        self.input.target()
     }
 
     pub fn parse_script(&mut self) -> PResult<'a, Script> {

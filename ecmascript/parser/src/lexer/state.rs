@@ -1,5 +1,5 @@
 use super::{Input, Lexer};
-use crate::{lexer::util::CharExt, token::*, Syntax};
+use crate::{lexer::util::CharExt, token::*, JscTarget, Syntax};
 use enum_kind::Kind;
 use input::Tokens;
 use smallvec::SmallVec;
@@ -97,6 +97,9 @@ impl<I: Input> Tokens for Lexer<'_, I> {
 
     fn syntax(&self) -> Syntax {
         self.syntax
+    }
+    fn target(&self) -> JscTarget {
+        self.target
     }
 
     fn set_expr_allowed(&mut self, allow: bool) {
@@ -600,7 +603,7 @@ where
     F: FnOnce(&mut Lexer<crate::lexer::input::SourceFileInput>) -> Result<Ret, ()>,
 {
     crate::with_test_sess(s, |sess, fm| {
-        let mut l = Lexer::new(sess, syntax, fm, None);
+        let mut l = Lexer::new(sess, syntax, Default::default(), fm, None);
         let res = f(&mut l);
 
         let c: SmallVec<[TokenContext; 32]> = smallvec![TokenContext::BraceStmt];

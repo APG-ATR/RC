@@ -295,6 +295,7 @@ impl<'a, I: Input> Lexer<'a, I> {
 
     fn make_legacy_octal(&mut self, start: BytePos, val: f64) -> LexResult<f64> {
         self.ensure_not_ident()?;
+
         return if self.ctx.strict {
             self.error(start, SyntaxError::LegacyOctal)?
         } else {
@@ -314,7 +315,7 @@ mod tests {
         F: FnOnce(&mut Lexer<SourceFileInput>) -> Ret,
     {
         crate::with_test_sess(s, |sess, fm| {
-            let mut l = Lexer::new(sess, Syntax::default(), fm.into(), None);
+            let mut l = Lexer::new(sess, Syntax::default(), Default::default(), fm.into(), None);
             Ok(f(&mut l))
         })
         .unwrap()
@@ -402,7 +403,8 @@ mod tests {
 
             let vec = panic::catch_unwind(|| {
                 crate::with_test_sess(case, |mut sess, input| {
-                    let mut l = Lexer::new(sess, Syntax::default(), input, None);
+                    let mut l =
+                        Lexer::new(sess, Syntax::default(), Default::default(), input, None);
                     l.ctx.strict = strict;
                     Ok(l.map(|ts| ts.token).collect::<Vec<_>>())
                 })
