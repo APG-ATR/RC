@@ -1078,7 +1078,8 @@ impl<'a, I: Tokens> Parser<'a, I> {
         // Note: babel's comment is wrong
         assert_and_bump!('['); // Skip '['
 
-        Ok(eat!(IdentRef) && is!(':'))
+        // ',' is for error recovery
+        Ok(eat!(IdentRef) && is_one_of!(':', ','))
     }
 
     /// `tsTryParseIndexSignature`
@@ -1095,7 +1096,12 @@ impl<'a, I: Tokens> Parser<'a, I> {
 
         let mut id = self.parse_ident_name()?;
 
-        expect!(':');
+        if eat!(',') {
+            self.emit_err(id.span, SyntaxError::TS1096);
+        } else {
+            expect!(':');
+        }
+
         let cur_pos = cur_pos!();
         id.type_ann = self
             .parse_ts_type_ann(/* eat_colon */ false, cur_pos)
