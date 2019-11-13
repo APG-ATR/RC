@@ -296,12 +296,14 @@ impl<'a, I: Input> Lexer<'a, I> {
     fn make_legacy_octal(&mut self, start: BytePos, val: f64) -> LexResult<f64> {
         self.ensure_not_ident()?;
 
-        return if self.ctx.strict {
-            self.error(start, SyntaxError::LegacyOctal)?
-        } else {
-            // FIXME
-            Ok(val)
-        };
+        if self.syntax.typescript() && self.target >= JscTarget::Es5 {
+            self.emit_error(start, SyntaxError::TS1085);
+        }
+        if self.ctx.strict {
+            self.emit_error(start, SyntaxError::LegacyOctal);
+        }
+
+        return Ok(val);
     }
 }
 
