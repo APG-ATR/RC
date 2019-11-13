@@ -1957,7 +1957,7 @@ impl<'a, I: Tokens> Parser<'a, I> {
             }
 
             js_word!("interface") => {
-                if next || is!(IdentRef) {
+                if next || (is!(IdentRef)) {
                     if next {
                         bump!();
                     }
