@@ -269,7 +269,9 @@ impl<'a, I: Tokens> Parser<'a, I> {
         match *expr {
             Expr::Ident(ref ident) => {
                 if self.input.syntax().typescript() {
-                    if *ident.sym == js_word!("interface") && self.input.had_line_break_before_cur()
+                    if *ident.sym == js_word!("interface")
+                        && self.input.had_line_break_before_cur()
+                        && self.ctx().strict
                     {
                         self.emit_err(ident.span, SyntaxError::InvalidIdentInStrict);
 
