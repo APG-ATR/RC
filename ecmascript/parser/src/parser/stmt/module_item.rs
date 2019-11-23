@@ -264,6 +264,10 @@ impl<'a, I: Tokens> Parser<'a, I> {
                     }
                     return Ok(class.into());
                 }
+                if is!("abstract") && peeked_is!("interface") {
+                    self.emit_err(self.input.cur_span(), SyntaxError::TS1242);
+                    assert_and_bump!("abstract");
+                }
 
                 if eat!("interface") {
                     let decl = self.parse_ts_interface_decl().map(DefaultDecl::from)?;
