@@ -82,6 +82,23 @@ impl Visit<MemberExpr> for UsageVisitor {
     fn visit(&mut self, node: &MemberExpr) {
         node.visit_children(self);
 
+        match *node.prop {
+            Expr::Ident(ref i) => {
+                //
+                for (name,) in corejs2_data::INSTANCE_PROPERTIES {
+                    if i.sym == **name {
+                        self.required.extend(
+                            imports
+                                .into_iter()
+                                .map(|v| format!("core-js/modules/{}", v))
+                                .map(From::from),
+                        );
+                    }
+                }
+            }
+            _ => {}
+        }
+
         match node.obj {
             ExprOrSuper::Expr(box Expr::Ident(ref obj)) => {
                 for (ty, props) in corejs2_data::STATIC_PROPERTIES {
