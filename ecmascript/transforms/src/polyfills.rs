@@ -1,10 +1,12 @@
-mod corejs2_data;
-
 use crate::pass::Pass;
 use ast::*;
 use serde::Deserialize;
 use swc_atoms::JsWord;
 use swc_common::{Fold, Visit, VisitWith};
+
+mod corejs2_data;
+#[cfg(test)]
+mod tests;
 
 pub fn polyfills(mut c: Config) -> impl Pass {
     if c.core_js == 0 {
