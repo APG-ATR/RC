@@ -3,7 +3,14 @@ name = "swc_ecma_polyfills"
 version = "0.1.0"
 authors = ["강동윤 <kdy1997.dev@gmail.com>"]
 edition = "2018"
+publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+swc_atoms = { path = "../../atoms" }
+swc_common = { path = "../../common" }
+swc_ecma_ast = { path = "../ast" }
+swc_ecma_parser = { path = "../parser", features = ["verify"] }
+swc_ecma_transforms = { path = "../transforms" }
+serde = { version = "1", features = ["derive"] }

@@ -1,8 +1,12 @@
-use crate::pass::Pass;
-use ast::*;
+#![feature(box_syntax)]
+#![feature(box_patterns)]
+#![feature(specialization)]
+
 use serde::Deserialize;
 use swc_atoms::JsWord;
 use swc_common::{Fold, Visit, VisitWith};
+use swc_ecma_ast::*;
+use swc_ecma_transforms::pass::Pass;
 
 mod corejs2_data;
 #[cfg(test)]
