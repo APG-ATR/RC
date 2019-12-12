@@ -14,3 +14,5 @@ swc_ecma_ast = { path = "../ast" }
 swc_ecma_parser = { path = "../parser", features = ["verify"] }
 swc_ecma_transforms = { path = "../transforms" }
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+walkdir = "2"
