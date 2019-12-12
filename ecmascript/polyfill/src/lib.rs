@@ -87,7 +87,7 @@ impl Visit<MemberExpr> for UsageVisitor {
         match *node.prop {
             Expr::Ident(ref i) => {
                 //
-                for (name,) in corejs2_data::INSTANCE_PROPERTIES {
+                for (name, imports) in corejs2_data::INSTANCE_PROPERTIES {
                     if i.sym == **name {
                         self.required.extend(
                             imports

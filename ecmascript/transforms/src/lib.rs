@@ -28,7 +28,6 @@ mod fixer;
 pub mod modules;
 pub mod optimization;
 pub mod pass;
-pub mod polyfills;
 pub mod proposals;
 pub mod react;
 mod resolver;
