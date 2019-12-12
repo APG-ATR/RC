@@ -9,8 +9,6 @@ use swc_ecma_ast::*;
 use swc_ecma_transforms::pass::Pass;
 
 mod corejs2_data;
-#[cfg(test)]
-mod tests;
 
 pub fn polyfills(mut c: Config) -> impl Pass {
     if c.core_js == 0 {
