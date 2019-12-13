@@ -1,3 +1,4 @@
+#![feature(box_syntax)]
 #![feature(try_blocks)]
 #![feature(test)]
 
@@ -5,9 +6,19 @@ extern crate test;
 
 use serde::Deserialize;
 use serde_json::Value;
-use std::{collections::HashMap, env, fs::File, io, path::PathBuf, process::Command};
+use std::{
+    collections::HashMap,
+    env,
+    fs::File,
+    io,
+    path::PathBuf,
+    process::{Command, Stdio},
+};
 use swc_common::FromVariant;
-use test::{TestDesc, TestDescAndFn};
+use test::{
+    run_tests, run_tests_console, ColorConfig, OutputFormat, RunIgnored, ShouldPanic, TestDesc,
+    TestDescAndFn, TestFn, TestName, TestOpts, TestType,
+};
 use walkdir::WalkDir;
 
 /// options.json file
@@ -41,7 +52,7 @@ struct PresetConfig {
     pub force_all_transforms: bool,
 
     #[serde(default)]
-    pub shippedProposals: bool,
+    pub shipped_proposals: bool,
 
     #[serde(default)]
     pub config_path: String,
@@ -104,7 +115,7 @@ fn load() -> Result<Vec<TestDescAndFn>, Error> {
     dir.push("tests");
     dir.push("fixtures");
 
-    for entry in WalkDir::new(dir) {
+    for entry in WalkDir::new(&dir) {
         let e = entry?;
 
         if e.metadata()?.is_file() {
@@ -120,22 +131,73 @@ fn load() -> Result<Vec<TestDescAndFn>, Error> {
             serde_json::from_reader(File::open(e.path().join("options.json"))?)?;
         assert_eq!(cfg.presets.len(), 1);
         let cfg = cfg.presets.into_iter().map(|v| v.1).next().unwrap();
+
+        let file = e.path().join("input.mjs");
+        tests.push(TestDescAndFn {
+            desc: TestDesc {
+                test_type: TestType::IntegrationTest,
+                name: TestName::DynTestName(format!(
+                    "{}",
+                    e.path()
+                        .strip_prefix(&dir)
+                        .expect("failed to strip prefix")
+                        .display()
+                )),
+                ignore: false,
+                allow_fail: false,
+                should_panic: ShouldPanic::No,
+            },
+            testfn: TestFn::DynTestFn(box move || {
+                //
+                exec(cfg, file).expect("failed to run test")
+            }),
+        });
     }
 
     Ok(tests)
 }
 
-fn exec() {
-    let res: Result<_, Error> = try {
-        let mut query_js = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
-        query_js.push("tests");
-        query_js.push("query.js");
+fn exec(c: PresetConfig, src: PathBuf) -> Result<(), Error> {
+    let mut qjs = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
+    qjs.push("tests");
+    qjs.push("query.js");
 
-        Command::new("node").arg(query_js).status()?
-    };
+    let cmd = Command::new("node")
+        .arg(&qjs)
+        .arg(serde_json::to_string(&c.targets)?)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .status()?;
+
+    Ok(())
 }
 
 #[test]
 fn fixtures() {
-    load().expect("failed to load fixtures");
+    let tests = load().expect("failed to load fixtures");
+
+    run_tests_console(
+        &TestOpts {
+            list: false,
+            filter: None,
+            filter_exact: false,
+            force_run_in_process: false,
+            exclude_should_panic: false,
+            run_ignored: RunIgnored::No,
+            run_tests: true,
+            bench_benchmarks: false,
+            logfile: None,
+            nocapture: false,
+            color: ColorConfig::AutoColor,
+            format: OutputFormat::Pretty,
+            test_threads: None,
+            skip: vec![],
+            time_options: None,
+            options: test::Options {
+                display_output: true,
+                panic_abort: false,
+            },
+        },
+        tests,
+    );
 }
