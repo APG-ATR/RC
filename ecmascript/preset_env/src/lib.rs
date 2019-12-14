@@ -29,6 +29,7 @@ pub fn preset_env(mut c: Config) -> impl Pass {
         ($prev:expr, $feature:ident, $pass:expr) => {{
             let f = transform_data::Feature::$feature;
             let enable = f.should_enable(&c.versions);
+            println!("{}: {:?}", f.as_str(), enable);
             chain!($prev, Optional::new($pass, enable))
         }};
     }

@@ -169,3 +169,16 @@ pub(crate) static FEATURES: Lazy<HashMap<Feature, BrowserData<Option<Version>>>>
             })
             .collect()
     });
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn arrow() {
+        assert!(Feature::ArrowFunctions.should_enable(&BrowserData {
+            ie: Some("11.0.0".parse().unwrap()),
+            ..Default::default()
+        }));
+    }
+}
