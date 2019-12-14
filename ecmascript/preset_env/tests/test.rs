@@ -20,9 +20,9 @@ use swc_common::{fold::FoldWith, input::SourceFileInput, FromVariant};
 use swc_ecma_ast::Module;
 use swc_ecma_codegen::Emitter;
 use swc_ecma_parser::{Parser, Session};
-use swc_ecma_preset_env::{polyfills, Config};
+use swc_ecma_preset_env::{preset_env, Config};
 use test::{test_main, ShouldPanic, TestDesc, TestDescAndFn, TestFn, TestName, TestType};
-use testing::{NormalizedOutput, Tester};
+use testing::Tester;
 use walkdir::WalkDir;
 
 /// options.json file
@@ -137,7 +137,6 @@ fn load() -> Result<Vec<TestDescAndFn>, Error> {
         assert_eq!(cfg.presets.len(), 1);
         let cfg = cfg.presets.into_iter().map(|v| v.1).next().unwrap();
 
-        let file = e.path().join("input.mjs");
         let name = e
             .path()
             .strip_prefix(&dir)
@@ -178,13 +177,12 @@ fn exec(c: PresetConfig, dir: PathBuf) -> Result<(), Error> {
                 .arg(serde_json::to_string(&c.targets)?)
                 .output()?;
 
-            //        println!(
-            //            "{}\n{}",
-            //            String::from_utf8_lossy(&output.stdout),
-            //            String::from_utf8_lossy(&output.stderr),
-            //        );
-
             if !output.status.success() {
+                println!(
+                    "{}\n{}",
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr),
+                );
                 return Err(Error::Msg(format!("query.js: Status {:?}", output.status,)));
             }
 
@@ -201,11 +199,14 @@ fn exec(c: PresetConfig, dir: PathBuf) -> Result<(), Error> {
         })
         .collect();
 
-    let mut pass = polyfills(Config {
+    let mut pass = preset_env(Config {
         debug: c.debug,
         mode: None,
         skip: vec![],
         // TODO
+        loose: true,
+        // TODO
+        dynamic_import: true,
         core_js: 2,
         versions: Default::default(),
     });

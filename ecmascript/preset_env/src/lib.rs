@@ -7,23 +7,98 @@ use arrayvec::ArrayVec;
 use semver::Version;
 use serde::Deserialize;
 use swc_atoms::JsWord;
-use swc_common::{Fold, Visit, VisitWith, DUMMY_SP};
+use swc_common::{chain, Fold, Visit, VisitWith, DUMMY_SP};
 use swc_ecma_ast::*;
-use swc_ecma_transforms::{pass::Pass, util::prepend_stmts};
+use swc_ecma_transforms::{
+    compat::{es2015, es2016, es2017, es2018, es3},
+    pass::{noop, Optional, Pass},
+    util::prepend_stmts,
+};
 
 mod corejs2_data;
 mod transform_data;
 
-pub fn polyfills(mut c: Config) -> impl Pass {
+pub fn preset_env(mut c: Config) -> impl Pass {
     if c.core_js == 0 {
         c.core_js = 2;
     }
+    let loose = c.loose;
 
-    for (feature, data) in &*FEATURES {
-        let enable = feature.should_enable(&c.versions);
+    let pass = noop();
+    macro_rules! add {
+        ($prev:expr, $feature:ident, $pass:expr) => {{
+            let f = transform_data::Feature::$feature;
+            let enable = f.should_enable(&c.versions);
+            chain!($prev, Optional::new($pass, enable))
+        }};
     }
 
-    Polyfills { c }
+    // ES2018
+    let pass = add!(pass, ObjectRestSpread, es2018::object_rest_spread());
+    let pass = add!(pass, OptionalCatchBinding, es2018::optional_catch_binding());
+
+    // ES2017
+    let pass = add!(pass, AsyncToGenerator, es2017::async_to_generator());
+
+    // ES2016
+    let pass = add!(pass, ExponentiationOperator, es2016::exponentation());
+
+    // ES2015
+    let pass = add!(pass, BlockScopedFunctions, es2015::BlockScopedFns);
+    let pass = add!(pass, TemplateLiterals, es2015::TemplateLiteral::default());
+    let pass = add!(pass, Classes, es2015::Classes::default());
+    let pass = add!(
+        pass,
+        Spread,
+        es2015::spread(es2015::spread::Config { loose })
+    );
+    let pass = add!(pass, FunctionName, es2015::function_name());
+    let pass = add!(pass, ArrowFunctions, es2015::arrow());
+    let pass = add!(pass, DuplicateKeys, es2015::duplicate_keys());
+    let pass = add!(pass, StickyRegex, es2015::StickyRegex);
+    // TODO:    InstanceOf,
+    let pass = add!(pass, TypeOfSymbol, es2015::TypeOfSymbol);
+    let pass = add!(pass, ShorthandProperties, es2015::Shorthand);
+    let pass = add!(pass, Parameters, es2015::parameters());
+    let pass = add!(
+        pass,
+        ForOf,
+        es2015::for_of(es2015::for_of::Config {
+            assume_array: loose
+        })
+    );
+    let pass = add!(pass, ComputedProperties, es2015::computed_properties());
+    let pass = add!(
+        pass,
+        Destructuring,
+        es2015::destructuring(es2015::destructuring::Config { loose })
+    );
+    let pass = add!(pass, BlockScoping, es2015::block_scoping());
+
+    // TODO:
+    //    Literals,
+    //    ObjectSuper,
+    //    DotAllRegex,
+    //    UnicodeRegex,
+    //    NewTarget,
+    //    Regenerator,
+    //    AsyncGeneratorFunctions,
+    //    UnicodePropertyRegex,
+    //    JsonStrings,
+    //    NamedCapturingGroupsRegex,
+
+    // ES 3
+    let pass = add!(pass, PropertyLiterals, es3::PropertyLiteral);
+    let pass = add!(pass, MemberExpressionLiterals, es3::MemberExprLit);
+    let pass = add!(
+        pass,
+        ReservedWords,
+        es3::ReservedWord {
+            preserve_import: c.dynamic_import
+        }
+    );
+
+    chain!(pass, Polyfills { c })
 }
 
 /// A map without allocation.
@@ -183,6 +258,12 @@ pub struct Config {
     #[serde(default)]
     pub debug: bool,
 
+    #[serde(default)]
+    pub dynamic_import: bool,
+
+    #[serde(default)]
+    pub loose: bool,
+
     /// Skipped es features.
     ///
     /// e.g.)
@@ -203,6 +284,18 @@ struct UsageVisitor {
     required: Vec<JsWord>,
 }
 
+impl UsageVisitor {
+    /// Add imports
+    fn add(&mut self, features: &[&str]) {
+        self.required.extend(
+            features
+                .iter()
+                .map(|v| format!("core-js/modules/{}", v))
+                .map(From::from),
+        );
+    }
+}
+
 /// Detects usage of types
 impl Visit<Ident> for UsageVisitor {
     fn visit(&mut self, node: &Ident) {
@@ -210,12 +303,7 @@ impl Visit<Ident> for UsageVisitor {
 
         for (name, builtin) in corejs2_data::BUILTIN_TYPES {
             if node.sym == **name {
-                self.required.extend(
-                    builtin
-                        .into_iter()
-                        .map(|v| format!("core-js/modules/{}", v))
-                        .map(From::from),
-                );
+                self.add(builtin)
             }
         }
     }
@@ -231,12 +319,7 @@ impl Visit<MemberExpr> for UsageVisitor {
                 //
                 for (name, imports) in corejs2_data::INSTANCE_PROPERTIES {
                     if i.sym == **name {
-                        self.required.extend(
-                            imports
-                                .into_iter()
-                                .map(|v| format!("core-js/modules/{}", v))
-                                .map(From::from),
-                        );
+                        self.add(imports)
                     }
                 }
             }
@@ -251,12 +334,7 @@ impl Visit<MemberExpr> for UsageVisitor {
                             Expr::Ident(ref p) => {
                                 for (prop, imports) in *props {
                                     if p.sym == **prop {
-                                        self.required.extend(
-                                            imports
-                                                .into_iter()
-                                                .map(|v| format!("core-js/modules/{}", v))
-                                                .map(From::from),
-                                        );
+                                        self.add(imports);
                                     }
                                 }
                             }
