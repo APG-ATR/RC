@@ -15,10 +15,7 @@ use std::{
     process::{Command, Stdio},
 };
 use swc_common::FromVariant;
-use test::{
-    run_tests, run_tests_console, ColorConfig, OutputFormat, RunIgnored, ShouldPanic, TestDesc,
-    TestDescAndFn, TestFn, TestName, TestOpts, TestType,
-};
+use test::{test_main, ShouldPanic, TestDesc, TestDescAndFn, TestFn, TestName, TestType};
 use walkdir::WalkDir;
 
 /// options.json file
@@ -107,6 +104,7 @@ enum Error {
     Var(env::VarError),
     WalkDir(walkdir::Error),
     Json(serde_json::Error),
+    Msg(String),
 }
 
 fn load() -> Result<Vec<TestDescAndFn>, Error> {
@@ -158,17 +156,28 @@ fn load() -> Result<Vec<TestDescAndFn>, Error> {
 }
 
 fn exec(c: PresetConfig, src: PathBuf) -> Result<(), Error> {
-    let mut qjs = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
-    qjs.push("tests");
-    qjs.push("query.js");
+    let output = {
+        let mut qjs = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
+        qjs.push("tests");
+        qjs.push("query.js");
 
-    let cmd = Command::new("node")
-        .arg(&qjs)
-        .arg(serde_json::to_string(&c.targets)?)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .status()?;
+        let output = Command::new("node")
+            .arg(&qjs)
+            .arg(serde_json::to_string(&c.targets)?)
+            .output()?;
 
+        println!(
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
+
+        if !output.status.success() {
+            return Err(Error::Msg(format!("query.js: Status {:?}", output.status,)));
+        }
+
+        output.stdout
+    };
     Ok(())
 }
 
@@ -176,28 +185,6 @@ fn exec(c: PresetConfig, src: PathBuf) -> Result<(), Error> {
 fn fixtures() {
     let tests = load().expect("failed to load fixtures");
 
-    run_tests_console(
-        &TestOpts {
-            list: false,
-            filter: None,
-            filter_exact: false,
-            force_run_in_process: false,
-            exclude_should_panic: false,
-            run_ignored: RunIgnored::No,
-            run_tests: true,
-            bench_benchmarks: false,
-            logfile: None,
-            nocapture: false,
-            color: ColorConfig::AutoColor,
-            format: OutputFormat::Pretty,
-            test_threads: None,
-            skip: vec![],
-            time_options: None,
-            options: test::Options {
-                display_output: true,
-                panic_abort: false,
-            },
-        },
-        tests,
-    );
+    let args: Vec<_> = env::args().collect();
+    test_main(&args, tests, Some(test::Options::new()));
 }
