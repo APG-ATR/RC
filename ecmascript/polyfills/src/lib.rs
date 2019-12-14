@@ -3,6 +3,7 @@
 #![feature(specialization)]
 
 use crate::transform_data::FEATURES;
+use arrayvec::ArrayVec;
 use semver::Version;
 use serde::Deserialize;
 use swc_atoms::JsWord;
@@ -76,6 +77,46 @@ where
     pub fn map_value<N: Default>(self, mut op: impl FnMut(T) -> N) -> BrowserData<N> {
         self.map(|_, v| op(v))
     }
+
+    pub fn iter<'a>(&'a self) -> impl 'a + Iterator<Item = (&'static str, &'a T)> {
+        let mut arr: ArrayVec<[_; 12]> = Default::default();
+
+        arr.try_extend_from_slice(&[
+            ("chrome", &self.chrome),
+            ("ie", &self.ie),
+            ("edge", &self.edge),
+            ("firefox", &self.firefox),
+            ("safari", &self.safari),
+            ("node", &self.node),
+            ("ios", &self.ios),
+            ("samsung", &self.samsung),
+            ("opera", &self.opera),
+            ("android", &self.android),
+            ("electron", &self.electron),
+            ("phantom", &self.phantom),
+        ]);
+
+        arr.into_iter()
+    }
+}
+
+impl<T> BrowserData<Option<T>> {
+    pub fn as_ref(&self) -> BrowserData<Option<&T>> {
+        BrowserData {
+            chrome: self.chrome.as_ref(),
+            ie: self.ie.as_ref(),
+            edge: self.edge.as_ref(),
+            firefox: self.firefox.as_ref(),
+            safari: self.safari.as_ref(),
+            node: self.node.as_ref(),
+            ios: self.ios.as_ref(),
+            samsung: self.samsung.as_ref(),
+            opera: self.opera.as_ref(),
+            android: self.android.as_ref(),
+            electron: self.electron.as_ref(),
+            phantom: self.phantom.as_ref(),
+        }
+    }
 }
 
 struct Polyfills {
@@ -133,6 +174,9 @@ pub enum Mode {
 pub struct Config {
     #[serde(default)]
     pub mode: Option<Mode>,
+
+    #[serde(default)]
+    pub debug: bool,
 
     /// Skipped es features.
     ///

@@ -4,6 +4,30 @@ use once_cell::sync::Lazy;
 use semver::Version;
 use string_enum::StringEnum;
 
+impl Feature {
+    pub fn should_enable(self, c: &BrowserData<Option<Version>>) -> bool {
+        let f = &FEATURES[&self];
+
+        c.as_ref()
+            .iter()
+            .zip(f.iter())
+            .any(|((browser, target_version), (_, f))| {
+                if target_version.is_none() {
+                    return false;
+                }
+
+                if f.is_none() {
+                    return true;
+                }
+
+                let f = f.as_ref().unwrap();
+                let target = target_version.unwrap();
+
+                *f > *target
+            })
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, StringEnum, Hash)]
 pub(crate) enum Feature {
     /// `transform-template-literals`
