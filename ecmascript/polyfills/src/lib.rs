@@ -19,7 +19,9 @@ pub fn polyfills(mut c: Config) -> impl Pass {
         c.core_js = 2;
     }
 
-    for (feature, data) in &*FEATURES {}
+    for (feature, data) in &*FEATURES {
+        let enable = feature.should_enable(&c.versions);
+    }
 
     Polyfills { c }
 }
@@ -94,7 +96,8 @@ where
             ("android", &self.android),
             ("electron", &self.electron),
             ("phantom", &self.phantom),
-        ]);
+        ])
+        .unwrap();
 
         arr.into_iter()
     }
