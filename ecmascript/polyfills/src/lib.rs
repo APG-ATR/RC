@@ -2,6 +2,7 @@
 #![feature(box_patterns)]
 #![feature(specialization)]
 
+use crate::transform_data::FEATURES;
 use semver::Version;
 use serde::Deserialize;
 use swc_atoms::JsWord;
@@ -17,21 +18,38 @@ pub fn polyfills(mut c: Config) -> impl Pass {
         c.core_js = 2;
     }
 
+    for (feature, data) in &*FEATURES {}
+
     Polyfills { c }
 }
 
-#[derive(Debug, Deserialize, Clone, Copy)]
+#[derive(Debug, Default, Deserialize, Clone, Copy)]
 #[serde(deny_unknown_fields)]
-pub struct BrowserData<T> {
+pub struct BrowserData<T: Default> {
+    #[serde(default)]
     pub chrome: T,
+    #[serde(default)]
+    pub ie: T,
+    #[serde(default)]
     pub edge: T,
+    #[serde(default)]
     pub firefox: T,
+    #[serde(default)]
     pub safari: T,
+    #[serde(default)]
     pub node: T,
+    #[serde(default)]
     pub ios: T,
+    #[serde(default)]
     pub samsung: T,
+    #[serde(default)]
     pub opera: T,
+    #[serde(default)]
+    pub android: T,
+    #[serde(default)]
     pub electron: T,
+    #[serde(default)]
+    pub phantom: T,
 }
 
 struct Polyfills {
@@ -87,16 +105,22 @@ pub enum Mode {
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
+    #[serde(default)]
     pub mode: Option<Mode>,
+
     /// Skipped es features.
     ///
     /// e.g.)
     ///  - `core-js/modules/foo`
+    #[serde(default)]
     pub skip: Vec<JsWord>,
+
     /// The version of the used core js.
+    #[serde(default)]
     pub core_js: usize,
 
-    pub versions: Option<BrowserData<Version>>,
+    #[serde(default)]
+    pub versions: BrowserData<Option<Version>>,
 }
 
 struct UsageVisitor {

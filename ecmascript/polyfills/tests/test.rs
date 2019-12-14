@@ -206,7 +206,7 @@ fn exec(c: PresetConfig, dir: PathBuf) -> Result<(), Error> {
         skip: vec![],
         // TODO
         core_js: 2,
-        versions: None,
+        versions: Default::default(),
     });
 
     println!("Browsers: {:?}", browsers);
