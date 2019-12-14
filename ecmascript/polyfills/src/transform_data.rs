@@ -103,15 +103,45 @@ pub(crate) enum Feature {
     ReservedWords,
 }
 
-pub(crate) static FEATURES: Lazy<HashMap<Feature, BrowserData<Option<String>>>> = Lazy::new(|| {
-    let map: HashMap<Feature, BrowserData<Option<String>>> =
-        serde_json::from_str(include_str!("transform_data.json")).expect("failed to parse json");
+pub(crate) static FEATURES: Lazy<HashMap<Feature, BrowserData<Option<Version>>>> =
+    Lazy::new(|| {
+        let map: HashMap<Feature, BrowserData<Option<String>>> =
+            serde_json::from_str(include_str!("transform_data.json"))
+                .expect("failed to parse json");
 
-    map.into_iter()
-        .map(|(feature, data)| {
-            // TODO: data: "42" -> "42.0.0"
+        map.into_iter()
+            .map(|(feature, version)| {
+                (
+                    feature,
+                    version.map_value(|version| {
+                        version.map(|v| {
+                            if !v.contains(".") {
+                                return Version {
+                                    major: v.parse().unwrap(),
+                                    minor: 0,
+                                    patch: 0,
+                                    pre: vec![],
+                                    build: vec![],
+                                };
+                            }
 
-            (feature, data)
-        })
-        .collect()
-});
+                            if v.split(".").count() == 2 {
+                                let mut s = v.split(".");
+                                return Version {
+                                    major: s.next().unwrap().parse().unwrap(),
+                                    minor: s.next().unwrap().parse().unwrap(),
+                                    patch: 0,
+                                    pre: vec![],
+                                    build: vec![],
+                                };
+                            }
+
+                            v.parse().unwrap_or_else(|err| {
+                                panic!("failed to parse {} as semver: {}", v, err)
+                            })
+                        })
+                    }),
+                )
+            })
+            .collect()
+    });

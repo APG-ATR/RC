@@ -52,6 +52,32 @@ pub struct BrowserData<T: Default> {
     pub phantom: T,
 }
 
+impl<T> BrowserData<T>
+where
+    T: Default,
+{
+    pub fn map<N: Default>(self, mut op: impl FnMut(&'static str, T) -> N) -> BrowserData<N> {
+        BrowserData {
+            chrome: op("chrome", self.chrome),
+            ie: op("ie", self.ie),
+            edge: op("edge", self.edge),
+            firefox: op("firefox", self.firefox),
+            safari: op("safari", self.safari),
+            node: op("node", self.node),
+            ios: op("ios", self.ios),
+            samsung: op("samsung", self.samsung),
+            opera: op("opera", self.opera),
+            android: op("android", self.android),
+            electron: op("electron", self.electron),
+            phantom: op("phantom", self.phantom),
+        }
+    }
+
+    pub fn map_value<N: Default>(self, mut op: impl FnMut(T) -> N) -> BrowserData<N> {
+        self.map(|_, v| op(v))
+    }
+}
+
 struct Polyfills {
     c: Config,
 }
