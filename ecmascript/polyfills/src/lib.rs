@@ -10,6 +10,7 @@ use swc_ecma_ast::*;
 use swc_ecma_transforms::{pass::Pass, util::prepend_stmts};
 
 mod corejs2_data;
+mod transform_data;
 
 pub fn polyfills(mut c: Config) -> impl Pass {
     if c.core_js == 0 {
