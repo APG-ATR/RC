@@ -138,17 +138,19 @@ fn load() -> Result<Vec<TestDescAndFn>, Error> {
         let cfg = cfg.presets.into_iter().map(|v| v.1).next().unwrap();
 
         let file = e.path().join("input.mjs");
+        let name = e
+            .path()
+            .strip_prefix(&dir)
+            .expect("failed to strip prefix")
+            .display()
+            .to_string();
         tests.push(TestDescAndFn {
             desc: TestDesc {
                 test_type: TestType::IntegrationTest,
-                name: TestName::DynTestName(format!(
-                    "{}",
-                    e.path()
-                        .strip_prefix(&dir)
-                        .expect("failed to strip prefix")
-                        .display()
-                )),
-                ignore: false,
+                ignore: env::var("TEST")
+                    .map(|s| !name.contains(&s))
+                    .unwrap_or(false),
+                name: TestName::DynTestName(name),
                 allow_fail: false,
                 should_panic: ShouldPanic::No,
             },

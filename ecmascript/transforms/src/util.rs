@@ -1118,7 +1118,7 @@ pub(crate) fn undefined(span: Span) -> Box<Expr> {
 }
 
 /// inject `stmt` after directives
-pub(crate) fn prepend<T: StmtLike>(stmts: &mut Vec<T>, stmt: T) {
+pub fn prepend<T: StmtLike>(stmts: &mut Vec<T>, stmt: T) {
     let idx = stmts
         .iter()
         .position(|item| match item.as_stmt() {
@@ -1134,7 +1134,7 @@ pub(crate) fn prepend<T: StmtLike>(stmts: &mut Vec<T>, stmt: T) {
 }
 
 /// inject `stmts` after directives
-pub(crate) fn prepend_stmts<T: StmtLike>(
+pub fn prepend_stmts<T: StmtLike>(
     to: &mut Vec<T>,
     stmts: impl Iterator + ExactSizeIterator<Item = T>,
 ) {
@@ -1160,7 +1160,7 @@ pub(crate) fn prepend_stmts<T: StmtLike>(
     *to = buf
 }
 
-pub(super) trait IsDirective {
+pub trait IsDirective {
     fn as_ref(&self) -> Option<&Stmt>;
     fn is_use_strict(&self) -> bool {
         match self.as_ref() {

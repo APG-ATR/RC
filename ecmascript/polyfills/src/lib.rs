@@ -5,9 +5,9 @@
 use semver::Version;
 use serde::Deserialize;
 use swc_atoms::JsWord;
-use swc_common::{Fold, Visit, VisitWith};
+use swc_common::{Fold, Visit, VisitWith, DUMMY_SP};
 use swc_ecma_ast::*;
-use swc_ecma_transforms::pass::Pass;
+use swc_ecma_transforms::{pass::Pass, util::prepend_stmts};
 
 mod corejs2_data;
 
@@ -38,20 +38,43 @@ struct Polyfills {
 }
 
 impl Fold<Module> for Polyfills {
-    fn fold(&mut self, node: Module) -> Module {
-        let mut v = UsageVisitor {
-            core_js: self.c.core_js,
-            required: vec![],
-        };
-        node.visit_with(&mut v);
+    fn fold(&mut self, mut node: Module) -> Module {
+        let span = node.span;
 
-        println!("{:?}", v.required);
+        if self.c.mode == Some(Mode::Usage) {
+            let mut v = UsageVisitor {
+                core_js: self.c.core_js,
+                required: vec![],
+            };
+            node.visit_with(&mut v);
+
+            prepend_stmts(
+                &mut node.body,
+                v.required.into_iter().map(|src| {
+                    ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
+                        span,
+                        specifiers: vec![],
+                        src: Str {
+                            span: DUMMY_SP,
+                            value: src,
+                            has_escape: false,
+                        },
+                    }))
+                }),
+            );
+        }
 
         node
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+impl Fold<Script> for Polyfills {
+    fn fold(&mut self, _: Script) -> Script {
+        unimplemented!("automatic polyfill for scripts")
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum Mode {
     #[serde(rename = "usage")]
