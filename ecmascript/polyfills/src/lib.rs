@@ -26,6 +26,7 @@ pub fn polyfills(mut c: Config) -> impl Pass {
     Polyfills { c }
 }
 
+/// A map without allocation.
 #[derive(Debug, Default, Deserialize, Clone, Copy)]
 #[serde(deny_unknown_fields)]
 pub struct BrowserData<T: Default> {
@@ -76,6 +77,7 @@ where
         }
     }
 
+    #[inline]
     pub fn map_value<N: Default>(self, mut op: impl FnMut(T) -> N) -> BrowserData<N> {
         self.map(|_, v| op(v))
     }
