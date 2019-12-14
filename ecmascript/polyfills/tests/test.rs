@@ -202,6 +202,7 @@ fn exec(c: PresetConfig, dir: PathBuf) -> Result<(), Error> {
         .collect();
 
     let mut pass = polyfills(Config {
+        debug: c.debug,
         mode: None,
         skip: vec![],
         // TODO
