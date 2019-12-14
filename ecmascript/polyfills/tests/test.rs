@@ -4,6 +4,7 @@
 
 extern crate test;
 
+use pretty_assertions::assert_eq;
 use serde::Deserialize;
 use serde_json::Value;
 use std::{
@@ -11,11 +12,17 @@ use std::{
     env,
     fs::File,
     io,
-    path::PathBuf,
-    process::{Command, Stdio},
+    io::Read,
+    path::{Path, PathBuf},
+    process::Command,
 };
-use swc_common::FromVariant;
+use swc_common::{fold::FoldWith, input::SourceFileInput, FromVariant};
+use swc_ecma_ast::Module;
+use swc_ecma_codegen::Emitter;
+use swc_ecma_parser::{Parser, Session};
+use swc_ecma_polyfills::{polyfills, Config};
 use test::{test_main, ShouldPanic, TestDesc, TestDescAndFn, TestFn, TestName, TestType};
+use testing::{NormalizedOutput, Tester};
 use walkdir::WalkDir;
 
 /// options.json file
@@ -147,7 +154,7 @@ fn load() -> Result<Vec<TestDescAndFn>, Error> {
             },
             testfn: TestFn::DynTestFn(box move || {
                 //
-                exec(cfg, file).expect("failed to run test")
+                exec(cfg, e.path().to_path_buf()).expect("failed to run test")
             }),
         });
     }
@@ -155,30 +162,143 @@ fn load() -> Result<Vec<TestDescAndFn>, Error> {
     Ok(tests)
 }
 
-fn exec(c: PresetConfig, src: PathBuf) -> Result<(), Error> {
+fn exec(c: PresetConfig, dir: PathBuf) -> Result<(), Error> {
     let output = {
-        let mut qjs = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
-        qjs.push("tests");
-        qjs.push("query.js");
+        if c.targets.is_empty() {
+            b"[]".to_vec()
+        } else {
+            let mut qjs = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
+            qjs.push("tests");
+            qjs.push("query.js");
 
-        let output = Command::new("node")
-            .arg(&qjs)
-            .arg(serde_json::to_string(&c.targets)?)
-            .output()?;
+            let output = Command::new("node")
+                .arg(&qjs)
+                .arg(serde_json::to_string(&c.targets)?)
+                .output()?;
 
-        println!(
-            "{}\n{}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr),
-        );
+            //        println!(
+            //            "{}\n{}",
+            //            String::from_utf8_lossy(&output.stdout),
+            //            String::from_utf8_lossy(&output.stderr),
+            //        );
 
-        if !output.status.success() {
-            return Err(Error::Msg(format!("query.js: Status {:?}", output.status,)));
+            if !output.status.success() {
+                return Err(Error::Msg(format!("query.js: Status {:?}", output.status,)));
+            }
+
+            output.stdout
         }
-
-        output.stdout
     };
+
+    let browsers: Vec<String> = serde_json::from_slice(&output)?;
+    let browsers: HashMap<_, _> = browsers
+        .into_iter()
+        .map(|v| {
+            let mut v = v.split(' ');
+            (v.next().unwrap().to_string(), v.next().unwrap().to_string())
+        })
+        .collect();
+
+    let mut pass = polyfills(Config {
+        mode: None,
+        skip: vec![],
+        // TODO
+        core_js: 2,
+        versions: None,
+    });
+
+    println!("Browsers: {:?}", browsers);
+
+    Tester::new()
+        .print_errors(|cm, handler| {
+            let print = |m: &Module| {
+                let mut buf = vec![];
+                {
+                    let handlers = box MyHandlers;
+                    let mut emitter = Emitter {
+                        cfg: swc_ecma_codegen::Config { minify: false },
+                        comments: None,
+                        cm: cm.clone(),
+                        wr: box swc_ecma_codegen::text_writer::JsWriter::new(
+                            cm.clone(),
+                            "\n",
+                            &mut buf,
+                            None,
+                        ),
+                        handlers,
+                        pos_of_leading_comments: Default::default(),
+                    };
+
+                    emitter.emit_module(m).expect("failed to emit module");
+                }
+                unsafe { String::from_utf8_unchecked(buf) }
+            };
+
+            let fm = cm
+                .load_file(&dir.join("input.mjs"))
+                .expect("failed to load file");
+            let mut p = Parser::new(
+                Session { handler: &handler },
+                Default::default(),
+                SourceFileInput::from(&*fm),
+                None,
+            );
+
+            let module = p.parse_module().map_err(|mut e| e.emit())?;
+            let actual = module.fold_with(&mut pass);
+
+            // debug mode?
+            if dir.join("stdout.txt").exists() {
+                let mut out = read(&dir.join("stdout.txt"));
+
+                if dir.join("stderr.txt").exists() {
+                    out.push_str("\n\n");
+                    out.push_str(&read(&dir.join("stderr.txt")));
+                }
+
+                return Ok(());
+            };
+
+            // It's normal transform test.
+            let expected = {
+                let fm = cm
+                    .load_file(&dir.join("output.mjs"))
+                    .expect("failed to load output file");
+
+                let mut p = Parser::new(
+                    Session { handler: &handler },
+                    Default::default(),
+                    SourceFileInput::from(&*fm),
+                    None,
+                );
+
+                p.parse_module().map_err(|mut e| e.emit())?
+            };
+
+            let actual_src = print(&actual);
+            let expected_src = print(&expected);
+
+            if actual_src != expected_src {
+                panic!(
+                    r#"assertion failed: `(left == right)`
+            {}"#,
+                    ::testing::diff(&actual_src, &expected_src),
+                );
+            }
+
+            Ok(())
+        })
+        .expect("failed to execute");
+
     Ok(())
+}
+
+fn read(p: &Path) -> String {
+    let mut buf = String::new();
+    let mut f = File::open(p).expect("failed to open file");
+    f.read_to_string(&mut buf).expect("failed to read file");
+
+    buf
 }
 
 #[test]
@@ -188,3 +308,7 @@ fn fixtures() {
     let args: Vec<_> = env::args().collect();
     test_main(&args, tests, Some(test::Options::new()));
 }
+
+struct MyHandlers;
+
+impl swc_ecma_codegen::Handlers for MyHandlers {}

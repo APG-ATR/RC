@@ -2,6 +2,7 @@
 #![feature(box_patterns)]
 #![feature(specialization)]
 
+use semver::Version;
 use serde::Deserialize;
 use swc_atoms::JsWord;
 use swc_common::{Fold, Visit, VisitWith};
@@ -16,6 +17,20 @@ pub fn polyfills(mut c: Config) -> impl Pass {
     }
 
     Polyfills { c }
+}
+
+#[derive(Debug, Deserialize, Clone, Copy)]
+#[serde(deny_unknown_fields)]
+pub struct BrowserData<T> {
+    pub chrome: T,
+    pub edge: T,
+    pub firefox: T,
+    pub safari: T,
+    pub node: T,
+    pub ios: T,
+    pub samsung: T,
+    pub opera: T,
+    pub electron: T,
 }
 
 struct Polyfills {
@@ -56,6 +71,8 @@ pub struct Config {
     pub skip: Vec<JsWord>,
     /// The version of the used core js.
     pub core_js: usize,
+
+    pub versions: Option<BrowserData<Version>>,
 }
 
 struct UsageVisitor {
