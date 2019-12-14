@@ -20,7 +20,7 @@ use swc_common::{fold::FoldWith, input::SourceFileInput, FromVariant};
 use swc_ecma_ast::Module;
 use swc_ecma_codegen::Emitter;
 use swc_ecma_parser::{Parser, Session};
-use swc_ecma_polyfills::{polyfills, Config};
+use swc_ecma_preset_env::{polyfills, Config};
 use test::{test_main, ShouldPanic, TestDesc, TestDescAndFn, TestFn, TestName, TestType};
 use testing::{NormalizedOutput, Tester};
 use walkdir::WalkDir;
