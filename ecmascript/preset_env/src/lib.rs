@@ -6,6 +6,7 @@ use crate::transform_data::FEATURES;
 use arrayvec::ArrayVec;
 use semver::Version;
 use serde::Deserialize;
+use st_map::StaticMap;
 use swc_atoms::JsWord;
 use swc_common::{chain, Fold, Visit, VisitWith, DUMMY_SP};
 use swc_ecma_ast::*;
@@ -103,7 +104,7 @@ pub fn preset_env(mut c: Config) -> impl Pass {
 }
 
 /// A map without allocation.
-#[derive(Debug, Default, Deserialize, Clone, Copy)]
+#[derive(Debug, Default, Deserialize, Clone, Copy, StaticMap)]
 #[serde(deny_unknown_fields)]
 pub struct BrowserData<T: Default> {
     #[serde(default)]
@@ -130,55 +131,6 @@ pub struct BrowserData<T: Default> {
     pub electron: T,
     #[serde(default)]
     pub phantom: T,
-}
-
-impl<T> BrowserData<T>
-where
-    T: Default,
-{
-    pub fn map<N: Default>(self, mut op: impl FnMut(&'static str, T) -> N) -> BrowserData<N> {
-        BrowserData {
-            chrome: op("chrome", self.chrome),
-            ie: op("ie", self.ie),
-            edge: op("edge", self.edge),
-            firefox: op("firefox", self.firefox),
-            safari: op("safari", self.safari),
-            node: op("node", self.node),
-            ios: op("ios", self.ios),
-            samsung: op("samsung", self.samsung),
-            opera: op("opera", self.opera),
-            android: op("android", self.android),
-            electron: op("electron", self.electron),
-            phantom: op("phantom", self.phantom),
-        }
-    }
-
-    #[inline]
-    pub fn map_value<N: Default>(self, mut op: impl FnMut(T) -> N) -> BrowserData<N> {
-        self.map(|_, v| op(v))
-    }
-
-    pub fn iter<'a>(&'a self) -> impl 'a + Iterator<Item = (&'static str, &'a T)> {
-        let mut arr: ArrayVec<[_; 12]> = Default::default();
-
-        arr.try_extend_from_slice(&[
-            ("chrome", &self.chrome),
-            ("ie", &self.ie),
-            ("edge", &self.edge),
-            ("firefox", &self.firefox),
-            ("safari", &self.safari),
-            ("node", &self.node),
-            ("ios", &self.ios),
-            ("samsung", &self.samsung),
-            ("opera", &self.opera),
-            ("android", &self.android),
-            ("electron", &self.electron),
-            ("phantom", &self.phantom),
-        ])
-        .unwrap();
-
-        arr.into_iter()
-    }
 }
 
 impl<T> BrowserData<Option<T>> {
@@ -250,6 +202,8 @@ pub enum Mode {
     Entry,
 }
 
+pub type Versions = BrowserData<Option<Version>>;
+
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
@@ -277,8 +231,10 @@ pub struct Config {
     pub core_js: usize,
 
     #[serde(default)]
-    pub versions: BrowserData<Option<Version>>,
+    pub versions: Versions,
 }
+
+pub fn parse_versions(s: &str) -> Versions {}
 
 struct UsageVisitor {
     core_js: usize,

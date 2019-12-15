@@ -208,7 +208,7 @@ fn exec(c: PresetConfig, dir: PathBuf) -> Result<(), Error> {
         // TODO
         dynamic_import: true,
         core_js: 2,
-        versions: Default::default(),
+        versions: browsers,
     });
 
     println!("Browsers: {:?}", browsers);
