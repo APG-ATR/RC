@@ -12,6 +12,7 @@ mod builtin;
 mod data;
 
 pub(super) struct UsageVisitor<'a> {
+    is_any_target: bool,
     target: &'a Versions,
     pub required: Vec<JsWord>,
 }
@@ -20,7 +21,7 @@ impl<'a> UsageVisitor<'a> {
     pub fn new(target: &'a Versions) -> Self {
         //        let mut v = Self { required: vec![] };
         //
-        //        let is_any_target = target.iter().all(|(_, v)| v.is_none());
+        //
         //        let is_web_target = target
         //            .iter()
         //            .any(|(name, version)| name != "node" &&
@@ -36,7 +37,10 @@ impl<'a> UsageVisitor<'a> {
         //            v.add(&["web.timers", "web.immediate",
         // "web.dom.iterable"]);        }
         //        v
+        let is_any_target = target.iter().all(|(_, v)| v.is_none());
+
         Self {
+            is_any_target,
             target,
             required: vec![],
         }
@@ -45,28 +49,30 @@ impl<'a> UsageVisitor<'a> {
     /// Add imports
     fn add(&mut self, features: &[&str]) {
         for f in features {
-            if let Some(v) = BUILTINS.get(&**f) {
-                // Skip
-                if v.iter()
-                    .zip(self.target.iter())
-                    .all(|((name, fv), (_, tv))| {
-                        // fv: feature's version
-                        // tv: target's version
+            if !self.is_any_target {
+                if let Some(v) = BUILTINS.get(&**f) {
+                    // Skip
+                    if v.iter()
+                        .zip(self.target.iter())
+                        .all(|((name, fv), (_, tv))| {
+                            // fv: feature's version
+                            // tv: target's version
 
-                        // We are not targeting the platform. So ignore it.
-                        if tv.is_none() {
-                            return true;
-                        }
+                            // We are not targeting the platform. So ignore it.
+                            if tv.is_none() {
+                                return true;
+                            }
 
-                        // Not supported by browser (even on latest version)
-                        if fv.is_none() {
-                            return false;
-                        }
+                            // Not supported by browser (even on latest version)
+                            if fv.is_none() {
+                                return false;
+                            }
 
-                        *fv < *tv
-                    })
-                {
-                    continue;
+                            *fv < *tv
+                        })
+                    {
+                        continue;
+                    }
                 }
             }
 
