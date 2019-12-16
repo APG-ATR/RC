@@ -51,28 +51,28 @@ pub fn preset_env(mut c: Config) -> impl Pass {
     let pass = add!(pass, ExponentiationOperator, es2016::exponentation());
 
     // ES2015
-    let pass = add!(pass, BlockScopedFunctions, es2015::BlockScopedFns, true);
+    let pass = add!(pass, BlockScopedFunctions, es2015::BlockScopedFns);
     let pass = add!(
         pass,
         TemplateLiterals,
         es2015::TemplateLiteral::default(),
         true
     );
-    let pass = add!(pass, Classes, es2015::Classes::default(), true);
+    let pass = add!(pass, Classes, es2015::Classes::default());
     let pass = add!(
         pass,
         Spread,
         es2015::spread(es2015::spread::Config { loose }),
         true
     );
-    let pass = add!(pass, FunctionName, es2015::function_name(), true);
-    let pass = add!(pass, ArrowFunctions, es2015::arrow(), true);
-    let pass = add!(pass, DuplicateKeys, es2015::duplicate_keys(), true);
-    let pass = add!(pass, StickyRegex, es2015::StickyRegex, true);
+    let pass = add!(pass, FunctionName, es2015::function_name());
+    let pass = add!(pass, ArrowFunctions, es2015::arrow());
+    let pass = add!(pass, DuplicateKeys, es2015::duplicate_keys());
+    let pass = add!(pass, StickyRegex, es2015::StickyRegex);
     // TODO:    InstanceOf,
-    let pass = add!(pass, TypeOfSymbol, es2015::TypeOfSymbol, true);
-    let pass = add!(pass, ShorthandProperties, es2015::Shorthand, true);
-    let pass = add!(pass, Parameters, es2015::parameters(), true);
+    let pass = add!(pass, TypeOfSymbol, es2015::TypeOfSymbol);
+    let pass = add!(pass, ShorthandProperties, es2015::Shorthand);
+    let pass = add!(pass, Parameters, es2015::parameters());
     let pass = add!(
         pass,
         ForOf,
@@ -93,7 +93,7 @@ pub fn preset_env(mut c: Config) -> impl Pass {
         es2015::destructuring(es2015::destructuring::Config { loose }),
         true
     );
-    let pass = add!(pass, BlockScoping, es2015::block_scoping(), true);
+    let pass = add!(pass, BlockScoping, es2015::block_scoping());
 
     // TODO:
     //    Literals,
