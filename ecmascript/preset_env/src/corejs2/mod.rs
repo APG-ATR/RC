@@ -2,6 +2,8 @@ use self::{
     builtin::BUILTINS,
     data::{BUILTIN_TYPES, INSTANCE_PROPERTIES, STATIC_PROPERTIES},
 };
+use crate::{BrowserData, Versions};
+use semver::Version;
 use swc_atoms::{js_word, JsWord};
 use swc_common::{Visit, VisitWith};
 use swc_ecma_ast::*;
@@ -9,19 +11,69 @@ use swc_ecma_ast::*;
 mod builtin;
 mod data;
 
-pub(crate) struct UsageVisitor {
+pub(super) struct UsageVisitor<'a> {
+    target: &'a Versions,
     pub required: Vec<JsWord>,
 }
 
-impl UsageVisitor {
+impl<'a> UsageVisitor<'a> {
+    pub fn new(target: &'a Versions) -> Self {
+        //        let mut v = Self { required: vec![] };
+        //
+        //        let is_any_target = target.iter().all(|(_, v)| v.is_none());
+        //        let is_web_target = target
+        //            .iter()
+        //            .any(|(name, version)| name != "node" &&
+        // version.is_some());
+        //
+        //        println!(
+        //            "is_any_target={:?}\nis_web_target={:?}",
+        //            is_any_target, is_web_target
+        //        );
+        //
+        //        // Web default
+        //        if is_any_target || is_web_target {
+        //            v.add(&["web.timers", "web.immediate",
+        // "web.dom.iterable"]);        }
+        //        v
+        Self {
+            target,
+            required: vec![],
+        }
+    }
+
     /// Add imports
     fn add(&mut self, features: &[&str]) {
-        self.required.extend(
-            features
-                .iter()
-                .map(|v| format!("core-js/modules/{}", v))
-                .map(From::from),
-        );
+        for f in features {
+            if let Some(v) = BUILTINS.get(&**f) {
+                // Skip
+                if v.iter()
+                    .zip(self.target.iter())
+                    .all(|((name, fv), (_, tv))| {
+                        // fv: feature's version
+                        // tv: target's version
+
+                        if fv.is_none() {
+                            return true;
+                        }
+
+                        if tv.is_none() {
+                            return true;
+                        }
+
+                        *fv < *tv
+                    })
+                {
+                    continue;
+                }
+            }
+
+            let v = format!("core-js/modules/{}", f);
+
+            if self.required.iter().all(|import| *import != *v) {
+                self.required.push(v.into())
+            }
+        }
     }
 }
 
@@ -36,7 +88,7 @@ impl UsageVisitor {
 //    },
 
 /// Detects usage of types
-impl Visit<Ident> for UsageVisitor {
+impl Visit<Ident> for UsageVisitor<'_> {
     fn visit(&mut self, node: &Ident) {
         node.visit_children(self);
 
@@ -51,7 +103,7 @@ impl Visit<Ident> for UsageVisitor {
 /// Detects usage of instance properties and static properties.
 ///
 ///  - `Array.from`
-impl Visit<MemberExpr> for UsageVisitor {
+impl Visit<MemberExpr> for UsageVisitor<'_> {
     fn visit(&mut self, node: &MemberExpr) {
         node.visit_children(self);
         //enter(path: NodePath) {
@@ -152,7 +204,7 @@ impl Visit<MemberExpr> for UsageVisitor {
 
 ///
 /// - `arr[Symbol.iterator]()`
-impl Visit<CallExpr> for UsageVisitor {
+impl Visit<CallExpr> for UsageVisitor<'_> {
     fn visit(&mut self, e: &CallExpr) {
         e.visit_children(self);
 
@@ -173,7 +225,7 @@ impl Visit<CallExpr> for UsageVisitor {
 
 ///
 /// - `Symbol.iterator in arr`
-impl Visit<BinExpr> for UsageVisitor {
+impl Visit<BinExpr> for UsageVisitor<'_> {
     fn visit(&mut self, e: &BinExpr) {
         e.visit_children(self);
 
@@ -186,7 +238,7 @@ impl Visit<BinExpr> for UsageVisitor {
 
 ///
 /// - `yield*`
-impl Visit<YieldExpr> for UsageVisitor {
+impl Visit<YieldExpr> for UsageVisitor<'_> {
     fn visit(&mut self, e: &YieldExpr) {
         e.visit_children(self);
         println!("Yield");
@@ -198,7 +250,7 @@ impl Visit<YieldExpr> for UsageVisitor {
 }
 
 /// var { repeat, startsWith } = String
-impl Visit<VarDeclarator> for UsageVisitor {
+impl Visit<VarDeclarator> for UsageVisitor<'_> {
     fn visit(&mut self, v: &VarDeclarator) {
         v.visit_children(self);
 

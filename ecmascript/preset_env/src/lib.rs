@@ -30,7 +30,9 @@ pub fn preset_env(mut c: Config) -> impl Pass {
         ($prev:expr, $feature:ident, $pass:expr) => {{
             let f = transform_data::Feature::$feature;
             let enable = f.should_enable(&c.versions);
-            println!("{}: {:?}", f.as_str(), enable);
+            if c.debug {
+                println!("{}: {:?}", f.as_str(), enable);
+            }
             chain!($prev, Optional::new($pass, enable))
         }};
     }
@@ -161,7 +163,7 @@ impl Fold<Module> for Polyfills {
         let span = node.span;
 
         if self.c.mode == Some(Mode::Usage) {
-            let mut v = corejs2::UsageVisitor { required: vec![] };
+            let mut v = corejs2::UsageVisitor::new(&self.c.versions);
             node.visit_with(&mut v);
 
             prepend_stmts(
