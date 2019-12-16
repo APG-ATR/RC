@@ -1,8 +1,12 @@
-use self::data::*;
+use self::{
+    builtin::BUILTINS,
+    data::{BUILTIN_TYPES, INSTANCE_PROPERTIES, STATIC_PROPERTIES},
+};
 use swc_atoms::{js_word, JsWord};
 use swc_common::{Visit, VisitWith};
 use swc_ecma_ast::*;
 
+mod builtin;
 mod data;
 
 pub(crate) struct UsageVisitor {
@@ -45,10 +49,73 @@ impl Visit<Ident> for UsageVisitor {
 }
 
 /// Detects usage of instance properties and static properties.
+///
+///  - `Array.from`
 impl Visit<MemberExpr> for UsageVisitor {
     fn visit(&mut self, node: &MemberExpr) {
         node.visit_children(self);
-
+        //enter(path: NodePath) {
+        //    const { node } = path;
+        //    const { object, property } = node;
+        //
+        //    // ignore namespace
+        //    if (isNamespaced(path.get("object"))) return;
+        //
+        //    let evaluatedPropType = object.name;
+        //    let propertyName = "";
+        //    let instanceType = "";
+        //
+        //    if (node.computed) {
+        //        if (t.isStringLiteral(property)) {
+        //            propertyName = property.value;
+        //        } else {
+        //            const result = path.get("property").evaluate();
+        //            if (result.confident && result.value) {
+        //                propertyName = result.value;
+        //            }
+        //        }
+        //    } else {
+        //        propertyName = property.name;
+        //    }
+        //
+        //    if (path.scope.getBindingIdentifier(object.name)) {
+        //        const result = path.get("object").evaluate();
+        //        if (result.value) {
+        //            instanceType = getType(result.value);
+        //        } else if (result.deopt && result.deopt.isIdentifier()) {
+        //            evaluatedPropType = result.deopt.node.name;
+        //        }
+        //    }
+        //
+        //    if (has(StaticProperties, evaluatedPropType)) {
+        //        const BuiltInProperties = StaticProperties[evaluatedPropType];
+        //        if (has(BuiltInProperties, propertyName)) {
+        //            const StaticPropertyDependencies =
+        // BuiltInProperties[propertyName];
+        // this.addUnsupported(StaticPropertyDependencies);        }
+        //    }
+        //
+        //    if (has(InstanceProperties, propertyName)) {
+        //        let InstancePropertyDependencies = InstanceProperties[propertyName];
+        //        if (instanceType) {
+        //            InstancePropertyDependencies =
+        // InstancePropertyDependencies.filter(                module =>
+        // module.includes(instanceType),            );
+        //        }
+        //        this.addUnsupported(InstancePropertyDependencies);
+        //    }
+        //},
+        //
+        //// Symbol.match
+        //exit(path: NodePath) {
+        //    const { name } = path.node.object;
+        //
+        //    if (!has(BuiltIns, name)) return;
+        //    if (path.scope.getBindingIdentifier(name)) return;
+        //
+        //    const BuiltInDependencies = BuiltIns[name];
+        //    this.addUnsupported(BuiltInDependencies);
+        //},
         match *node.prop {
             Expr::Ident(ref i) => {
                 //
@@ -83,7 +150,8 @@ impl Visit<MemberExpr> for UsageVisitor {
     }
 }
 
-/// `arr[Symbol.iterator]()`
+///
+/// - `arr[Symbol.iterator]()`
 impl Visit<CallExpr> for UsageVisitor {
     fn visit(&mut self, e: &CallExpr) {
         e.visit_children(self);
@@ -94,28 +162,83 @@ impl Visit<CallExpr> for UsageVisitor {
                 _ => true,
             }
             && match e.args[0] {
-                ExprOrSpread {
-                    expr:
-                        box Expr::Member(MemberExpr {
-                            obj:
-                                ExprOrSuper::Expr(box Expr::Ident(Ident {
-                                    sym: js_word!("Symbol"),
-                                    ..
-                                })),
-                            prop:
-                                box Expr::Ident(Ident {
-                                    sym: js_word!("iterator"),
-                                    ..
-                                }),
-                            computed: false,
-                            ..
-                        }),
-                    ..
-                } => true,
+                ExprOrSpread { ref expr, .. } if is_symbol_iterator(&expr) => true,
                 _ => false,
             }
         {
             self.add(&["web.dom.iterable"])
         }
+    }
+}
+
+///
+/// - `Symbol.iterator in arr`
+impl Visit<BinExpr> for UsageVisitor {
+    fn visit(&mut self, e: &BinExpr) {
+        e.visit_children(self);
+
+        match e.op {
+            op!("in") if is_symbol_iterator(&e.left) => self.add(&["web.dom.iterable"]),
+            _ => {}
+        }
+    }
+}
+
+///
+/// - `yield*`
+impl Visit<YieldExpr> for UsageVisitor {
+    fn visit(&mut self, e: &YieldExpr) {
+        e.visit_children(self);
+        println!("Yield");
+
+        if e.delegate {
+            self.add(&["web.dom.iterable"])
+        }
+    }
+}
+
+/// var { repeat, startsWith } = String
+impl Visit<VarDeclarator> for UsageVisitor {
+    fn visit(&mut self, v: &VarDeclarator) {
+        v.visit_children(self);
+
+        //const { node } = path;
+        //const { id, init } = node;
+        //
+        //if (!t.isObjectPattern(id)) return;
+        //
+        //// doesn't reference the global
+        //if (init && path.scope.getBindingIdentifier(init.name)) return;
+        //
+        //for (const { key } of id.properties) {
+        //    if (
+        //        !node.computed &&
+        //            t.isIdentifier(key) &&
+        //            has(InstanceProperties, key.name)
+        //    ) {
+        //        const InstancePropertyDependencies =
+        // InstanceProperties[key.name];        this.
+        // addUnsupported(InstancePropertyDependencies);    }
+        //}
+    }
+}
+
+fn is_symbol_iterator(e: &Expr) -> bool {
+    match *e {
+        Expr::Member(MemberExpr {
+            obj:
+                ExprOrSuper::Expr(box Expr::Ident(Ident {
+                    sym: js_word!("Symbol"),
+                    ..
+                })),
+            prop:
+                box Expr::Ident(Ident {
+                    sym: js_word!("iterator"),
+                    ..
+                }),
+            computed: false,
+            ..
+        }) => true,
+        _ => false,
     }
 }
