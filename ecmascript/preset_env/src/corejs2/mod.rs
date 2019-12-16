@@ -53,12 +53,14 @@ impl<'a> UsageVisitor<'a> {
                         // fv: feature's version
                         // tv: target's version
 
-                        if fv.is_none() {
+                        // We are not targeting the platform. So ignore it.
+                        if tv.is_none() {
                             return true;
                         }
 
-                        if tv.is_none() {
-                            return true;
+                        // Not supported by browser (even on latest version)
+                        if fv.is_none() {
+                            return false;
                         }
 
                         *fv < *tv
