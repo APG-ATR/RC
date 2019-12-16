@@ -20,7 +20,7 @@ use swc_common::{fold::FoldWith, input::SourceFileInput, FromVariant};
 use swc_ecma_ast::Module;
 use swc_ecma_codegen::Emitter;
 use swc_ecma_parser::{Parser, Session};
-use swc_ecma_preset_env::{parse_version, preset_env, BrowserData, Config};
+use swc_ecma_preset_env::{parse_version, preset_env, BrowserData, Config, Mode};
 use test::{test_main, ShouldPanic, TestDesc, TestDescAndFn, TestFn, TestName, TestType};
 use testing::Tester;
 use walkdir::WalkDir;
@@ -204,7 +204,12 @@ fn exec(c: PresetConfig, dir: PathBuf) -> Result<(), Error> {
 
     let mut pass = preset_env(Config {
         debug: c.debug,
-        mode: None,
+        mode: match c.use_built_ins {
+            UseBuiltIns::Bool(false) => None,
+            UseBuiltIns::Str(s) if s == "usage" => Some(Mode::Usage),
+            UseBuiltIns::Str(s) if s == "entry" => Some(Mode::Entry),
+            v => unreachable!("invalid: {:?}", v),
+        },
         skip: vec![],
         // TODO
         loose: true,
