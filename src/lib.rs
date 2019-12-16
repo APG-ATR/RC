@@ -8,7 +8,6 @@ pub use sourcemap;
 mod builder;
 pub mod config;
 pub mod error;
-pub mod preset;
 
 pub use crate::builder::PassBuilder;
 use crate::{

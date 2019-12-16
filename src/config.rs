@@ -1,11 +1,13 @@
 use crate::{builder::PassBuilder, error::Error};
 use atoms::JsWord;
 use chashmap::CHashMap;
+pub use common::chain;
 use common::{errors::Handler, FileName, SourceMap};
 pub use ecmascript::parser::JscTarget;
 use ecmascript::{
     ast::{Expr, ExprStmt, ModuleItem, Program, Stmt},
     parser::{lexer::Lexer, Parser, Session as ParseSess, SourceFileInput, Syntax},
+    preset_env,
     transforms::{
         chain_at, const_modules, modules,
         optimization::{simplifier, InlineGlobals, JsonParse},
@@ -43,7 +45,7 @@ pub struct ParseOptions {
     pub target: JscTarget,
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Options {
     #[serde(flatten, default)]
@@ -145,6 +147,8 @@ impl Options {
 
         let syntax = syntax.unwrap_or_default();
         let transform = transform.unwrap_or_default();
+        let optimizer = transform.optimizer;
+        let enable_optimizer = optimizer.is_some();
 
         let const_modules = {
             let enabled = transform.const_modules.is_some();
@@ -155,8 +159,6 @@ impl Options {
             Optional::new(const_modules(globals), enabled)
         };
 
-        let optimizer = transform.optimizer;
-        let enable_optimizer = optimizer.is_some();
         let json_parse_pass = {
             if let Some(ref cfg) = optimizer.as_ref().and_then(|v| v.jsonify) {
                 JsonParse {
@@ -169,11 +171,15 @@ impl Options {
             }
         };
 
-        let pass = if let Some(opts) = optimizer.map(|o| o.globals.unwrap_or_else(Default::default))
-        {
-            opts.build(cm, handler)
-        } else {
-            GlobalPassOption::default().build(cm, handler)
+        let optimization = {
+            let pass =
+                if let Some(opts) = optimizer.map(|o| o.globals.unwrap_or_else(Default::default)) {
+                    opts.build(cm, handler)
+                } else {
+                    GlobalPassOption::default().build(cm, handler)
+                };
+
+            pass
         };
 
         let pass = chain_at!(
@@ -185,7 +191,7 @@ impl Options {
             Optional::new(class_properties(), syntax.typescript()),
             resolver(),
             const_modules,
-            pass,
+            optimization,
             Optional::new(decorators(Default::default()), syntax.decorators()),
             Optional::new(class_properties(), syntax.class_props()),
             Optional::new(
@@ -198,6 +204,7 @@ impl Options {
 
         let pass = PassBuilder::new(&cm, &handler, loose, pass)
             .target(target)
+            .preset_env(config.env)
             .finalize(syntax, config.module);
 
         BuiltConfig {
@@ -263,7 +270,7 @@ fn default_cwd() -> PathBuf {
 }
 
 /// `.swcrc` file
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(untagged)]
 pub enum Rc {
     Single(Config),
@@ -317,9 +324,12 @@ impl Rc {
 }
 
 /// A single object in the `.swcrc` file
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Config {
+    #[serde(default)]
+    pub env: Option<preset_env::Config>,
+
     #[serde(default)]
     pub test: Option<FileMatcher>,
 

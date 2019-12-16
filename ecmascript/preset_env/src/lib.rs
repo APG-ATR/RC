@@ -2,8 +2,6 @@
 #![feature(box_patterns)]
 #![feature(specialization)]
 
-use crate::transform_data::FEATURES;
-use arrayvec::ArrayVec;
 use semver::Version;
 use serde::Deserialize;
 use st_map::StaticMap;
@@ -234,7 +232,9 @@ pub struct Config {
     pub versions: Versions,
 }
 
-pub fn parse_versions(s: &str) -> Versions {}
+pub fn parse_versions(_: &str) -> Versions {
+    unimplemented!()
+}
 
 struct UsageVisitor {
     core_js: usize,
