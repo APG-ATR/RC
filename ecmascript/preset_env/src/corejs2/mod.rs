@@ -67,7 +67,7 @@ impl<'a> UsageVisitor<'a> {
                                 return false;
                             }
 
-                            *fv < *tv
+                            *fv <= *tv
                         })
                     {
                         continue;
