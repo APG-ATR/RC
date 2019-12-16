@@ -216,11 +216,11 @@ impl Visit<CallExpr> for UsageVisitor<'_> {
 
         if !e.args.is_empty()
             && match e.callee {
-                ExprOrSuper::Expr(box Expr::Member(MemberExpr { computed: true, .. })) => true,
-                _ => false,
-            }
-            && match e.args[0] {
-                ExprOrSpread { ref expr, .. } if is_symbol_iterator(&expr) => true,
+                ExprOrSuper::Expr(box Expr::Member(MemberExpr {
+                    computed: true,
+                    ref prop,
+                    ..
+                })) if is_symbol_iterator(&prop) => true,
                 _ => false,
             }
         {
