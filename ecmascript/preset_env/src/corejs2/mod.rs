@@ -51,25 +51,22 @@ impl<'a> UsageVisitor<'a> {
             if !self.is_any_target {
                 if let Some(v) = BUILTINS.get(&**f) {
                     // Skip
-                    if v.iter()
-                        .zip(self.target.iter())
-                        .all(|((name, fv), (_, tv))| {
-                            // fv: feature's version
-                            // tv: target's version
+                    if v.iter().zip(self.target.iter()).all(|((_, fv), (_, tv))| {
+                        // fv: feature's version
+                        // tv: target's version
 
-                            // We are not targeting the platform. So ignore it.
-                            if tv.is_none() {
-                                return true;
-                            }
+                        // We are not targeting the platform. So ignore it.
+                        if tv.is_none() {
+                            return true;
+                        }
 
-                            // Not supported by browser (even on latest version)
-                            if fv.is_none() {
-                                return false;
-                            }
+                        // Not supported by browser (even on latest version)
+                        if fv.is_none() {
+                            return false;
+                        }
 
-                            *fv <= *tv
-                        })
-                    {
+                        *fv <= *tv
+                    }) {
                         continue;
                     }
                 }
