@@ -7,7 +7,7 @@ use semver::Version;
 use serde::Deserialize;
 use st_map::StaticMap;
 use swc_atoms::JsWord;
-use swc_common::{chain, Fold, Visit, VisitWith, DUMMY_SP};
+use swc_common::{chain, Fold, VisitWith, DUMMY_SP};
 use swc_ecma_ast::*;
 use swc_ecma_transforms::{
     compat::{es2015, es2016, es2017, es2018, es3},
@@ -15,7 +15,8 @@ use swc_ecma_transforms::{
     util::prepend_stmts,
 };
 
-mod corejs2_data;
+mod corejs2;
+mod corejs3;
 mod transform_data;
 
 pub fn preset_env(mut c: Config) -> impl Pass {
@@ -160,10 +161,7 @@ impl Fold<Module> for Polyfills {
         let span = node.span;
 
         if self.c.mode == Some(Mode::Usage) {
-            let mut v = UsageVisitor {
-                core_js: self.c.core_js,
-                required: vec![],
-            };
+            let mut v = corejs2::UsageVisitor { required: vec![] };
             node.visit_with(&mut v);
 
             prepend_stmts(
@@ -235,73 +233,4 @@ pub struct Config {
 
 pub fn parse_versions(_: &str) -> Versions {
     unimplemented!()
-}
-
-struct UsageVisitor {
-    core_js: usize,
-    required: Vec<JsWord>,
-}
-
-impl UsageVisitor {
-    /// Add imports
-    fn add(&mut self, features: &[&str]) {
-        self.required.extend(
-            features
-                .iter()
-                .map(|v| format!("core-js/modules/{}", v))
-                .map(From::from),
-        );
-    }
-}
-
-/// Detects usage of types
-impl Visit<Ident> for UsageVisitor {
-    fn visit(&mut self, node: &Ident) {
-        node.visit_children(self);
-
-        for (name, builtin) in corejs2_data::BUILTIN_TYPES {
-            if node.sym == **name {
-                self.add(builtin)
-            }
-        }
-    }
-}
-
-/// Detects usage of instance properties and static properties.
-impl Visit<MemberExpr> for UsageVisitor {
-    fn visit(&mut self, node: &MemberExpr) {
-        node.visit_children(self);
-
-        match *node.prop {
-            Expr::Ident(ref i) => {
-                //
-                for (name, imports) in corejs2_data::INSTANCE_PROPERTIES {
-                    if i.sym == **name {
-                        self.add(imports)
-                    }
-                }
-            }
-            _ => {}
-        }
-
-        match node.obj {
-            ExprOrSuper::Expr(box Expr::Ident(ref obj)) => {
-                for (ty, props) in corejs2_data::STATIC_PROPERTIES {
-                    if obj.sym == **ty {
-                        match *node.prop {
-                            Expr::Ident(ref p) => {
-                                for (prop, imports) in *props {
-                                    if p.sym == **prop {
-                                        self.add(imports);
-                                    }
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-            }
-            _ => {}
-        }
-    }
 }

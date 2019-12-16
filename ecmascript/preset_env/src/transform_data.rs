@@ -11,7 +11,7 @@ impl Feature {
         c.as_ref()
             .iter()
             .zip(f.iter())
-            .any(|((browser, target_version), (_, f))| {
+            .any(|((_, target_version), (_, f))| {
                 if target_version.is_none() {
                     return false;
                 }
