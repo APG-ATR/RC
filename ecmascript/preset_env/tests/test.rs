@@ -20,7 +20,7 @@ use swc_common::{fold::FoldWith, input::SourceFileInput, FromVariant};
 use swc_ecma_ast::Module;
 use swc_ecma_codegen::Emitter;
 use swc_ecma_parser::{Parser, Session};
-use swc_ecma_preset_env::{preset_env, Config};
+use swc_ecma_preset_env::{parse_version, preset_env, BrowserData, Config};
 use test::{test_main, ShouldPanic, TestDesc, TestDescAndFn, TestFn, TestName, TestType};
 use testing::Tester;
 use walkdir::WalkDir;
@@ -199,6 +199,9 @@ fn exec(c: PresetConfig, dir: PathBuf) -> Result<(), Error> {
         })
         .collect();
 
+    let mut versions =
+        BrowserData::<()>::default().map(|k, ()| browsers.get(&*k).map(|s| parse_version(s)));
+
     let mut pass = preset_env(Config {
         debug: c.debug,
         mode: None,
@@ -208,7 +211,7 @@ fn exec(c: PresetConfig, dir: PathBuf) -> Result<(), Error> {
         // TODO
         dynamic_import: true,
         core_js: 2,
-        versions: browsers,
+        versions,
     });
 
     println!("Browsers: {:?}", browsers);

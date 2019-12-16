@@ -2,6 +2,7 @@
 #![feature(box_patterns)]
 #![feature(specialization)]
 
+pub use self::transform_data::parse_version;
 use semver::Version;
 use serde::Deserialize;
 use st_map::StaticMap;
