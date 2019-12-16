@@ -292,12 +292,14 @@ fn exec(c: PresetConfig, dir: PathBuf) -> Result<(), Error> {
                         ref specifiers,
                         ref src,
                         ..
-                    })) if specifiers.is_empty() => match *b {
+                    })) if specifiers.is_empty() && src.value.starts_with("core-js") => match *b {
                         ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
                             specifiers: ref rs,
                             src: ref rsrc,
                             ..
-                        })) if rs.is_empty() => src.value.cmp(&rsrc.value),
+                        })) if rs.is_empty() && rsrc.value.starts_with("core-js") => {
+                            src.value.cmp(&rsrc.value)
+                        }
 
                         _ => Ordering::Equal,
                     },
