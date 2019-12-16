@@ -5,13 +5,17 @@ use semver::Version;
 use string_enum::StringEnum;
 
 impl Feature {
-    pub fn should_enable(self, c: &Versions) -> bool {
+    pub fn should_enable(self, c: &Versions, default: bool) -> bool {
         let f = &FEATURES[&self];
 
         c.as_ref()
             .iter()
             .zip(f.iter())
             .any(|((_, target_version), (_, f))| {
+                if target_version.is_none() && f.is_none() {
+                    return default;
+                }
+
                 if target_version.is_none() {
                     return false;
                 }
@@ -23,7 +27,7 @@ impl Feature {
                 let f = f.as_ref().unwrap();
                 let target = target_version.unwrap();
 
-                *f > *target
+                *f >= *target
             })
     }
 }
@@ -175,9 +179,12 @@ mod tests {
 
     #[test]
     fn arrow() {
-        assert!(Feature::ArrowFunctions.should_enable(&BrowserData {
-            ie: Some("11.0.0".parse().unwrap()),
-            ..Default::default()
-        }));
+        assert!(Feature::ArrowFunctions.should_enable(
+            &BrowserData {
+                ie: Some("11.0.0".parse().unwrap()),
+                ..Default::default()
+            },
+            true
+        ));
     }
 }

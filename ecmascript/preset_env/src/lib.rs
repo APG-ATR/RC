@@ -28,8 +28,11 @@ pub fn preset_env(mut c: Config) -> impl Pass {
     let pass = noop();
     macro_rules! add {
         ($prev:expr, $feature:ident, $pass:expr) => {{
+            add!($prev, $feature, $pass, false)
+        }};
+        ($prev:expr, $feature:ident, $pass:expr, $default:expr) => {{
             let f = transform_data::Feature::$feature;
-            let enable = f.should_enable(&c.versions);
+            let enable = f.should_enable(&c.versions, $default);
             if c.debug {
                 println!("{}: {:?}", f.as_str(), enable);
             }
@@ -48,36 +51,49 @@ pub fn preset_env(mut c: Config) -> impl Pass {
     let pass = add!(pass, ExponentiationOperator, es2016::exponentation());
 
     // ES2015
-    let pass = add!(pass, BlockScopedFunctions, es2015::BlockScopedFns);
-    let pass = add!(pass, TemplateLiterals, es2015::TemplateLiteral::default());
-    let pass = add!(pass, Classes, es2015::Classes::default());
+    let pass = add!(pass, BlockScopedFunctions, es2015::BlockScopedFns, true);
+    let pass = add!(
+        pass,
+        TemplateLiterals,
+        es2015::TemplateLiteral::default(),
+        true
+    );
+    let pass = add!(pass, Classes, es2015::Classes::default(), true);
     let pass = add!(
         pass,
         Spread,
-        es2015::spread(es2015::spread::Config { loose })
+        es2015::spread(es2015::spread::Config { loose }),
+        true
     );
-    let pass = add!(pass, FunctionName, es2015::function_name());
-    let pass = add!(pass, ArrowFunctions, es2015::arrow());
-    let pass = add!(pass, DuplicateKeys, es2015::duplicate_keys());
-    let pass = add!(pass, StickyRegex, es2015::StickyRegex);
+    let pass = add!(pass, FunctionName, es2015::function_name(), true);
+    let pass = add!(pass, ArrowFunctions, es2015::arrow(), true);
+    let pass = add!(pass, DuplicateKeys, es2015::duplicate_keys(), true);
+    let pass = add!(pass, StickyRegex, es2015::StickyRegex, true);
     // TODO:    InstanceOf,
-    let pass = add!(pass, TypeOfSymbol, es2015::TypeOfSymbol);
-    let pass = add!(pass, ShorthandProperties, es2015::Shorthand);
-    let pass = add!(pass, Parameters, es2015::parameters());
+    let pass = add!(pass, TypeOfSymbol, es2015::TypeOfSymbol, true);
+    let pass = add!(pass, ShorthandProperties, es2015::Shorthand, true);
+    let pass = add!(pass, Parameters, es2015::parameters(), true);
     let pass = add!(
         pass,
         ForOf,
         es2015::for_of(es2015::for_of::Config {
             assume_array: loose
-        })
+        }),
+        true
     );
-    let pass = add!(pass, ComputedProperties, es2015::computed_properties());
+    let pass = add!(
+        pass,
+        ComputedProperties,
+        es2015::computed_properties(),
+        true
+    );
     let pass = add!(
         pass,
         Destructuring,
-        es2015::destructuring(es2015::destructuring::Config { loose })
+        es2015::destructuring(es2015::destructuring::Config { loose }),
+        true
     );
-    let pass = add!(pass, BlockScoping, es2015::block_scoping());
+    let pass = add!(pass, BlockScoping, es2015::block_scoping(), true);
 
     // TODO:
     //    Literals,
