@@ -2,8 +2,7 @@ use self::{
     builtin::BUILTINS,
     data::{BUILTIN_TYPES, INSTANCE_PROPERTIES, STATIC_PROPERTIES},
 };
-use crate::{BrowserData, Versions};
-use semver::Version;
+use crate::Versions;
 use swc_atoms::{js_word, JsWord};
 use swc_common::{Visit, VisitWith};
 use swc_ecma_ast::*;
