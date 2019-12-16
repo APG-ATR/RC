@@ -37,10 +37,9 @@ impl<'a> UsageVisitor<'a> {
         //            v.add(&["web.timers", "web.immediate",
         // "web.dom.iterable"]);        }
         //        v
-        let is_any_target = target.iter().all(|(_, v)| v.is_none());
 
         Self {
-            is_any_target,
+            is_any_target: target.is_any_target(),
             target,
             required: vec![],
         }
@@ -188,24 +187,26 @@ impl Visit<MemberExpr> for UsageVisitor<'_> {
             _ => {}
         }
 
-        match node.obj {
-            ExprOrSuper::Expr(box Expr::Ident(ref obj)) => {
-                for (ty, props) in STATIC_PROPERTIES {
-                    if obj.sym == **ty {
-                        match *node.prop {
-                            Expr::Ident(ref p) => {
-                                for (prop, imports) in *props {
-                                    if p.sym == **prop {
-                                        self.add(imports);
+        if !node.computed {
+            match node.obj {
+                ExprOrSuper::Expr(box Expr::Ident(ref obj)) => {
+                    for (ty, props) in STATIC_PROPERTIES {
+                        if obj.sym == **ty {
+                            match *node.prop {
+                                Expr::Ident(ref p) => {
+                                    for (prop, imports) in *props {
+                                        if p.sym == **prop {
+                                            self.add(imports);
+                                        }
                                     }
                                 }
+                                _ => {}
                             }
-                            _ => {}
                         }
                     }
                 }
+                _ => {}
             }
-            _ => {}
         }
     }
 }

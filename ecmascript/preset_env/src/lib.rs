@@ -166,6 +166,10 @@ impl Fold<Module> for Polyfills {
             let mut v = corejs2::UsageVisitor::new(&self.c.versions);
             node.visit_with(&mut v);
 
+            if cfg!(debug_assertions) {
+                v.required.sort();
+            }
+
             prepend_stmts(
                 &mut node.body,
                 v.required.into_iter().map(|src| {
@@ -202,6 +206,12 @@ pub enum Mode {
 }
 
 pub type Versions = BrowserData<Option<Version>>;
+
+impl BrowserData<Option<Version>> {
+    pub fn is_any_target(&self) -> bool {
+        self.iter().all(|(_, v)| v.is_none())
+    }
+}
 
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]

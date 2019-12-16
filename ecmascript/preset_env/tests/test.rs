@@ -8,6 +8,7 @@ use pretty_assertions::assert_eq;
 use serde::Deserialize;
 use serde_json::Value;
 use std::{
+    cmp::Ordering,
     collections::HashMap,
     env,
     fs::File,
@@ -17,7 +18,7 @@ use std::{
     process::Command,
 };
 use swc_common::{fold::FoldWith, input::SourceFileInput, FromVariant};
-use swc_ecma_ast::Module;
+use swc_ecma_ast::*;
 use swc_ecma_codegen::Emitter;
 use swc_ecma_parser::{Parser, Session};
 use swc_ecma_preset_env::{parse_version, preset_env, BrowserData, Config, Mode};
@@ -284,7 +285,26 @@ fn exec(c: PresetConfig, dir: PathBuf) -> Result<(), Error> {
                     None,
                 );
 
-                p.parse_module().map_err(|mut e| e.emit())?
+                let mut m = p.parse_module().map_err(|mut e| e.emit())?;
+
+                m.body.sort_by(|a, b| match *a {
+                    ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
+                        ref specifiers,
+                        ref src,
+                        ..
+                    })) if specifiers.is_empty() => match *b {
+                        ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
+                            specifiers: ref rs,
+                            src: ref rsrc,
+                            ..
+                        })) if rs.is_empty() => src.value.cmp(&rsrc.value),
+
+                        _ => Ordering::Equal,
+                    },
+                    _ => Ordering::Equal,
+                });
+
+                m
             };
 
             let actual_src = print(&actual);
