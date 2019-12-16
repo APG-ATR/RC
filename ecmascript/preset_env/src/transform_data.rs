@@ -6,10 +6,6 @@ use string_enum::StringEnum;
 
 impl Feature {
     pub fn should_enable(self, c: &Versions) -> bool {
-        if c.is_any_target() {
-            return true;
-        }
-
         let f = &FEATURES[&self];
 
         c.as_ref()
