@@ -199,7 +199,7 @@ fn exec(c: PresetConfig, dir: PathBuf) -> Result<(), Error> {
         })
         .collect();
 
-    let mut versions =
+    let versions =
         BrowserData::<()>::default().map(|k, ()| browsers.get(&*k).map(|s| parse_version(s)));
 
     let mut pass = preset_env(Config {
