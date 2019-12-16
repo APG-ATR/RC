@@ -171,19 +171,20 @@ impl Visit<MemberExpr> for UsageVisitor<'_> {
         //    const BuiltInDependencies = BuiltIns[name];
         //    this.addUnsupported(BuiltInDependencies);
         //},
-        match *node.prop {
-            Expr::Ident(ref i) => {
-                //
-                for (name, imports) in INSTANCE_PROPERTIES {
-                    if i.sym == **name {
-                        self.add(imports)
-                    }
-                }
-            }
-            _ => {}
-        }
 
         if !node.computed {
+            match *node.prop {
+                Expr::Ident(ref i) => {
+                    //
+                    for (name, imports) in INSTANCE_PROPERTIES {
+                        if i.sym == **name {
+                            self.add(imports)
+                        }
+                    }
+                }
+                _ => {}
+            }
+
             match node.obj {
                 ExprOrSuper::Expr(box Expr::Ident(ref obj)) => {
                     for (ty, props) in STATIC_PROPERTIES {
