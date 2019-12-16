@@ -6,7 +6,7 @@ extern crate test;
 
 use swc_common::{FileName, FoldWith};
 use swc_ecma_parser::{Parser, Session, SourceFileInput, Syntax};
-use swc_ecma_transforms::polyfills::{polyfills, Config};
+use swc_ecma_preset_env::{polyfills, Config};
 use test::Bencher;
 
 fn run(b: &mut Bencher, src: &str, config: Config) {
