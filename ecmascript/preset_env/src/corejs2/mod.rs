@@ -172,38 +172,44 @@ impl Visit<MemberExpr> for UsageVisitor<'_> {
         //    this.addUnsupported(BuiltInDependencies);
         //},
 
-        if !node.computed {
-            match *node.prop {
-                Expr::Ident(ref i) => {
-                    //
-                    for (name, imports) in INSTANCE_PROPERTIES {
-                        if i.sym == **name {
-                            self.add(imports)
-                        }
+        match *node.prop {
+            Expr::Ident(ref i) if !node.computed => {
+                //
+                for (name, imports) in INSTANCE_PROPERTIES {
+                    if i.sym == **name {
+                        self.add(imports)
                     }
                 }
-                _ => {}
             }
+            Expr::Lit(Lit::Str(Str { ref value, .. })) if node.computed => {
+                for (name, imports) in INSTANCE_PROPERTIES {
+                    if *value == **name {
+                        self.add(imports);
+                    }
+                }
+            }
+            _ => {}
+        }
 
-            match node.obj {
-                ExprOrSuper::Expr(box Expr::Ident(ref obj)) => {
-                    for (ty, props) in STATIC_PROPERTIES {
-                        if obj.sym == **ty {
-                            match *node.prop {
-                                Expr::Ident(ref p) => {
-                                    for (prop, imports) in *props {
-                                        if p.sym == **prop {
-                                            self.add(imports);
-                                        }
+        match node.obj {
+            ExprOrSuper::Expr(box Expr::Ident(ref obj)) => {
+                for (ty, props) in STATIC_PROPERTIES {
+                    if obj.sym == **ty {
+                        match *node.prop {
+                            Expr::Ident(ref p) if !node.computed => {
+                                for (prop, imports) in *props {
+                                    if p.sym == **prop {
+                                        self.add(imports);
                                     }
                                 }
-                                _ => {}
                             }
+
+                            _ => {}
                         }
                     }
                 }
-                _ => {}
             }
+            _ => {}
         }
     }
 }

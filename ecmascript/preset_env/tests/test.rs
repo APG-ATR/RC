@@ -21,7 +21,7 @@ use swc_common::{fold::FoldWith, input::SourceFileInput, FromVariant};
 use swc_ecma_ast::*;
 use swc_ecma_codegen::Emitter;
 use swc_ecma_parser::{Parser, Session};
-use swc_ecma_preset_env::{parse_version, preset_env, BrowserData, Config, Mode};
+use swc_ecma_preset_env::{parse_version, preset_env, BrowserData, Config, Mode, Target};
 use test::{test_main, ShouldPanic, TestDesc, TestDescAndFn, TestFn, TestName, TestType};
 use testing::Tester;
 use walkdir::WalkDir;
@@ -217,7 +217,7 @@ fn exec(c: PresetConfig, dir: PathBuf) -> Result<(), Error> {
         // TODO
         dynamic_import: true,
         core_js: 2,
-        versions,
+        targets: Some(Target::Versions(versions)),
     });
 
     println!("Browsers: {:?}", browsers);

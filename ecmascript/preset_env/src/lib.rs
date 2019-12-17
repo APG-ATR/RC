@@ -6,8 +6,9 @@ pub use self::transform_data::parse_version;
 use semver::Version;
 use serde::Deserialize;
 use st_map::StaticMap;
+use std::convert::{TryFrom, TryInto};
 use swc_atoms::JsWord;
-use swc_common::{chain, Fold, VisitWith, DUMMY_SP};
+use swc_common::{chain, Fold, FromVariant, VisitWith, DUMMY_SP};
 use swc_ecma_ast::*;
 use swc_ecma_transforms::{
     compat::{es2015, es2016, es2017, es2018, es3},
@@ -24,6 +25,7 @@ pub fn preset_env(mut c: Config) -> impl Pass {
         c.core_js = 2;
     }
     let loose = c.loose;
+    let targets = c.targets.try_into().expect("failed to parse targets");
 
     let pass = noop();
     macro_rules! add {
@@ -32,7 +34,7 @@ pub fn preset_env(mut c: Config) -> impl Pass {
         }};
         ($prev:expr, $feature:ident, $pass:expr, $default:expr) => {{
             let f = transform_data::Feature::$feature;
-            let enable = f.should_enable(&c.versions, $default);
+            let enable = f.should_enable(&targets, $default);
             if c.debug {
                 println!("{}: {:?}", f.as_str(), enable);
             }
@@ -118,7 +120,13 @@ pub fn preset_env(mut c: Config) -> impl Pass {
         }
     );
 
-    chain!(pass, Polyfills { c })
+    chain!(
+        pass,
+        Polyfills {
+            mode: c.mode,
+            targets
+        }
+    )
 }
 
 /// A map without allocation.
@@ -171,15 +179,16 @@ impl<T> BrowserData<Option<T>> {
 }
 
 struct Polyfills {
-    c: Config,
+    mode: Option<Mode>,
+    targets: Versions,
 }
 
 impl Fold<Module> for Polyfills {
     fn fold(&mut self, mut node: Module) -> Module {
         let span = node.span;
 
-        if self.c.mode == Some(Mode::Usage) {
-            let mut v = corejs2::UsageVisitor::new(&self.c.versions);
+        if self.mode == Some(Mode::Usage) {
+            let mut v = corejs2::UsageVisitor::new(&self.targets);
             node.visit_with(&mut v);
 
             if cfg!(debug_assertions) {
@@ -256,9 +265,25 @@ pub struct Config {
     pub core_js: usize,
 
     #[serde(default)]
-    pub versions: Versions,
+    pub targets: Option<Target>,
 }
 
-pub fn parse_versions(_: &str) -> Versions {
-    unimplemented!()
+#[derive(Debug, Clone, Deserialize, FromVariant)]
+#[serde(untagged)]
+pub enum Target {
+    Versions(Versions),
+    Queries(Vec<String>),
+    Query(String),
+}
+
+impl TryFrom<Option<Target>> for Versions {
+    type Error = ();
+
+    fn try_from(v: Option<Target>) -> Result<Self, Self::Error> {
+        match v {
+            None => Ok(Versions::default()),
+            Some(Target::Versions(v)) => Ok(v),
+            _ => unimplemented!(),
+        }
+    }
 }
