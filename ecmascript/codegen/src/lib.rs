@@ -396,8 +396,7 @@ impl<'a> Emitter<'a> {
             if num.value.is_sign_negative() && num.value == 0.0 {
                 self.wr.write_str_lit(num.span, "-0.0")?;
             } else {
-                self.wr
-                    .write_str_lit(num.span, &format!("{:?}", num.value))?;
+                self.wr.write_str_lit(num.span, &format!("{}", num.value))?;
             }
         }
     }
