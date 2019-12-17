@@ -113,7 +113,6 @@ fn fold_member_expr(e: MemberExpr) -> Expr {
         /// [a, b].length
         Len,
 
-        #[allow(dead_code)]
         Index(u32),
 
         /// ({}).foo
@@ -125,14 +124,9 @@ fn fold_member_expr(e: MemberExpr) -> Expr {
             ..
         }) => KnownOp::Len,
         Expr::Ident(Ident { ref sym, .. }) => KnownOp::IndexStr(sym.clone()),
-        // Lit(Lit::Num(Number(f)))=>{
-        //     if f==0{
-
-        //     }else{
-
-        //     }
-        //     // TODO: Report error
-        //     KnownOp::Index(f)},
+        Expr::Lit(Lit::Num(Number { value, .. })) if value.fract() == 0.0 => {
+            KnownOp::Index(value as _)
+        }
         _ => return Expr::Member(e),
     };
 
@@ -191,6 +185,45 @@ fn fold_member_expr(e: MemberExpr) -> Expr {
                 value: elems.len() as _,
                 span,
             }))
+        }
+
+        Expr::Array(ArrayLit { span, elems })
+            if match op {
+                KnownOp::Index(..) => true,
+                _ => false,
+            } && !obj.may_have_side_effects() =>
+        {
+            // do nothing if spread exists
+            let has_spread = elems.iter().any(|elem| {
+                elem.as_ref()
+                    .map(|elem| elem.spread.is_some())
+                    .unwrap_or(false)
+            });
+
+            if has_spread {
+                return Expr::Member(MemberExpr {
+                    obj: ExprOrSuper::Expr(box Expr::Array(ArrayLit { span, elems })),
+                    ..e
+                });
+            }
+
+            let idx = match op {
+                KnownOp::Index(i) => i,
+                _ => unreachable!(),
+            };
+
+            if let Some(e) = elems.iter().nth(idx as _) {
+                if let Some(e) = e {
+                    return *e.expr.clone();
+                } else {
+                    return *undefined(span);
+                }
+            }
+
+            return Expr::Member(MemberExpr {
+                obj: ExprOrSuper::Expr(box Expr::Array(ArrayLit { span, elems })),
+                ..e
+            });
         }
 
         // { foo: true }['foo']

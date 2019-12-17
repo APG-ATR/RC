@@ -959,7 +959,7 @@ fn test_fold_get_elem2() {
 
 #[test]
 fn test_fold_array_lit_spread_get_elem() {
-    fold("x = [...[0]][0]", "x = 0;");
+    fold("x = [...[0    ]][0]", "x = 0;");
     fold("x = [0, 1, ...[2, 3, 4]][3]", "x = 3;");
     fold("x = [...[0, 1], 2, ...[3, 4]][3]", "x = 3;");
     fold("x = [...[...[0, 1], 2, 3], 4][0]", "x = 0");
