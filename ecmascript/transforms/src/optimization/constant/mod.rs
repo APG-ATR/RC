@@ -1,10 +1,10 @@
 use crate::{
     pass::Pass,
-    util::{is_literal, ExprExt, Value::Known},
+    util::{is_literal, preserve_effects, ExprExt, Value::Known},
 };
 use ast::*;
 use hashbrown::HashMap;
-use std::{cell::RefCell, f64::NAN};
+use std::{cell::RefCell, f64::NAN, iter::once};
 use swc_atoms::{js_word, JsWord};
 use swc_common::{Fold, FoldWith, Spanned, SyntaxContext};
 
@@ -262,6 +262,49 @@ impl Fold<Expr> for Const<'_> {
                         if right.is_ident_ref_to(js_word!("Object")) {
                             return Expr::Lit(Lit::Bool(Bool { span, value: false }));
                         }
+                    }
+
+                    op!("&&") | op!("||") => {
+                        let l = left.as_pure_bool();
+                        if let Known(l) = l {
+                            if (l && op == op!("||")) || (!l && op == op!("&&")) {
+                                // (TRUE || x) => TRUE (also, (3 || x) => 3)
+                                // (FALSE && x) => FALSE
+                                return *left;
+                            }
+                            if !left.may_have_side_effects() {
+                                // (FALSE || x) => x
+                                // (TRUE && x) => x
+                                return *right;
+                            }
+
+                            // Left side may have side effects, but we know
+                            // its boolean value.
+                            // e.g. true_with_sideeffects || foo() =>
+                            // true_with_sideeffects, foo()
+                            // or: false_with_sideeffects && foo() =>
+                            // false_with_sideeffects, foo()
+                            // This, combined with PeepholeRemoveDeadCode,
+                            // helps reduce expressions
+                            // like "x() || false || z()".
+
+                            return preserve_effects(span, *right, once(left));
+                        }
+
+                        // TODO:
+                        //else if (parent.getToken() == type && n ==
+                        // parent.getFirstChild()) {
+                        //    TernaryValue rightValue =
+                        // NodeUtil.getBooleanValue(right);
+                        //    if (!mayHaveSideEffects(right)) {
+                        //        if ((rightValue == TernaryValue.FALSE && type
+                        // == Token.OR)
+                        //        || (rightValue == TernaryValue.TRUE && type ==
+                        // Token.AND)) {        result =
+                        // left;        dropped = right;
+                        //        }
+                        //    }
+                        //}
                     }
 
                     _ => {}
