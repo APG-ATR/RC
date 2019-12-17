@@ -361,7 +361,7 @@ fn fold_bin(
         }
 
         // Arithmetic operations
-        op!(bin, "-") | op!("/") | op!("%") => {
+        op!(bin, "-") | op!("/") | op!("%") | op!("**") => {
             try_replace!(number, perform_arithmetic_op(op, &left, &right))
         }
 
