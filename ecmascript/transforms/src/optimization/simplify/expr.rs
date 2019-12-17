@@ -9,14 +9,6 @@ mod tests;
 
 pub(super) struct SimplifyExpr;
 
-/// We don't recurse into a statemetn.
-impl Fold<Stmt> for SimplifyExpr {
-    #[inline(always)]
-    fn fold(&mut self, s: Stmt) -> Stmt {
-        s
-    }
-}
-
 impl Fold<Expr> for SimplifyExpr {
     /// Ported from [optimizeSubtree](https://github.com/google/closure-compiler/blob/9203e01b/src/com/google/javascript/jscomp/PeepholeFoldConstants.java#L74-L98)
     fn fold(&mut self, expr: Expr) -> Expr {
@@ -193,6 +185,7 @@ fn fold_member_expr(e: MemberExpr) -> Expr {
                 _ => false,
             } && !obj.may_have_side_effects() =>
         {
+            println!("indexing");
             // do nothing if spread exists
             let has_spread = elems.iter().any(|elem| {
                 elem.as_ref()
@@ -201,6 +194,8 @@ fn fold_member_expr(e: MemberExpr) -> Expr {
             });
 
             if has_spread {
+                println!("indexing: has_spread");
+
                 return Expr::Member(MemberExpr {
                     obj: ExprOrSuper::Expr(box Expr::Array(ArrayLit { span, elems })),
                     ..e
@@ -212,18 +207,11 @@ fn fold_member_expr(e: MemberExpr) -> Expr {
                 _ => unreachable!(),
             };
 
-            if let Some(e) = elems.iter().nth(idx as _) {
-                if let Some(e) = e {
-                    return *e.expr.clone();
-                } else {
-                    return *undefined(span);
-                }
-            }
-
-            return Expr::Member(MemberExpr {
-                obj: ExprOrSuper::Expr(box Expr::Array(ArrayLit { span, elems })),
-                ..e
-            });
+            let e = elems.into_iter().nth(idx as _);
+            return match e {
+                None | Some(None) => *undefined(span),
+                Some(Some(e)) => *e.expr,
+            };
         }
 
         // { foo: true }['foo']
