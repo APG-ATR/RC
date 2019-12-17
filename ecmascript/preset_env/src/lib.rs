@@ -25,7 +25,9 @@ pub fn preset_env(mut c: Config) -> impl Pass {
         c.core_js = 2;
     }
     let loose = c.loose;
-    let targets = c.targets.try_into().expect("failed to parse targets");
+    let targets: Versions = c.targets.try_into().expect("failed to parse targets");
+
+    let is_any_target = targets.is_any_target();
 
     let pass = noop();
     macro_rules! add {
@@ -34,7 +36,7 @@ pub fn preset_env(mut c: Config) -> impl Pass {
         }};
         ($prev:expr, $feature:ident, $pass:expr, $default:expr) => {{
             let f = transform_data::Feature::$feature;
-            let enable = f.should_enable(&targets, $default);
+            let enable = is_any_target || f.should_enable(&targets, $default);
             if c.debug {
                 println!("{}: {:?}", f.as_str(), enable);
             }
