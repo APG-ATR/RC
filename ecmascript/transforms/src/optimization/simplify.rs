@@ -8,11 +8,15 @@ mod expr;
 #[cfg(test)]
 mod tests;
 
-/// Not intended for general use.
+/// Not intended for general use. Use [simplifier] instead.
+///
+/// Ported from `PeepholeFoldConstants` of google closure compler.
 pub fn expr_simplifier() -> impl Pass + 'static {
     SimplifyExpr
 }
 
+/// Ported from `PeepholeRemoveDeadCode` and `PeepholeFoldConstants` of google
+/// closure compiler.
 pub fn simplifier() -> impl Pass + 'static {
     Simplifier
 }
