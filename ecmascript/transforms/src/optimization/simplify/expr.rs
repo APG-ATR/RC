@@ -211,6 +211,19 @@ fn fold_bin(
         op!(bin, "+") => {
             // It's string concatenation if either left or right is string.
 
+            if left.is_str() || left.is_array_lit() || right.is_str() || right.is_array_lit() {
+                if let (Known(l), Known(r)) = (left.as_string(), right.as_string()) {
+                    let mut l = l.into_owned();
+                    l.push_str(&r);
+                    return Expr::Lit(Lit::Str(Str {
+                        value: l.into(),
+                        span,
+                        // TODO
+                        has_escape: false,
+                    }));
+                }
+            }
+
             let mut bin = Expr::Bin(BinExpr {
                 span,
                 left,
