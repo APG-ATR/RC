@@ -33,7 +33,7 @@ impl Feature {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, StringEnum, Hash)]
-pub(crate) enum Feature {
+pub enum Feature {
     /// `transform-template-literals`
     TemplateLiterals,
 

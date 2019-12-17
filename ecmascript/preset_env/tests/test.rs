@@ -216,6 +216,8 @@ fn exec(c: PresetConfig, dir: PathBuf) -> Result<(), Error> {
         loose: true,
         // TODO
         dynamic_import: true,
+        include: c.include.into_iter().map(|v| v.parse().unwrap()).collect(),
+        exclude: c.exclude.into_iter().map(|v| v.parse().unwrap()).collect(),
         core_js: 2,
         targets: Some(Target::Versions(versions)),
     });

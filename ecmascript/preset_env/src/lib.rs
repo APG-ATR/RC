@@ -2,7 +2,7 @@
 #![feature(box_patterns)]
 #![feature(specialization)]
 
-pub use self::transform_data::parse_version;
+pub use self::transform_data::{parse_version, Feature};
 use semver::Version;
 use serde::Deserialize;
 use st_map::StaticMap;
@@ -27,8 +27,6 @@ pub fn preset_env(mut c: Config) -> impl Pass {
     let loose = c.loose;
     let targets: Versions = c.targets.try_into().expect("failed to parse targets");
 
-    let is_any_target = targets.is_any_target();
-
     let pass = noop();
     macro_rules! add {
         ($prev:expr, $feature:ident, $pass:expr) => {{
@@ -36,7 +34,9 @@ pub fn preset_env(mut c: Config) -> impl Pass {
         }};
         ($prev:expr, $feature:ident, $pass:expr, $default:expr) => {{
             let f = transform_data::Feature::$feature;
-            let enable = is_any_target || f.should_enable(&targets, $default);
+
+            let enable = !c.exclude.contains(&f)
+                && (c.include.contains(&f) || f.should_enable(&targets, $default));
             if c.debug {
                 println!("{}: {:?}", f.as_str(), enable);
             }
@@ -261,6 +261,12 @@ pub struct Config {
     ///  - `core-js/modules/foo`
     #[serde(default)]
     pub skip: Vec<JsWord>,
+
+    #[serde(default)]
+    pub include: Vec<Feature>,
+
+    #[serde(default)]
+    pub exclude: Vec<Feature>,
 
     /// The version of the used core js.
     #[serde(default)]
