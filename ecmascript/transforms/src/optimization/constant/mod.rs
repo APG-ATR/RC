@@ -5,8 +5,8 @@ use crate::{
 use ast::*;
 use hashbrown::HashMap;
 use std::cell::RefCell;
-use swc_atoms::JsWord;
-use swc_common::{Fold, FoldWith, SyntaxContext};
+use swc_atoms::{js_word, JsWord};
+use swc_common::{Fold, FoldWith, Spanned, SyntaxContext};
 
 #[cfg(test)]
 mod tests;
@@ -158,11 +158,12 @@ impl Fold<Expr> for Const<'_> {
                             sym: js_word!("undefined"),
                             ..
                         }) => Some(js_word!("undefined")),
+                        _ => None,
                     } {
                         return Expr::Lit(Lit::Str(Str {
                             span,
                             value,
-                            has_escape,
+                            has_escape: false,
                         }));
                     }
                 }
@@ -185,13 +186,15 @@ impl Fold<UnaryExpr> for Const<'_> {
         let e = e.fold_children(self);
 
         match e.op {
-            op!("void") if !e.arg.may_have_side_effects() => UnaryExpr {
-                arg: box Expr::Lit(Lit::Num(Number {
-                    span: e.arg.span(),
-                    value: 0.0,
-                })),
-                ..e
-            },
+            op!("void") if !e.arg.may_have_side_effects() => {
+                return UnaryExpr {
+                    arg: box Expr::Lit(Lit::Num(Number {
+                        span: e.arg.span(),
+                        value: 0.0,
+                    })),
+                    ..e
+                }
+            }
 
             _ => {}
         }

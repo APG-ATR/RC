@@ -401,10 +401,6 @@ fn testObjectComparison1() {
 
 #[test]
 fn testUnaryOps() {
-    // Running on just changed code results in an exception on only the first
-    // invocation. Don't repeat because it confuses the exception verification.
-    numRepetitions = 1;
-
     // These cases are handled by PeepholeRemoveDeadCode.
     foldSame("!foo()");
     foldSame("~foo()");
@@ -438,7 +434,6 @@ fn testUnaryOps() {
 
     fold("a=~0xffffffff", "a=0");
     fold("a=~~0xffffffff", "a=-1");
-    foldSame("a=~.5", PeepholeFoldConstants.FRACTIONAL_BITWISE_OPERAND);
 }
 
 #[test]
@@ -587,27 +582,7 @@ fn testFoldBitwiseOp2() {
 }
 
 #[test]
-fn testFoldingMixTypesLate() {
-    late = true;
-    fold("x = x + '2'", "x+='2'");
-    fold("x = +x + +'2'", "x = +x + 2");
-    fold("x = x - '2'", "x-=2");
-    fold("x = x ^ '2'", "x^=2");
-    fold("x = '2' ^ x", "x^=2");
-    fold("x = '2' & x", "x&=2");
-    fold("x = '2' | x", "x|=2");
-
-    fold("x = '2' | y", "x=2|y");
-    fold("x = y | '2'", "x=y|2");
-    fold("x = y | (a && '2')", "x=y|(a&&2)");
-    fold("x = y | (a,'2')", "x=y|(a,2)");
-    fold("x = y | (a?'1':'2')", "x=y|(a?1:2)");
-    fold("x = y | ('x'?'1':'2')", "x=y|('x'?1:2)");
-}
-
-#[test]
 fn testFoldingMixTypesEarly() {
-    late = false;
     foldSame("x = x + '2'");
     fold("x = +x + +'2'", "x = +x + 2");
     fold("x = x - '2'", "x = x - 2");
@@ -648,10 +623,6 @@ fn testFoldBitwiseOpStringCompare() {
 
 #[test]
 fn testFoldBitShifts() {
-    // Running on just changed code results in an exception on only the first
-    // invocation. Don't repeat because it confuses the exception verification.
-    numRepetitions = 1;
-
     fold("x = 1 << 0", "x = 1");
     fold("x = -1 << 0", "x = -1");
     fold("x = 1 << 1", "x = 2");
@@ -683,15 +654,6 @@ fn testFoldBitShifts() {
     foldSame("1 << 32");
     foldSame("1 << -1");
     foldSame("1 >> 32");
-    foldSame("1.5 << 0", PeepholeFoldConstants.FRACTIONAL_BITWISE_OPERAND);
-    foldSame("1 << .5", PeepholeFoldConstants.FRACTIONAL_BITWISE_OPERAND);
-    foldSame(
-        "1.5 >>> 0",
-        PeepholeFoldConstants.FRACTIONAL_BITWISE_OPERAND,
-    );
-    foldSame("1 >>> .5", PeepholeFoldConstants.FRACTIONAL_BITWISE_OPERAND);
-    foldSame("1.5 >> 0", PeepholeFoldConstants.FRACTIONAL_BITWISE_OPERAND);
-    foldSame("1 >> .5", PeepholeFoldConstants.FRACTIONAL_BITWISE_OPERAND);
 }
 
 #[test]
@@ -747,16 +709,9 @@ fn testStringAdd() {
 }
 
 #[test]
-fn testStringAdd_identity() {
-    enableTypeCheck();
-    foldStringTypes("x + ''", "x");
-    foldStringTypes("'' + x", "x");
-}
-
-#[test]
 fn testIssue821() {
     foldSame("var a =(Math.random()>0.5? '1' : 2 ) + 3 + 4;");
-    foldSame("var a = ((Math.random() ? 0 : 1) ||" + "(Math.random()>0.5? '1' : 2 )) + 3 + 4;");
+    foldSame("var a = ((Math.random() ? 0 : 1) || (Math.random()>0.5? '1' : 2 )) + 3 + 4;");
 }
 
 #[test]
@@ -973,18 +928,10 @@ fn testFoldComparison4() {
 
 #[test]
 fn testFoldGetElem1() {
-    // Running on just changed code results in an exception on only the first
-    // invocation. Don't repeat because it confuses the exception verification.
-    numRepetitions = 1;
-
     fold("x = [,10][0]", "x = void 0");
     fold("x = [10, 20][0]", "x = 10");
     fold("x = [10, 20][1]", "x = 20");
 
-    foldSame(
-        "x = [10, 20][0.5]",
-        PeepholeFoldConstants.INVALID_GETELEM_INDEX_ERROR,
-    );
     fold("x = [10, 20][-1]", "x = void 0;");
     fold("x = [10, 20][2]", "x = void 0;");
 
@@ -996,33 +943,24 @@ fn testFoldGetElem1() {
 
 #[test]
 fn testFoldGetElem2() {
-    // Running on just changed code results in an exception on only the first
-    // invocation. Don't repeat because it confuses the exception verification.
-    numRepetitions = 1;
-
     fold("x = 'string'[5]", "x = 'g'");
     fold("x = 'string'[0]", "x = 's'");
     fold("x = 's'[0]", "x = 's'");
     foldSame("x = '\\uD83D\\uDCA9'[0]");
 
-    foldSame(
-        "x = 'string'[0.5]",
-        PeepholeFoldConstants.INVALID_GETELEM_INDEX_ERROR,
-    );
     fold("x = 'string'[-1]", "x = void 0;");
     fold("x = 'string'[6]", "x = void 0;");
 }
 
 #[test]
 fn testFoldArrayLitSpreadGetElem() {
-    numRepetitions = 1;
     fold("x = [...[0]][0]", "x = 0;");
     fold("x = [0, 1, ...[2, 3, 4]][3]", "x = 3;");
     fold("x = [...[0, 1], 2, ...[3, 4]][3]", "x = 3;");
     fold("x = [...[...[0, 1], 2, 3], 4][0]", "x = 0");
     fold("x = [...[...[0, 1], 2, 3], 4][3]", "x = 3");
-    fold(srcs("x = [...[]][100]"), expected("x = void 0;"));
-    fold(srcs("x = [...[0]][100]"), expected("x = void 0;"));
+    fold("x = [...[]][100]", "x = void 0;");
+    fold("x = [...[0]][100]", "x = void 0;");
 }
 
 #[test]
@@ -1035,7 +973,6 @@ fn testDontFoldNonLiteralSpreadGetElem() {
 
 #[test]
 fn testFoldArraySpread() {
-    numRepetitions = 1;
     fold("x = [...[]]", "x = []");
     fold("x = [0, ...[], 1]", "x = [0, 1]");
     fold("x = [...[0, 1], 2, ...[3, 4]]", "x = [0, 1, 2, 3, 4]");
@@ -1045,7 +982,6 @@ fn testFoldArraySpread() {
 
 #[test]
 fn testFoldObjectLitSpreadGetProp() {
-    numRepetitions = 1;
     fold("x = {...{a}}.a", "x = a;");
     fold("x = {a, b, ...{c, d, e}}.d", "x = d;");
     fold("x = {...{a, b}, c, ...{d, e}}.d", "x = d;");
@@ -1055,8 +991,6 @@ fn testFoldObjectLitSpreadGetProp() {
 
 #[test]
 fn testDontFoldNonLiteralObjectSpreadGetProp_gettersImpure() {
-    this.assumeGettersPure = false;
-
     foldSame("x = {...obj}.a;");
     foldSame("x = {a, ...obj, c}.a;");
     foldSame("x = {a, ...obj, c}.c;");
@@ -1064,8 +998,6 @@ fn testDontFoldNonLiteralObjectSpreadGetProp_gettersImpure() {
 
 #[test]
 fn testDontFoldNonLiteralObjectSpreadGetProp_assumeGettersPure() {
-    this.assumeGettersPure = true;
-
     foldSame("x = {...obj}.a;");
     foldSame("x = {a, ...obj, c}.a;");
     fold("x = {a, ...obj, c}.c;", "x = c;"); // We assume object spread has no
@@ -1074,7 +1006,6 @@ fn testDontFoldNonLiteralObjectSpreadGetProp_assumeGettersPure() {
 
 #[test]
 fn testFoldObjectSpread() {
-    numRepetitions = 1;
     fold("x = {...{}}", "x = {}");
     fold("x = {a, ...{}, b}", "x = {a, b}");
     fold("x = {...{a, b}, c, ...{d, e}}", "x = {a, b, c, d, e}");
@@ -1084,7 +1015,6 @@ fn testFoldObjectSpread() {
 
 #[test]
 fn testDontFoldMixedObjectAndArraySpread() {
-    numRepetitions = 1;
     foldSame("x = [...{}]");
     foldSame("x = {...[]}");
     fold("x = [a, ...[...{}]]", "x = [a, ...{}]");
@@ -1192,32 +1122,7 @@ fn testDivision() {
 }
 
 #[test]
-fn testAssignOpsLate() {
-    late = true;
-    fold("x=x+y", "x+=y");
-    foldSame("x=y+x");
-    fold("x=x*y", "x*=y");
-    fold("x=y*x", "x*=y");
-    fold("x.y=x.y+z", "x.y+=z");
-    foldSame("next().x = next().x + 1");
-
-    fold("x=x-y", "x-=y");
-    foldSame("x=y-x");
-    fold("x=x|y", "x|=y");
-    fold("x=y|x", "x|=y");
-    fold("x=x*y", "x*=y");
-    fold("x=y*x", "x*=y");
-    fold("x=x**y", "x**=y");
-    foldSame("x=y**x");
-    fold("x.y=x.y+z", "x.y+=z");
-    foldSame("next().x = next().x + 1");
-    // This is OK, really.
-    fold("({a:1}).a = ({a:1}).a + 1", "({a:1}).a = 2");
-}
-
-#[test]
 fn testAssignOpsEarly() {
-    late = false;
     foldSame("x=x+y");
     foldSame("x=y+x");
     foldSame("x=x*y");
@@ -1240,21 +1145,7 @@ fn testAssignOpsEarly() {
 }
 
 #[test]
-fn testUnfoldAssignOpsLate() {
-    late = true;
-    foldSame("x+=y");
-    foldSame("x*=y");
-    foldSame("x.y+=z");
-    foldSame("x-=y");
-    foldSame("x|=y");
-    foldSame("x*=y");
-    foldSame("x**=y");
-    foldSame("x.y+=z");
-}
-
-#[test]
 fn testUnfoldAssignOpsEarly() {
-    late = false;
     fold("x+=y", "x=x+y");
     fold("x*=y", "x=x*y");
     fold("x.y+=z", "x.y=x.y+z");
@@ -1376,17 +1267,9 @@ fn testFoldLiteralsAsNumbers() {
 
 #[test]
 fn testNotFoldBackToTrueFalse() {
-    late = false;
     fold("!0", "true");
     fold("!1", "false");
     fold("!3", "false");
-
-    late = true;
-    foldSame("!0");
-    foldSame("!1");
-    fold("!3", "false");
-    foldSame("false");
-    foldSame("true");
 }
 
 #[test]
@@ -1518,13 +1401,7 @@ fn testFoldObjectLiteralRef1() {
     // Note: it may be useful to fold symbols in the future.
     foldSame("var y = Symbol(); var a = {[y]: 3}[y];");
 
-    /**
- * We can fold member functions sometimes.
- *
- * <p>Even though they're different from fn expressions and arrow fns, extracting them only
- * causes programs that would have thrown errors to change behaviour.
- */
-fold("var x = {a() { 1; }}.a;", "var x = function() { 1; };");
+    fold("var x = {a() { 1; }}.a;", "var x = function() { 1; };");
     // Notice `a` isn't invoked, so beahviour didn't change.
     fold(
         "var x = {a() { return this; }}.a;",
@@ -1543,10 +1420,7 @@ fold("var x = {a() { 1; }}.a;", "var x = function() { 1; };");
 
 #[test]
 fn testFoldObjectLiteralRef2() {
-    late = false;
     fold("({a:x}).a += 1", "({a:x}).a = x + 1");
-    late = true;
-    foldSame("({a:x}).a += 1");
 }
 
 // Regression test for https://github.com/google/closure-compiler/issues/2873
@@ -1594,29 +1468,6 @@ fn testIssue522() {
 }
 
 #[test]
-fn testTypeBasedFoldConstant() {
-    enableTypeCheck();
-    fold(
-        "function f(/** number */ x) { x + 1 + 1 + x; }",
-        "function f(/** number */ x) { x + 2 + x; }",
-    );
-
-    fold(
-        "function f(/** boolean */ x) { x + 1 + 1 + x; }",
-        "function f(/** boolean */ x) { x + 2 + x; }",
-    );
-
-    foldSame("function f(/** null */ x) { var y = true > x; }");
-
-    foldSame("function f(/** null */ x) { var y = null > x; }");
-
-    foldSame("function f(/** string */ x) { x + 1 + 1 + x; }");
-
-    useTypes = false;
-    foldSame("function f(/** number */ x) { x + 1 + 1 + x; }");
-}
-
-#[test]
 fn testES6Features() {
     fold(
         "var x = {[undefined != true] : 1};",
@@ -1634,12 +1485,8 @@ fn testES6Features() {
         "function foo(x = true, y) {return x+y;}",
     );
     fold(
-        lines(
-            "class Foo {",
-            "  constructor() {this.x = null <= null;}",
-            "}",
-        ),
-        lines("class Foo {", "  constructor() {this.x = true;}", "}"),
+        "class Foo {  constructor() {this.x = null <= null;} }",
+        "class Foo {  constructor() {this.x = true;}}",
     );
     fold(
         "function foo() {return `${false && y}`}",
