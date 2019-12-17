@@ -64,6 +64,23 @@ impl Fold<Expr> for SimplifyExpr {
                 }
             }
 
+            Expr::Array(ArrayLit { span, elems, .. }) => {
+                let mut e = Vec::with_capacity(elems.len());
+
+                for elem in elems {
+                    match elem {
+                        Some(ExprOrSpread {
+                            spread: Some(..),
+                            expr: box Expr::Array(ArrayLit { elems, .. }),
+                        }) => e.extend(elems),
+
+                        _ => e.push(elem),
+                    }
+                }
+
+                ArrayLit { span, elems: e }.into()
+            }
+
             // be conservative.
             _ => expr,
         }
