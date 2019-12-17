@@ -9,6 +9,14 @@ mod tests;
 
 pub(super) struct SimplifyExpr;
 
+/// We don't recurse into a statemetn.
+impl Fold<Stmt> for SimplifyExpr {
+    #[inline(always)]
+    fn fold(&mut self, s: Stmt) -> Stmt {
+        s
+    }
+}
+
 impl Fold<Expr> for SimplifyExpr {
     /// Ported from [optimizeSubtree](https://github.com/google/closure-compiler/blob/9203e01b/src/com/google/javascript/jscomp/PeepholeFoldConstants.java#L74-L98)
     fn fold(&mut self, expr: Expr) -> Expr {
