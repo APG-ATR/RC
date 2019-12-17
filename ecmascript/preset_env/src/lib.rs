@@ -97,7 +97,7 @@ pub fn preset_env(mut c: Config) -> impl Pass {
         es2015::destructuring(es2015::destructuring::Config { loose }),
         true
     );
-    let pass = add!(pass, BlockScoping, es2015::block_scoping());
+    let pass = add!(pass, BlockScoping, es2015::block_scoping(), true);
 
     // TODO:
     //    Literals,
