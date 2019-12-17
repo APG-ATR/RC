@@ -740,7 +740,7 @@ fn perform_arithmetic_op(op: BinaryOp, left: &Expr, right: &Expr) -> Value<f64> 
         }
 
         op!("**") => {
-            if Known(1.0) == rv {
+            if Known(0.0) == rv {
                 return Known(1.0);
             }
 
