@@ -8,14 +8,18 @@ impl Feature {
     pub fn should_enable(self, c: &Versions, default: bool) -> bool {
         let f = &FEATURES[&self];
 
+        if c.as_ref()
+            .iter()
+            .zip(f.iter())
+            .all(|((_, target_version), (_, f))| target_version.is_none() && f.is_none())
+        {
+            return default;
+        }
+
         c.as_ref()
             .iter()
             .zip(f.iter())
             .any(|((_, target_version), (_, f))| {
-                if target_version.is_none() && f.is_none() {
-                    return default;
-                }
-
                 if target_version.is_none() {
                     return false;
                 }
@@ -182,6 +186,17 @@ mod tests {
         assert!(Feature::ArrowFunctions.should_enable(
             &BrowserData {
                 ie: Some("11.0.0".parse().unwrap()),
+                ..Default::default()
+            },
+            false
+        ));
+    }
+
+    #[test]
+    fn tpl_lit() {
+        assert!(!Feature::TemplateLiterals.should_enable(
+            &BrowserData {
+                chrome: Some("71.0.0".parse().unwrap()),
                 ..Default::default()
             },
             true
