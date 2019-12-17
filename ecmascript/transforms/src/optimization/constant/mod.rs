@@ -1,10 +1,10 @@
 use crate::{
     pass::Pass,
-    util::{is_literal, ExprExt},
+    util::{is_literal, ExprExt, Value::Known},
 };
 use ast::*;
 use hashbrown::HashMap;
-use std::cell::RefCell;
+use std::{cell::RefCell, f64::NAN};
 use swc_atoms::{js_word, JsWord};
 use swc_common::{Fold, FoldWith, Spanned, SyntaxContext};
 
@@ -173,6 +173,108 @@ impl Fold<Expr> for Const<'_> {
                     arg,
                 });
             }
+
+            Expr::Unary(UnaryExpr {
+                span,
+                op: op!("!"),
+                arg,
+            }) => {
+                let v = arg.as_pure_bool();
+
+                if let Known(v) = v {
+                    return Expr::Lit(Lit::Bool(Bool { span, value: !v }));
+                }
+
+                return Expr::Unary(UnaryExpr {
+                    span,
+                    op: op!("!"),
+                    arg,
+                });
+            }
+
+            Expr::Unary(UnaryExpr {
+                span,
+                op: op!(unary, "-"),
+                arg,
+            }) => {
+                if arg.is_ident_ref_to(js_word!("Infinity")) {
+                    return Expr::Unary(UnaryExpr {
+                        span,
+                        op: op!(unary, "-"),
+                        arg,
+                    });
+                }
+
+                // "-NaN" is "NaN".
+                if arg.is_nan() {
+                    return Expr::Lit(Lit::Num(Number { span, value: NAN }));
+                }
+
+                if let Known(value) = arg.as_number() {
+                    return Expr::Lit(Lit::Num(Number {
+                        span,
+                        value: -value,
+                    }));
+                }
+
+                return Expr::Unary(UnaryExpr {
+                    span,
+                    op: op!(unary, "-"),
+                    arg,
+                });
+            }
+
+            Expr::Unary(UnaryExpr {
+                span,
+                op: op!("~"),
+                arg,
+            }) => {
+                if let Known(value) = arg.as_number() {
+                    if value.fract() == 0.0 {
+                        return Expr::Lit(Lit::Num(Number {
+                            span,
+                            value: !(value as i64) as f64,
+                        }));
+                    }
+                    // TODO: Report error
+                }
+
+                return Expr::Unary(UnaryExpr {
+                    span,
+                    op: op!("~"),
+                    arg,
+                });
+            }
+
+            Expr::Bin(BinExpr {
+                span,
+                left,
+                op,
+                right,
+            }) => {
+                match op {
+                    op!("instanceof") if is_literal(&left) && !right.may_have_side_effects() => {
+                        // Non-object types are never instances.
+                        if left.is_immutable_value() {
+                            return Expr::Lit(Lit::Bool(Bool { span, value: false }));
+                        }
+
+                        if right.is_ident_ref_to(js_word!("Object")) {
+                            return Expr::Lit(Lit::Bool(Bool { span, value: false }));
+                        }
+                    }
+
+                    _ => {}
+                }
+
+                return Expr::Bin(BinExpr {
+                    span,
+                    left,
+                    op,
+                    right,
+                });
+            }
+
             _ => {}
         }
 

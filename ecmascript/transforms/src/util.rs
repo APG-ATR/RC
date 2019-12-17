@@ -209,6 +209,51 @@ impl<T> IsEmpty for Vec<T> {
 pub trait ExprExt {
     fn as_expr_kind(&self) -> &Expr;
 
+    /// Returns true if this is an immutable value.
+    fn is_immutable_value(&self) -> bool {
+        // TODO(johnlenz): rename this function.  It is currently being used
+        // in two disjoint cases:
+        // 1) We only care about the result of the expression
+        //    (in which case NOT here should return true)
+        // 2) We care that expression is a side-effect free and can't
+        //    be side-effected by other expressions.
+        // This should only be used to say the value is immutable and
+        // hasSideEffects and canBeSideEffected should be used for the other case.
+        match *self.as_expr_kind() {
+            Expr::Lit(Lit::Bool(..))
+            | Expr::Lit(Lit::Str(..))
+            | Expr::Lit(Lit::Num(..))
+            | Expr::Lit(Lit::Null(..)) => true,
+
+            Expr::Unary(UnaryExpr {
+                op: op!("!"),
+                ref arg,
+                ..
+            })
+            | Expr::Unary(UnaryExpr {
+                op: op!("~"),
+                ref arg,
+                ..
+            })
+            | Expr::Unary(UnaryExpr {
+                op: op!("void"),
+                ref arg,
+                ..
+            })
+            | Expr::TsTypeCast(TsTypeCastExpr { expr: ref arg, .. }) => arg.is_immutable_value(),
+
+            Expr::Ident(ref i) => {
+                i.sym == js_word!("undefined")
+                    || i.sym == js_word!("Infinity")
+                    || i.sym == js_word!("NaN")
+            }
+
+            Expr::Tpl(Tpl { ref exprs, .. }) => exprs.iter().all(|e| e.is_immutable_value()),
+
+            _ => false,
+        }
+    }
+
     fn is_number(&self) -> bool {
         match *self.as_expr_kind() {
             Expr::Lit(Lit::Num(..)) => true,
@@ -220,6 +265,7 @@ pub trait ExprExt {
     fn is_nan(&self) -> bool {
         self.is_ident_ref_to(js_word!("NaN"))
     }
+
     /// Is `self` an IdentifierReference to `id`?
     fn is_ident_ref_to(&self, id: JsWord) -> bool {
         match *self.as_expr_kind() {
