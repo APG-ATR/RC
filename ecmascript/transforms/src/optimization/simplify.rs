@@ -8,6 +8,11 @@ mod expr;
 #[cfg(test)]
 mod tests;
 
+/// Not intended for general use.
+pub fn expr_simplifier() -> impl Pass + 'static {
+    SimplifyExpr
+}
+
 pub fn simplifier() -> impl Pass + 'static {
     Simplifier
 }
