@@ -997,14 +997,6 @@ fn test_dont_fold_non_literal_object_spread_get_prop_getters_impure() {
 }
 
 #[test]
-fn test_dont_fold_non_literal_object_spread_get_prop_assume_getters_pure() {
-    fold_same("x = {...obj}.a;");
-    fold_same("x = {a, ...obj, c}.a;");
-    fold("x = {a, ...obj, c}.c;", "x = c;"); // We assume object spread has no
-                                             // side-effects.
-}
-
-#[test]
 fn test_fold_object_spread() {
     fold("x = {...{}}", "x = {}");
     fold("x = {a, ...{}, b}", "x = {a, b}");
