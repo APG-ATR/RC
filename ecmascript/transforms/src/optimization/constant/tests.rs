@@ -6,12 +6,12 @@ fn fold(src: &str, expected: &str) {
     test_transform!(Default::default(), |_| constant_propagator(), src, expected);
 }
 
-fn foldSame(s: &str) {
+fn fold_same(s: &str) {
     test_transform!(Default::default(), |_| constant_propagator(), s, s);
 }
 
 #[test]
-fn testUndefinedComparison1() {
+fn test_undefined_comparison1() {
     fold("undefined == undefined", "true");
     fold("undefined == null", "true");
     fold("undefined == void 0", "true");
@@ -26,8 +26,8 @@ fn testUndefinedComparison1() {
     fold("undefined === null", "false");
     fold("undefined === void 0", "true");
 
-    foldSame("undefined == this");
-    foldSame("undefined == x");
+    fold_same("undefined == this");
+    fold_same("undefined == x");
 
     fold("undefined != undefined", "false");
     fold("undefined != null", "false");
@@ -43,8 +43,8 @@ fn testUndefinedComparison1() {
     fold("undefined !== void 0", "false");
     fold("undefined !== null", "true");
 
-    foldSame("undefined != this");
-    foldSame("undefined != x");
+    fold_same("undefined != this");
+    fold_same("undefined != x");
 
     fold("undefined < undefined", "false");
     fold("undefined > undefined", "false");
@@ -100,12 +100,12 @@ fn testUndefinedComparison1() {
     fold("(function(){}) != undefined", "true");
     fold("undefined != (function(){})", "true");
 
-    foldSame("this == undefined");
-    foldSame("x == undefined");
+    fold_same("this == undefined");
+    fold_same("x == undefined");
 }
 
 #[test]
-fn testUndefinedComparison2() {
+fn test_undefined_comparison2() {
     fold("\"123\" !== void 0", "true");
     fold("\"123\" === void 0", "false");
 
@@ -114,7 +114,7 @@ fn testUndefinedComparison2() {
 }
 
 #[test]
-fn testUndefinedComparison3() {
+fn test_undefined_comparison3() {
     fold("\"123\" !== undefined", "true");
     fold("\"123\" === undefined", "false");
 
@@ -123,7 +123,7 @@ fn testUndefinedComparison3() {
 }
 
 #[test]
-fn testUndefinedComparison4() {
+fn test_undefined_comparison4() {
     fold("1 !== void 0", "true");
     fold("1 === void 0", "false");
 
@@ -135,7 +135,7 @@ fn testUndefinedComparison4() {
 }
 
 #[test]
-fn testNullComparison1() {
+fn test_null_comparison1() {
     fold("null == undefined", "true");
     fold("null == null", "true");
     fold("null == void 0", "true");
@@ -149,10 +149,10 @@ fn testNullComparison1() {
     fold("null === undefined", "false");
     fold("null === null", "true");
     fold("null === void 0", "false");
-    foldSame("null === x");
+    fold_same("null === x");
 
-    foldSame("null == this");
-    foldSame("null == x");
+    fold_same("null == this");
+    fold_same("null == x");
 
     fold("null != undefined", "false");
     fold("null != null", "false");
@@ -168,8 +168,8 @@ fn testNullComparison1() {
     fold("null !== void 0", "true");
     fold("null !== null", "false");
 
-    foldSame("null != this");
-    foldSame("null != x");
+    fold_same("null != this");
+    fold_same("null != x");
 
     fold("null < null", "false");
     fold("null > null", "false");
@@ -229,103 +229,103 @@ fn testNullComparison1() {
     fold("(function(){}) != null", "true");
     fold("null != (function(){})", "true");
 
-    foldSame("({a:f()}) == null");
-    foldSame("null == ({a:f()})");
-    foldSame("([f()]) == null");
-    foldSame("null == ([f()])");
+    fold_same("({a:f()}) == null");
+    fold_same("null == ({a:f()})");
+    fold_same("([f()]) == null");
+    fold_same("null == ([f()])");
 
-    foldSame("this == null");
-    foldSame("x == null");
+    fold_same("this == null");
+    fold_same("x == null");
 }
 
 #[test]
-fn testBooleanBooleanComparison() {
-    foldSame("!x == !y");
-    foldSame("!x < !y");
-    foldSame("!x !== !y");
+fn test_boolean_boolean_comparison() {
+    fold_same("!x == !y");
+    fold_same("!x < !y");
+    fold_same("!x !== !y");
 
-    foldSame("!x == !x"); // foldable
-    foldSame("!x < !x"); // foldable
-    foldSame("!x !== !x"); // foldable
+    fold_same("!x == !x"); // foldable
+    fold_same("!x < !x"); // foldable
+    fold_same("!x !== !x"); // foldable
 }
 
 #[test]
-fn testBooleanNumberComparison() {
-    foldSame("!x == +y");
-    foldSame("!x <= +y");
+fn test_boolean_number_comparison() {
+    fold_same("!x == +y");
+    fold_same("!x <= +y");
     fold("!x !== +y", "true");
 }
 
 #[test]
-fn testNumberBooleanComparison() {
-    foldSame("+x == !y");
-    foldSame("+x <= !y");
+fn test_number_boolean_comparison() {
+    fold_same("+x == !y");
+    fold_same("+x <= !y");
     fold("+x === !y", "false");
 }
 
 #[test]
-fn testBooleanStringComparison() {
-    foldSame("!x == '' + y");
-    foldSame("!x <= '' + y");
+fn test_boolean_string_comparison() {
+    fold_same("!x == '' + y");
+    fold_same("!x <= '' + y");
     fold("!x !== '' + y", "true");
 }
 
 #[test]
-fn testStringBooleanComparison() {
-    foldSame("'' + x == !y");
-    foldSame("'' + x <= !y");
+fn test_string_boolean_comparison() {
+    fold_same("'' + x == !y");
+    fold_same("'' + x <= !y");
     fold("'' + x === !y", "false");
 }
 
 #[test]
-fn testNumberNumberComparison() {
+fn test_number_number_comparison() {
     fold("1 > 1", "false");
     fold("2 == 3", "false");
     fold("3.6 === 3.6", "true");
-    foldSame("+x > +y");
-    foldSame("+x == +y");
-    foldSame("+x === +y");
-    foldSame("+x == +x");
-    foldSame("+x === +x");
+    fold_same("+x > +y");
+    fold_same("+x == +y");
+    fold_same("+x === +y");
+    fold_same("+x == +x");
+    fold_same("+x === +x");
 
-    foldSame("+x > +x"); // foldable
+    fold_same("+x > +x"); // foldable
 }
 
 #[test]
-fn testStringStringComparison() {
+fn test_string_string_comparison() {
     fold("'a' < 'b'", "true");
     fold("'a' <= 'b'", "true");
     fold("'a' > 'b'", "false");
     fold("'a' >= 'b'", "false");
     fold("+'a' < +'b'", "false");
-    foldSame("typeof a < 'a'");
-    foldSame("'a' >= typeof a");
+    fold_same("typeof a < 'a'");
+    fold_same("'a' >= typeof a");
     fold("typeof a < typeof a", "false");
     fold("typeof a >= typeof a", "true");
     fold("typeof 3 > typeof 4", "false");
     fold("typeof function() {} < typeof function() {}", "false");
     fold("'a' == 'a'", "true");
     fold("'b' != 'a'", "true");
-    foldSame("'undefined' == typeof a");
-    foldSame("typeof a != 'number'");
-    foldSame("'undefined' == typeof a");
-    foldSame("'undefined' == typeof a");
+    fold_same("'undefined' == typeof a");
+    fold_same("typeof a != 'number'");
+    fold_same("'undefined' == typeof a");
+    fold_same("'undefined' == typeof a");
     fold("typeof a == typeof a", "true");
     fold("'a' === 'a'", "true");
     fold("'b' !== 'a'", "true");
     fold("typeof a === typeof a", "true");
     fold("typeof a !== typeof a", "false");
-    foldSame("'' + x <= '' + y");
-    foldSame("'' + x != '' + y");
-    foldSame("'' + x === '' + y");
+    fold_same("'' + x <= '' + y");
+    fold_same("'' + x != '' + y");
+    fold_same("'' + x === '' + y");
 
-    foldSame("'' + x <= '' + x"); // potentially foldable
-    foldSame("'' + x != '' + x"); // potentially foldable
-    foldSame("'' + x === '' + x"); // potentially foldable
+    fold_same("'' + x <= '' + x"); // potentially foldable
+    fold_same("'' + x != '' + x"); // potentially foldable
+    fold_same("'' + x === '' + x"); // potentially foldable
 }
 
 #[test]
-fn testNumberStringComparison() {
+fn test_number_string_comparison() {
     fold("1 < '2'", "true");
     fold("2 > '1'", "true");
     fold("123 > '34'", "true");
@@ -335,13 +335,13 @@ fn testNumberStringComparison() {
     fold("NaN == 'NaN'", "false");
     fold("1 === '1'", "false");
     fold("1 !== '1'", "true");
-    foldSame("+x > '' + y");
-    foldSame("+x == '' + y");
+    fold_same("+x > '' + y");
+    fold_same("+x == '' + y");
     fold("+x !== '' + y", "true");
 }
 
 #[test]
-fn testStringNumberComparison() {
+fn test_string_number_comparison() {
     fold("'1' < 2", "true");
     fold("'2' > 1", "true");
     fold("'123' > 34", "true");
@@ -351,13 +351,13 @@ fn testStringNumberComparison() {
     fold("'NaN' == NaN", "false");
     fold("'1' === 1", "false");
     fold("'1' !== 1", "true");
-    foldSame("'' + x < +y");
-    foldSame("'' + x == +y");
+    fold_same("'' + x < +y");
+    fold_same("'' + x == +y");
     fold("'' + x === +y", "false");
 }
 
 #[test]
-fn testNaNComparison() {
+fn test_na_ncomparison() {
     fold("NaN < NaN", "false");
     fold("NaN >= NaN", "false");
     fold("NaN == NaN", "false");
@@ -375,17 +375,17 @@ fn testNaNComparison() {
     fold("undefined != NaN", "true");
     fold("undefined === NaN", "false");
 
-    foldSame("NaN < x");
-    foldSame("x >= NaN");
-    foldSame("NaN == x");
-    foldSame("x != NaN");
+    fold_same("NaN < x");
+    fold_same("x >= NaN");
+    fold_same("NaN == x");
+    fold_same("x != NaN");
     fold("NaN === x", "false");
     fold("x !== NaN", "true");
-    foldSame("NaN == foo()");
+    fold_same("NaN == foo()");
 }
 
 #[test]
-fn testObjectComparison1() {
+fn test_object_comparison1() {
     fold("!new Date()", "false");
     fold("!!new Date()", "true");
 
@@ -400,22 +400,22 @@ fn testObjectComparison1() {
 }
 
 #[test]
-fn testUnaryOps() {
+fn test_unary_ops() {
     // These cases are handled by PeepholeRemoveDeadCode.
-    foldSame("!foo()");
-    foldSame("~foo()");
-    foldSame("-foo()");
+    fold_same("!foo()");
+    fold_same("~foo()");
+    fold_same("-foo()");
 
     // These cases are handled here.
     fold("a=!true", "a=false");
     fold("a=!10", "a=false");
     fold("a=!false", "a=true");
-    foldSame("a=!foo()");
+    fold_same("a=!foo()");
     fold("a=-0", "a=-0.0");
     fold("a=-(0)", "a=-0.0");
-    foldSame("a=-Infinity");
+    fold_same("a=-Infinity");
     fold("a=-NaN", "a=NaN");
-    foldSame("a=-foo()");
+    fold_same("a=-foo()");
     fold("a=~~0", "a=0");
     fold("a=~~10", "a=10");
     fold("a=~-7", "a=6");
@@ -423,8 +423,8 @@ fn testUnaryOps() {
     fold("a=+true", "a=1");
     fold("a=+10", "a=10");
     fold("a=+false", "a=0");
-    foldSame("a=+foo()");
-    foldSame("a=+f");
+    fold_same("a=+foo()");
+    fold_same("a=+f");
     fold("a=+(f?true:false)", "a=+(f?1:0)"); // TODO(johnlenz): foldable
     fold("a=+0", "a=0");
     fold("a=+Infinity", "a=Infinity");
@@ -437,15 +437,15 @@ fn testUnaryOps() {
 }
 
 #[test]
-fn testUnaryOpsStringCompare() {
-    foldSame("a = -1");
+fn test_unary_ops_string_compare() {
+    fold_same("a = -1");
     fold("a = ~0", "a = -1");
     fold("a = ~1", "a = -2");
     fold("a = ~101", "a = -102");
 }
 
 #[test]
-fn testFoldLogicalOp() {
+fn test_fold_logical_op() {
     fold("x = true && x", "x = x");
     fold("x = [foo()] && x", "x = ([foo()],x)");
 
@@ -467,8 +467,8 @@ fn testFoldLogicalOp() {
     fold("a = b ? x && true : c", "a=b ? x && true:c");
 
     // folded, but not here.
-    foldSame("a = x || false ? b : c");
-    foldSame("a = x && true ? b : c");
+    fold_same("a = x || false ? b : c");
+    fold_same("a = x && true ? b : c");
 
     fold("x = foo() || true || bar()", "x = foo() || true");
     fold("x = foo() || true && bar()", "x = foo() || bar()");
@@ -483,8 +483,8 @@ fn testFoldLogicalOp() {
     fold("x = foo() && 1 && bar()", "x = foo() && bar()");
     fold("x = foo() || 0 || bar()", "x = foo() || bar()");
     fold("x = foo() || 1 || bar()", "x = foo() || 1");
-    foldSame("x = foo() || bar() || baz()");
-    foldSame("x = foo() && bar() && baz()");
+    fold_same("x = foo() || bar() || baz()");
+    fold_same("x = foo() && bar() && baz()");
 
     fold("0 || b()", "b()");
     fold("1 && b()", "b()");
@@ -502,12 +502,12 @@ fn testFoldLogicalOp() {
     // An example would be if foo() is 1 (truthy) and bar() is 0 (falsey):
     // (1 && true) || 0 == true
     // 1 || 0 == 1, but true =/= 1
-    foldSame("x = foo() && true || bar()");
-    foldSame("foo() && true || bar()");
+    fold_same("x = foo() && true || bar()");
+    fold_same("foo() && true || bar()");
 }
 
 #[test]
-fn testFoldLogicalOp2() {
+fn test_fold_logical_op2() {
     fold("x = function(){} && x", "x = x");
     fold("x = true && function(){}", "x = function(){}");
     fold(
@@ -517,7 +517,7 @@ fn testFoldLogicalOp2() {
 }
 
 #[test]
-fn testFoldBitwiseOp() {
+fn test_fold_bitwise_op() {
     fold("x = 1 & 1", "x = 1");
     fold("x = 1 & 2", "x = 0");
     fold("x = 3 & 1", "x = 1");
@@ -549,13 +549,13 @@ fn testFoldBitwiseOp() {
     fold("x = 1 | 4", "x = 5");
     fold("x = 1 | 3", "x = 3");
     fold("x = 1 | 1.1", "x = 1");
-    foldSame("x = 1 | 3E9");
+    fold_same("x = 1 | 3E9");
     fold("x = 1 | 3000000001", "x = -1294967295");
     fold("x = 4294967295 | 0", "x = -1");
 }
 
 #[test]
-fn testFoldBitwiseOp2() {
+fn test_fold_bitwise_op2() {
     fold("x = y & 1 & 1", "x = y & 1");
     fold("x = y & 1 & 2", "x = y & 0");
     fold("x = y & 3 & 1", "x = y & 1");
@@ -582,8 +582,8 @@ fn testFoldBitwiseOp2() {
 }
 
 #[test]
-fn testFoldingMixTypesEarly() {
-    foldSame("x = x + '2'");
+fn test_folding_mix_types_early() {
+    fold_same("x = x + '2'");
     fold("x = +x + +'2'", "x = +x + 2");
     fold("x = x - '2'", "x = x - 2");
     fold("x = x ^ '2'", "x = x ^ 2");
@@ -600,9 +600,9 @@ fn testFoldingMixTypesEarly() {
 }
 
 #[test]
-fn testFoldingAdd1() {
+fn test_folding_add1() {
     fold("x = null + true", "x=1");
-    foldSame("x = a + true");
+    fold_same("x = a + true");
     fold("x = '' + {}", "x = '[object Object]'");
     fold("x = [] + {}", "x = '[object Object]'");
     fold("x = {} + []", "x = '[object Object]'");
@@ -610,19 +610,19 @@ fn testFoldingAdd1() {
 }
 
 #[test]
-fn testFoldingAdd2() {
+fn test_folding_add2() {
     fold("x = false + []", "x='false'");
     fold("x = [] + true", "x='true'");
     fold("NaN + []", "'NaN'");
 }
 
 #[test]
-fn testFoldBitwiseOpStringCompare() {
+fn test_fold_bitwise_op_string_compare() {
     fold("x = -1 | 0", "x = -1");
 }
 
 #[test]
-fn testFoldBitShifts() {
+fn test_fold_bit_shifts() {
     fold("x = 1 << 0", "x = 1");
     fold("x = -1 << 0", "x = -1");
     fold("x = 1 << 1", "x = 2");
@@ -651,13 +651,13 @@ fn testFoldBitShifts() {
 
     fold("x = 0xffffffff << 0", "x = -1");
     fold("x = 0xffffffff << 4", "x = -16");
-    foldSame("1 << 32");
-    foldSame("1 << -1");
-    foldSame("1 >> 32");
+    fold_same("1 << 32");
+    fold_same("1 << -1");
+    fold_same("1 >> 32");
 }
 
 #[test]
-fn testFoldBitShiftsStringCompare() {
+fn test_fold_bit_shifts_string_compare() {
     fold("x = -1 << 1", "x = -2");
     fold("x = -1 << 8", "x = -256");
     fold("x = -1 >> 1", "x = -1");
@@ -666,7 +666,7 @@ fn testFoldBitShiftsStringCompare() {
 }
 
 #[test]
-fn testStringAdd() {
+fn test_string_add() {
     fold("x = 'a' + 'bc'", "x = 'abc'");
     fold("x = 'a' + 5", "x = 'a5'");
     fold("x = 5 + 'a'", "x = '5a'");
@@ -696,26 +696,26 @@ fn testStringAdd() {
     fold("x = (p1 + (p2 + 'a')) + 'b'", "x = (p1 + (p2 + 'ab'))");
     fold("'a' + ('b' + p1) + 1", "'ab' + p1 + 1");
     fold("x = 'a' + ('b' + p1 + 'c')", "x = 'ab' + (p1 + 'c')");
-    foldSame("x = 'a' + (4 + p1 + 'a')");
-    foldSame("x = p1 / 3 + 4");
-    foldSame("foo() + 3 + 'a' + foo()");
-    foldSame("x = 'a' + ('b' + p1 + p2)");
-    foldSame("x = 1 + ('a' + p1)");
-    foldSame("x = p1 + '' + p2");
-    foldSame("x = 'a' + (1 + p1)");
-    foldSame("x = (p2 + 'a') + (1 + p1)");
-    foldSame("x = (p2 + 'a') + (1 + p1 + p2)");
-    foldSame("x = (p2 + 'a') + (1 + (p1 + p2))");
+    fold_same("x = 'a' + (4 + p1 + 'a')");
+    fold_same("x = p1 / 3 + 4");
+    fold_same("foo() + 3 + 'a' + foo()");
+    fold_same("x = 'a' + ('b' + p1 + p2)");
+    fold_same("x = 1 + ('a' + p1)");
+    fold_same("x = p1 + '' + p2");
+    fold_same("x = 'a' + (1 + p1)");
+    fold_same("x = (p2 + 'a') + (1 + p1)");
+    fold_same("x = (p2 + 'a') + (1 + p1 + p2)");
+    fold_same("x = (p2 + 'a') + (1 + (p1 + p2))");
 }
 
 #[test]
-fn testIssue821() {
-    foldSame("var a =(Math.random()>0.5? '1' : 2 ) + 3 + 4;");
-    foldSame("var a = ((Math.random() ? 0 : 1) || (Math.random()>0.5? '1' : 2 )) + 3 + 4;");
+fn test_issue821() {
+    fold_same("var a =(Math.random()>0.5? '1' : 2 ) + 3 + 4;");
+    fold_same("var a = ((Math.random() ? 0 : 1) || (Math.random()>0.5? '1' : 2 )) + 3 + 4;");
 }
 
 #[test]
-fn testFoldConstructor() {
+fn test_fold_constructor() {
     fold("x = this[new String('a')]", "x = this['a']");
     fold("x = ob[new String(12)]", "x = ob['12']");
     fold("x = ob[new String(false)]", "x = ob['false']");
@@ -723,42 +723,42 @@ fn testFoldConstructor() {
     fold("x = 'a' + new String('b')", "x = 'ab'");
     fold("x = 'a' + new String(23)", "x = 'a23'");
     fold("x = 2 + new String(1)", "x = '21'");
-    foldSame("x = ob[new String(a)]");
-    foldSame("x = new String('a')");
-    foldSame("x = (new String('a'))[3]");
+    fold_same("x = ob[new String(a)]");
+    fold_same("x = new String('a')");
+    fold_same("x = (new String('a'))[3]");
 }
 
 #[test]
-fn testFoldArithmetic() {
+fn test_fold_arithmetic() {
     fold("x = 10 + 20", "x = 30");
     fold("x = 2 / 4", "x = 0.5");
     fold("x = 2.25 * 3", "x = 6.75");
-    foldSame("z = x * y");
-    foldSame("x = y * 5");
-    foldSame("x = 1 / 0");
+    fold_same("z = x * y");
+    fold_same("x = y * 5");
+    fold_same("x = 1 / 0");
     fold("x = 3 % 2", "x = 1");
     fold("x = 3 % -2", "x = 1");
     fold("x = -1 % 3", "x = -1");
-    foldSame("x = 1 % 0");
+    fold_same("x = 1 % 0");
     fold("x = 2 ** 3", "x = 8");
     fold("x = 2 ** -3", "x = 0.125");
-    foldSame("x = 2 ** 55"); // backs off folding because 2 ** 55 is too large
-    foldSame("x = 3 ** -1"); // backs off because 3**-1 is shorter than
-                             // 0.3333333333333333
+    fold_same("x = 2 ** 55"); // backs off folding because 2 ** 55 is too large
+    fold_same("x = 3 ** -1"); // backs off because 3**-1 is shorter than
+                              // 0.3333333333333333
 }
 
 #[test]
-fn testFoldArithmetic2() {
-    foldSame("x = y + 10 + 20");
-    foldSame("x = y / 2 / 4");
+fn test_fold_arithmetic2() {
+    fold_same("x = y + 10 + 20");
+    fold_same("x = y / 2 / 4");
     fold("x = y * 2.25 * 3", "x = y * 6.75");
-    foldSame("z = x * y");
-    foldSame("x = y * 5");
+    fold_same("z = x * y");
+    fold_same("x = y * 5");
     fold("x = y + (z * 24 * 60 * 60 * 1000)", "x = y + z * 864E5");
 }
 
 #[test]
-fn testFoldArithmetic3() {
+fn test_fold_arithmetic3() {
     fold("x = null * undefined", "x = NaN");
     fold("x = null * 1", "x = 0");
     fold("x = (null - 1) * 2", "x = -2");
@@ -768,7 +768,7 @@ fn testFoldArithmetic3() {
 }
 
 #[test]
-fn testFoldArithmeticInfinity() {
+fn test_fold_arithmetic_infinity() {
     fold("x=-Infinity-2", "x=-Infinity");
     fold("x=Infinity-2", "x=Infinity");
     fold("x=Infinity*5", "x=Infinity");
@@ -777,12 +777,12 @@ fn testFoldArithmeticInfinity() {
 }
 
 #[test]
-fn testFoldArithmeticStringComp() {
+fn test_fold_arithmetic_string_comp() {
     fold("x = 10 - 20", "x = -10");
 }
 
 #[test]
-fn testFoldComparison() {
+fn test_fold_comparison() {
     fold("x = 0 == 0", "x = true");
     fold("x = 1 == 2", "x = false");
     fold("x = 'abc' == 'def'", "x = false");
@@ -817,7 +817,7 @@ fn testFoldComparison() {
     fold("'abc' == 'def'", "false");
     fold("'abc' == 'abc'", "true");
     fold("\"\" == ''", "true");
-    foldSame("foo() == bar()");
+    fold_same("foo() == bar()");
 
     fold("1 != 0", "true");
     fold("'abc' != 'def'", "true");
@@ -827,7 +827,7 @@ fn testFoldComparison() {
     fold("3 < 3", "false");
     fold("10 > 1.0", "true");
     fold("10 > 10.25", "false");
-    foldSame("x == x");
+    fold_same("x == x");
     fold("x < x", "false");
     fold("x > x", "false");
     fold("1 <= 1", "true");
@@ -843,7 +843,7 @@ fn testFoldComparison() {
 
 // ===, !== comparison tests
 #[test]
-fn testFoldComparison2() {
+fn test_fold_comparison2() {
     fold("x = 0 === 0", "x = true");
     fold("x = 1 === 2", "x = false");
     fold("x = 'abc' === 'def'", "x = false");
@@ -868,7 +868,7 @@ fn testFoldComparison2() {
     fold("'abc' === 'def'", "false");
     fold("'abc' === 'abc'", "true");
     fold("\"\" === ''", "true");
-    foldSame("foo() === bar()");
+    fold_same("foo() === bar()");
 
     fold("1 === '1'", "false");
     fold("1 === true", "false");
@@ -879,7 +879,7 @@ fn testFoldComparison2() {
     fold("'abc' !== 'def'", "true");
     fold("'a' !== 'a'", "false");
 
-    foldSame("x === x");
+    fold_same("x === x");
 
     fold("true === true", "true");
     fold("false === null", "false");
@@ -888,7 +888,7 @@ fn testFoldComparison2() {
 }
 
 #[test]
-fn testFoldComparison3() {
+fn test_fold_comparison3() {
     fold("x = !1 == !0", "x = false");
 
     fold("x = !0 == !0", "x = true");
@@ -915,19 +915,19 @@ fn testFoldComparison3() {
 }
 
 #[test]
-fn testFoldComparison4() {
-    foldSame("[] == false"); // true
-    foldSame("[] == true"); // false
-    foldSame("[0] == false"); // true
-    foldSame("[0] == true"); // false
-    foldSame("[1] == false"); // false
-    foldSame("[1] == true"); // true
-    foldSame("({}) == false"); // false
-    foldSame("({}) == true"); // true
+fn test_fold_comparison4() {
+    fold_same("[] == false"); // true
+    fold_same("[] == true"); // false
+    fold_same("[0] == false"); // true
+    fold_same("[0] == true"); // false
+    fold_same("[1] == false"); // false
+    fold_same("[1] == true"); // true
+    fold_same("({}) == false"); // false
+    fold_same("({}) == true"); // true
 }
 
 #[test]
-fn testFoldGetElem1() {
+fn test_fold_get_elem1() {
     fold("x = [,10][0]", "x = void 0");
     fold("x = [10, 20][0]", "x = 10");
     fold("x = [10, 20][1]", "x = 20");
@@ -935,25 +935,25 @@ fn testFoldGetElem1() {
     fold("x = [10, 20][-1]", "x = void 0;");
     fold("x = [10, 20][2]", "x = void 0;");
 
-    foldSame("x = [foo(), 0][1]");
+    fold_same("x = [foo(), 0][1]");
     fold("x = [0, foo()][1]", "x = foo()");
-    foldSame("x = [0, foo()][0]");
-    foldSame("for([1][0] in {});");
+    fold_same("x = [0, foo()][0]");
+    fold_same("for([1][0] in {});");
 }
 
 #[test]
-fn testFoldGetElem2() {
+fn test_fold_get_elem2() {
     fold("x = 'string'[5]", "x = 'g'");
     fold("x = 'string'[0]", "x = 's'");
     fold("x = 's'[0]", "x = 's'");
-    foldSame("x = '\\uD83D\\uDCA9'[0]");
+    fold_same("x = '\\uD83D\\uDCA9'[0]");
 
     fold("x = 'string'[-1]", "x = void 0;");
     fold("x = 'string'[6]", "x = void 0;");
 }
 
 #[test]
-fn testFoldArrayLitSpreadGetElem() {
+fn test_fold_array_lit_spread_get_elem() {
     fold("x = [...[0]][0]", "x = 0;");
     fold("x = [0, 1, ...[2, 3, 4]][3]", "x = 3;");
     fold("x = [...[0, 1], 2, ...[3, 4]][3]", "x = 3;");
@@ -964,24 +964,24 @@ fn testFoldArrayLitSpreadGetElem() {
 }
 
 #[test]
-fn testDontFoldNonLiteralSpreadGetElem() {
-    foldSame("x = [...iter][0];");
-    foldSame("x = [0, 1, ...iter][2];");
+fn test_dont_fold_non_literal_spread_get_elem() {
+    fold_same("x = [...iter][0];");
+    fold_same("x = [0, 1, ...iter][2];");
     //  `...iter` could have side effects, so don't replace `x` with `0`
-    foldSame("x = [0, 1, ...iter][0];");
+    fold_same("x = [0, 1, ...iter][0];");
 }
 
 #[test]
-fn testFoldArraySpread() {
+fn test_fold_array_spread() {
     fold("x = [...[]]", "x = []");
     fold("x = [0, ...[], 1]", "x = [0, 1]");
     fold("x = [...[0, 1], 2, ...[3, 4]]", "x = [0, 1, 2, 3, 4]");
     fold("x = [...[...[0], 1], 2]", "x = [0, 1, 2]");
-    foldSame("[...[x]] = arr");
+    fold_same("[...[x]] = arr");
 }
 
 #[test]
-fn testFoldObjectLitSpreadGetProp() {
+fn test_fold_object_lit_spread_get_prop() {
     fold("x = {...{a}}.a", "x = a;");
     fold("x = {a, b, ...{c, d, e}}.d", "x = d;");
     fold("x = {...{a, b}, c, ...{d, e}}.d", "x = d;");
@@ -990,52 +990,52 @@ fn testFoldObjectLitSpreadGetProp() {
 }
 
 #[test]
-fn testDontFoldNonLiteralObjectSpreadGetProp_gettersImpure() {
-    foldSame("x = {...obj}.a;");
-    foldSame("x = {a, ...obj, c}.a;");
-    foldSame("x = {a, ...obj, c}.c;");
+fn test_dont_fold_non_literal_object_spread_get_prop_getters_impure() {
+    fold_same("x = {...obj}.a;");
+    fold_same("x = {a, ...obj, c}.a;");
+    fold_same("x = {a, ...obj, c}.c;");
 }
 
 #[test]
-fn testDontFoldNonLiteralObjectSpreadGetProp_assumeGettersPure() {
-    foldSame("x = {...obj}.a;");
-    foldSame("x = {a, ...obj, c}.a;");
+fn test_dont_fold_non_literal_object_spread_get_prop_assume_getters_pure() {
+    fold_same("x = {...obj}.a;");
+    fold_same("x = {a, ...obj, c}.a;");
     fold("x = {a, ...obj, c}.c;", "x = c;"); // We assume object spread has no
                                              // side-effects.
 }
 
 #[test]
-fn testFoldObjectSpread() {
+fn test_fold_object_spread() {
     fold("x = {...{}}", "x = {}");
     fold("x = {a, ...{}, b}", "x = {a, b}");
     fold("x = {...{a, b}, c, ...{d, e}}", "x = {a, b, c, d, e}");
     fold("x = {...{...{a}, b}, c}", "x = {a, b, c}");
-    foldSame("({...{x}} = obj)");
+    fold_same("({...{x}} = obj)");
 }
 
 #[test]
-fn testDontFoldMixedObjectAndArraySpread() {
-    foldSame("x = [...{}]");
-    foldSame("x = {...[]}");
+fn test_dont_fold_mixed_object_and_array_spread() {
+    fold_same("x = [...{}]");
+    fold_same("x = {...[]}");
     fold("x = [a, ...[...{}]]", "x = [a, ...{}]");
     fold("x = {a, ...{...[]}}", "x = {a, ...[]}");
 }
 
 #[test]
-fn testFoldComplex() {
+fn test_fold_complex() {
     fold("x = (3 / 1.0) + (1 * 2)", "x = 5");
     fold("x = (1 == 1.0) && foo() && true", "x = foo()&&true");
     fold("x = 'abc' + 5 + 10", "x = \"abc510\"");
 }
 
 #[test]
-fn testFoldLeft() {
-    foldSame("(+x - 1) + 2"); // not yet
+fn test_fold_left() {
+    fold_same("(+x - 1) + 2"); // not yet
     fold("(+x + 1) + 2", "+x + 3");
 }
 
 #[test]
-fn testFoldArrayLength() {
+fn test_fold_array_length() {
     // Can fold
     fold("x = [].length", "x = 0");
     fold("x = [1,2,3].length", "x = 3");
@@ -1046,11 +1046,11 @@ fn testFoldArrayLength() {
 
     // Cannot fold
     fold("x = [foo(), 0].length", "x = [foo(),0].length");
-    foldSame("x = y.length");
+    fold_same("x = y.length");
 }
 
 #[test]
-fn testFoldStringLength() {
+fn test_fold_string_length() {
     // Can fold basic strings.
     fold("x = ''.length", "x = 0");
     fold("x = '123'.length", "x = 3");
@@ -1060,7 +1060,7 @@ fn testFoldStringLength() {
 }
 
 #[test]
-fn testFoldTypeof() {
+fn test_fold_typeof() {
     fold("x = typeof 1", "x = \"number\"");
     fold("x = typeof 'foo'", "x = \"string\"");
     fold("x = typeof true", "x = \"boolean\"");
@@ -1074,12 +1074,12 @@ fn testFoldTypeof() {
     fold("x = typeof {}", "x = \"object\"");
     fold("x = typeof function() {}", "x = 'function'");
 
-    foldSame("x = typeof[1,[foo()]]");
-    foldSame("x = typeof{bathwater:baby()}");
+    fold_same("x = typeof[1,[foo()]]");
+    fold_same("x = typeof{bathwater:baby()}");
 }
 
 #[test]
-fn testFoldInstanceOf() {
+fn test_fold_instance_of() {
     // Non object types are never instances of anything.
     fold("64 instanceof Object", "false");
     fold("64 instanceof Number", "false");
@@ -1100,21 +1100,21 @@ fn testFoldInstanceOf() {
     fold("({}) instanceof Object", "true");
 
     // These cases is foldable, but no handled currently.
-    foldSame("new Foo() instanceof Object");
+    fold_same("new Foo() instanceof Object");
     // These would require type information to fold.
-    foldSame("[] instanceof Foo");
-    foldSame("({}) instanceof Foo");
+    fold_same("[] instanceof Foo");
+    fold_same("({}) instanceof Foo");
 
     fold("(function() {}) instanceof Object", "true");
 
     // An unknown value should never be folded.
-    foldSame("x instanceof Foo");
+    fold_same("x instanceof Foo");
 }
 
 #[test]
-fn testDivision() {
+fn test_division() {
     // Make sure the 1/3 does not expand to 0.333333
-    foldSame("print(1/3)");
+    fold_same("print(1/3)");
 
     // Decimal form is preferable to fraction form when strings are the
     // same length.
@@ -1122,30 +1122,30 @@ fn testDivision() {
 }
 
 #[test]
-fn testAssignOpsEarly() {
-    foldSame("x=x+y");
-    foldSame("x=y+x");
-    foldSame("x=x*y");
-    foldSame("x=y*x");
-    foldSame("x.y=x.y+z");
-    foldSame("next().x = next().x + 1");
+fn test_assign_ops_early() {
+    fold_same("x=x+y");
+    fold_same("x=y+x");
+    fold_same("x=x*y");
+    fold_same("x=y*x");
+    fold_same("x.y=x.y+z");
+    fold_same("next().x = next().x + 1");
 
-    foldSame("x=x-y");
-    foldSame("x=y-x");
-    foldSame("x=x|y");
-    foldSame("x=y|x");
-    foldSame("x=x*y");
-    foldSame("x=y*x");
-    foldSame("x=x**y");
-    foldSame("x=y**2");
-    foldSame("x.y=x.y+z");
-    foldSame("next().x = next().x + 1");
+    fold_same("x=x-y");
+    fold_same("x=y-x");
+    fold_same("x=x|y");
+    fold_same("x=y|x");
+    fold_same("x=x*y");
+    fold_same("x=y*x");
+    fold_same("x=x**y");
+    fold_same("x=y**2");
+    fold_same("x.y=x.y+z");
+    fold_same("next().x = next().x + 1");
     // This is OK, really.
     fold("({a:1}).a = ({a:1}).a + 1", "({a:1}).a = 2");
 }
 
 #[test]
-fn testUnfoldAssignOpsEarly() {
+fn test_unfold_assign_ops_early() {
     fold("x+=y", "x=x+y");
     fold("x*=y", "x=x*y");
     fold("x.y+=z", "x.y=x.y+z");
@@ -1157,7 +1157,7 @@ fn testUnfoldAssignOpsEarly() {
 }
 
 #[test]
-fn testFoldAdd1() {
+fn test_fold_add1() {
     fold("x=false+1", "x=1");
     fold("x=true+1", "x=2");
     fold("x=1+false", "x=1");
@@ -1165,7 +1165,7 @@ fn testFoldAdd1() {
 }
 
 #[test]
-fn testFoldLiteralNames() {
+fn test_fold_literal_names() {
     fold("NaN == NaN", "false");
     fold("Infinity == Infinity", "true");
     fold("Infinity == NaN", "false");
@@ -1177,7 +1177,7 @@ fn testFoldLiteralNames() {
 }
 
 #[test]
-fn testFoldLiteralsTypeMismatches() {
+fn test_fold_literals_type_mismatches() {
     fold("true == true", "true");
     fold("true == false", "false");
     fold("true == null", "false");
@@ -1206,59 +1206,59 @@ fn testFoldLiteralsTypeMismatches() {
 }
 
 #[test]
-fn testFoldLeftChildConcat() {
-    foldSame("x +5 + \"1\"");
+fn test_fold_left_child_concat() {
+    fold_same("x +5 + \"1\"");
     fold("x+\"5\" + \"1\"", "x + \"51\"");
     // fold("\"a\"+(c+\"b\")", "\"a\"+c+\"b\"");
     fold("\"a\"+(\"b\"+c)", "\"ab\"+c");
 }
 
 #[test]
-fn testFoldLeftChildOp() {
+fn test_fold_left_child_op() {
     fold("x * Infinity * 2", "x * Infinity");
-    foldSame("x - Infinity - 2"); // want "x-Infinity"
-    foldSame("x - 1 + Infinity");
-    foldSame("x - 2 + 1");
-    foldSame("x - 2 + 3");
-    foldSame("1 + x - 2 + 1");
-    foldSame("1 + x - 2 + 3");
-    foldSame("1 + x - 2 + 3 - 1");
-    foldSame("f(x)-0");
+    fold_same("x - Infinity - 2"); // want "x-Infinity"
+    fold_same("x - 1 + Infinity");
+    fold_same("x - 2 + 1");
+    fold_same("x - 2 + 3");
+    fold_same("1 + x - 2 + 1");
+    fold_same("1 + x - 2 + 3");
+    fold_same("1 + x - 2 + 3 - 1");
+    fold_same("f(x)-0");
     fold("x-0-0", "x-0");
-    foldSame("x+2-2+2");
-    foldSame("x+2-2+2-2");
-    foldSame("x-2+2");
-    foldSame("x-2+2-2");
-    foldSame("x-2+2-2+2");
+    fold_same("x+2-2+2");
+    fold_same("x+2-2+2-2");
+    fold_same("x-2+2");
+    fold_same("x-2+2-2");
+    fold_same("x-2+2-2+2");
 
-    foldSame("1+x-0-NaN");
-    foldSame("1+f(x)-0-NaN");
-    foldSame("1+x-0+NaN");
-    foldSame("1+f(x)-0+NaN");
+    fold_same("1+x-0-NaN");
+    fold_same("1+f(x)-0-NaN");
+    fold_same("1+x-0+NaN");
+    fold_same("1+f(x)-0+NaN");
 
-    foldSame("1+x+NaN"); // unfoldable
-    foldSame("x+2-2"); // unfoldable
-    foldSame("x+2"); // nothing to do
-    foldSame("x-2"); // nothing to do
+    fold_same("1+x+NaN"); // unfoldable
+    fold_same("x+2-2"); // unfoldable
+    fold_same("x+2"); // nothing to do
+    fold_same("x-2"); // nothing to do
 }
 
 #[test]
-fn testFoldSimpleArithmeticOp() {
-    foldSame("x*NaN");
-    foldSame("NaN/y");
-    foldSame("f(x)-0");
-    foldSame("f(x)*1");
-    foldSame("1*f(x)");
-    foldSame("0+a+b");
-    foldSame("0-a-b");
-    foldSame("a+b-0");
-    foldSame("(1+x)*NaN");
+fn test_fold_simple_arithmetic_op() {
+    fold_same("x*NaN");
+    fold_same("NaN/y");
+    fold_same("f(x)-0");
+    fold_same("f(x)*1");
+    fold_same("1*f(x)");
+    fold_same("0+a+b");
+    fold_same("0-a-b");
+    fold_same("a+b-0");
+    fold_same("(1+x)*NaN");
 
-    foldSame("(1+f(x))*NaN"); // don't fold side-effects
+    fold_same("(1+f(x))*NaN"); // don't fold side-effects
 }
 
 #[test]
-fn testFoldLiteralsAsNumbers() {
+fn test_fold_literals_as_numbers() {
     fold("x/'12'", "x/12");
     fold("x/('12'+'6')", "x/126");
     fold("true*x", "1*x");
@@ -1266,14 +1266,14 @@ fn testFoldLiteralsAsNumbers() {
 }
 
 #[test]
-fn testNotFoldBackToTrueFalse() {
+fn test_not_fold_back_to_true_false() {
     fold("!0", "true");
     fold("!1", "false");
     fold("!3", "false");
 }
 
 #[test]
-fn testFoldBangConstants() {
+fn test_fold_bang_constants() {
     fold("1 + !0", "2");
     fold("1 + !1", "1");
     fold("'a ' + !1", "'a false'");
@@ -1281,57 +1281,57 @@ fn testFoldBangConstants() {
 }
 
 #[test]
-fn testFoldMixed() {
+fn test_fold_mixed() {
     fold("''+[1]", "'1'");
     fold("false+[]", "\"false\"");
 }
 
 #[test]
-fn testFoldVoid() {
-    foldSame("void 0");
+fn test_fold_void() {
+    fold_same("void 0");
     fold("void 1", "void 0");
     fold("void x", "void 0");
-    foldSame("void x()");
+    fold_same("void x()");
 }
 
 #[test]
-fn testObjectLiteral() {
+fn test_object_literal() {
     fold("(!{})", "false");
     fold("(!{a:1})", "false");
-    foldSame("(!{a:foo()})");
-    foldSame("(!{'a':foo()})");
+    fold_same("(!{a:foo()})");
+    fold_same("(!{'a':foo()})");
 }
 
 #[test]
-fn testArrayLiteral() {
+fn test_array_literal() {
     fold("(![])", "false");
     fold("(![1])", "false");
     fold("(![a])", "false");
-    foldSame("(![foo()])");
+    fold_same("(![foo()])");
 }
 
 #[test]
-fn testIssue601() {
-    foldSame("'\\v' == 'v'");
-    foldSame("'v' == '\\v'");
-    foldSame("'\\u000B' == '\\v'");
+fn test_issue601() {
+    fold_same("'\\v' == 'v'");
+    fold_same("'v' == '\\v'");
+    fold_same("'\\u000B' == '\\v'");
 }
 
 #[test]
-fn testFoldObjectLiteralRef1() {
+fn test_fold_object_literal_ref1() {
     // Leave extra side-effects in place
-    foldSame("var x = ({a:foo(),b:bar()}).a");
-    foldSame("var x = ({a:1,b:bar()}).a");
-    foldSame("function f() { return {b:foo(), a:2}.a; }");
+    fold_same("var x = ({a:foo(),b:bar()}).a");
+    fold_same("var x = ({a:1,b:bar()}).a");
+    fold_same("function f() { return {b:foo(), a:2}.a; }");
 
     // on the LHS the object act as a temporary leave it in place.
-    foldSame("({a:x}).a = 1");
+    fold_same("({a:x}).a = 1");
     fold("({a:x}).a += 1", "({a:x}).a = x + 1");
-    foldSame("({a:x}).a ++");
-    foldSame("({a:x}).a --");
+    fold_same("({a:x}).a ++");
+    fold_same("({a:x}).a --");
 
     // Getters should not be inlined.
-    foldSame("({get a() {return this}}).a");
+    fold_same("({get a() {return this}}).a");
 
     // Except, if we can see that the getter function never references 'this'.
     fold("({get a() {return 0}}).a", "(function() {return 0})()");
@@ -1349,20 +1349,20 @@ fn testFoldObjectLiteralRef1() {
     fold("({a:function(){return 0}}).a()", "(function(){return 0})()");
 
     // Don't inline setters.
-    foldSame("({set a(b) {return this}}).a");
-    foldSame("({set a(b) {this._a = b}}).a");
+    fold_same("({set a(b) {return this}}).a");
+    fold_same("({set a(b) {this._a = b}}).a");
 
     // Don't inline if there are side-effects.
-    foldSame("({[foo()]: 1,   a: 0}).a");
-    foldSame("({['x']: foo(), a: 0}).a");
-    foldSame("({x: foo(),     a: 0}).a");
+    fold_same("({[foo()]: 1,   a: 0}).a");
+    fold_same("({['x']: foo(), a: 0}).a");
+    fold_same("({x: foo(),     a: 0}).a");
 
     // Leave unknown props alone, the might be on the prototype
-    foldSame("({}).a");
+    fold_same("({}).a");
 
     // setters by themselves don't provide a definition
-    foldSame("({}).a");
-    foldSame("({set a(b) {}}).a");
+    fold_same("({}).a");
+    fold_same("({set a(b) {}}).a");
     // sets don't hide other definitions.
     fold("({a:1,set a(b) {}}).a", "1");
 
@@ -1397,9 +1397,9 @@ fn testFoldObjectLiteralRef1() {
         "var a = function() { return 1; }();",
     );
     fold("var a = {'a': x, ['a']: y}['a']", "var a = y;");
-    foldSame("var a = {['foo']: x}.a;");
+    fold_same("var a = {['foo']: x}.a;");
     // Note: it may be useful to fold symbols in the future.
-    foldSame("var y = Symbol(); var a = {[y]: 3}[y];");
+    fold_same("var y = Symbol(); var a = {[y]: 3}[y];");
 
     fold("var x = {a() { 1; }}.a;", "var x = function() { 1; };");
     // Notice `a` isn't invoked, so beahviour didn't change.
@@ -1409,17 +1409,17 @@ fn testFoldObjectLiteralRef1() {
     );
     // `super` is invisibly captures the object that declared the method so we can't
     // fold.
-    foldSame("var x = {a() { return super.a; }}.a;");
+    fold_same("var x = {a() { return super.a; }}.a;");
     fold(
         "var x = {a: 1, a() { 2; }}.a;",
         "var x = function() { 2; };",
     );
     fold("var x = {a() {}, a: 1}.a;", "var x = 1;");
-    foldSame("var x = {a() {}}.b");
+    fold_same("var x = {a() {}}.b");
 }
 
 #[test]
-fn testFoldObjectLiteralRef2() {
+fn test_fold_object_literal_ref2() {
     fold("({a:x}).a += 1", "({a:x}).a = x + 1");
 }
 
@@ -1428,47 +1428,47 @@ fn testFoldObjectLiteralRef2() {
 // the function will be the global object, instead of the object {a:x} as it
 // should be.
 #[test]
-fn testFoldObjectLiteral_methodCall_nonLiteralFn() {
-    foldSame("({a:x}).a()");
+fn test_fold_object_literal_method_call_non_literal_fn() {
+    fold_same("({a:x}).a()");
 }
 
 #[test]
-fn testFoldObjectLiteral_freeMethodCall() {
+fn test_fold_object_literal_free_method_call() {
     fold("({a() { return 1; }}).a()", "(function() { return 1; })()");
 }
 
 #[test]
-fn testFoldObjectLiteral_freeArrowCall_usingEnclosingThis() {
+fn test_fold_object_literal_free_arrow_call_using_enclosing_this() {
     fold("({a: () => this }).a()", "(() => this)()");
 }
 
 #[test]
-fn testFoldObjectLiteral_unfreeMethodCall_dueToThis() {
-    foldSame("({a() { return this; }}).a()");
+fn test_fold_object_literal_unfree_method_call_due_to_this() {
+    fold_same("({a() { return this; }}).a()");
 }
 
 #[test]
-fn testFoldObjectLiteral_unfreeMethodCall_dueToSuper() {
-    foldSame("({a() { return super.toString(); }}).a()");
+fn test_fold_object_literal_unfree_method_call_due_to_super() {
+    fold_same("({a() { return super.toString(); }}).a()");
 }
 
 #[test]
-fn testFoldObjectLiteral_paramToInvocation() {
+fn test_fold_object_literal_param_to_invocation() {
     fold("console.log({a: 1}.a)", "console.log(1)");
 }
 
 #[test]
-fn testIEString() {
-    foldSame("!+'\\v1'");
+fn test_ie_string() {
+    fold_same("!+'\\v1'");
 }
 
 #[test]
-fn testIssue522() {
-    foldSame("[][1] = 1;");
+fn test_issue522() {
+    fold_same("[][1] = 1;");
 }
 
 #[test]
-fn testES6Features() {
+fn test_es6_features() {
     fold(
         "var x = {[undefined != true] : 1};",
         "var x = {[true] : 1};",
