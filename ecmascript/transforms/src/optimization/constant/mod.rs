@@ -148,7 +148,6 @@ impl Fold<Expr> for Const<'_> {
                         Expr::Fn(..) => Some(js_word!("function")),
                         Expr::Lit(Lit::Str(..)) => Some(js_word!("string")),
                         Expr::Lit(Lit::Num(..)) => Some(js_word!("number")),
-                        Expr::Lit(Lit::Num(..)) => Some(js_word!("number")),
                         Expr::Lit(Lit::Bool(..)) => Some(js_word!("boolean")),
                         Expr::Lit(Lit::Null(..)) | Expr::Object(..) | Expr::Array(..) => {
                             Some(js_word!("object"))
