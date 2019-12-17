@@ -196,6 +196,14 @@ impl Visit<MemberExpr> for UsageVisitor<'_> {
                 for (ty, props) in STATIC_PROPERTIES {
                     if obj.sym == **ty {
                         match *node.prop {
+                            Expr::Lit(Lit::Str(Str { ref value, .. })) if node.computed => {
+                                for (name, imports) in INSTANCE_PROPERTIES {
+                                    if *value == **name {
+                                        self.add(imports);
+                                    }
+                                }
+                            }
+
                             Expr::Ident(ref p) if !node.computed => {
                                 for (prop, imports) in *props {
                                     if p.sym == **prop {
