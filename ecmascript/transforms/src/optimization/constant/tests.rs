@@ -1,14 +1,25 @@
 //! Copied from test suite of the google closure compiler.
 
 use super::constant_propagator;
-use crate::optimization::expr_simplifier;
-use swc_common::chain;
 
-fn fold(src: &str, expected: &str) {
-    test_transform!(
-        Default::default(),
-        |_| chain!(constant_propagator(), expr_simplifier()),
-        src,
-        expected
-    );
+macro_rules! to {
+    ($name:ident,$src:literal, $expected:literal) => {
+        test!(
+            Default::default(),
+            |_| constant_propagator(),
+            $name,
+            $src,
+            $expected
+        );
+    };
 }
+
+to!(
+    simple_num_add,
+    "var a = 1;
+var b = 2;
+var c = a + b",
+    "var a = 1;
+var b = 2;
+var c = 1 + 2"
+);

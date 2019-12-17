@@ -615,6 +615,24 @@ fn fold_unary(UnaryExpr { span, op, arg }: UnaryExpr) -> Expr {
                 span,
             });
         }
+
+        op!("~") => {
+            if let Known(value) = arg.as_number() {
+                if value.fract() == 0.0 {
+                    return Expr::Lit(Lit::Num(Number {
+                        span,
+                        value: !(value as i64) as f64,
+                    }));
+                }
+                // TODO: Report error
+            }
+
+            return Expr::Unary(UnaryExpr {
+                span,
+                op: op!("~"),
+                arg,
+            });
+        }
         _ => {}
     }
 
@@ -722,6 +740,10 @@ fn perform_arithmetic_op(op: BinaryOp, left: &Expr, right: &Expr) -> Value<f64> 
         }
 
         op!("**") => {
+            if Known(1.0) == rv {
+                return Known(1.0);
+            }
+
             if let (Known(lv), Known(rv)) = (lv, rv) {
                 return try_replace!(lv.powf(rv));
             }
