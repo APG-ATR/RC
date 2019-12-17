@@ -1137,18 +1137,6 @@ fn test_assign_ops_early() {
 }
 
 #[test]
-fn test_unfold_assign_ops_early() {
-    fold("x+=y", "x=x+y");
-    fold("x*=y", "x=x*y");
-    fold("x.y+=z", "x.y=x.y+z");
-    fold("x-=y", "x=x-y");
-    fold("x|=y", "x=x|y");
-    fold("x*=y", "x=x*y");
-    fold("x**=y", "x=x**y");
-    fold("x.y+=z", "x.y=x.y+z");
-}
-
-#[test]
 fn test_fold_add1() {
     fold("x=false+1", "x=1");
     fold("x=true+1", "x=2");
