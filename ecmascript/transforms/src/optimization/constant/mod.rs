@@ -307,6 +307,25 @@ impl Fold<Expr> for Const<'_> {
                         //}
                     }
 
+                    op!(bin, "+")
+                        if left.is_str()
+                            || left.is_array_lit()
+                            || right.is_str()
+                            || right.is_array_lit() =>
+                    {
+                        if let Known(l) = left.as_string() {
+                            if let Known(r) = right.as_string() {
+                                let mut l = l.into_owned();
+                                l.push_str(&r);
+                                return Expr::Lit(Lit::Str(Str {
+                                    span,
+                                    value: l.into(),
+                                    has_escape: false,
+                                }));
+                            }
+                        }
+                    }
+
                     _ => {}
                 }
 

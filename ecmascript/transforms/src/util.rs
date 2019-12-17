@@ -261,6 +261,20 @@ pub trait ExprExt {
         }
     }
 
+    fn is_str(&self) -> bool {
+        match *self.as_expr_kind() {
+            Expr::Lit(Lit::Str(..)) => true,
+            _ => false,
+        }
+    }
+
+    fn is_array_lit(&self) -> bool {
+        match *self.as_expr_kind() {
+            Expr::Array(..) => true,
+            _ => false,
+        }
+    }
+
     /// Checks if `self` is `NaN`.
     fn is_nan(&self) -> bool {
         self.is_ident_ref_to(js_word!("NaN"))
@@ -426,6 +440,7 @@ pub trait ExprExt {
         Known(v)
     }
 
+    /// Returns Known only if it's pure.
     fn as_string(&self) -> Value<Cow<'_, str>> {
         let expr = self.as_expr_kind();
         match *expr {
