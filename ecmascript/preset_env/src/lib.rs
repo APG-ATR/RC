@@ -26,6 +26,7 @@ pub fn preset_env(mut c: Config) -> impl Pass {
     }
     let loose = c.loose;
     let targets: Versions = c.targets.try_into().expect("failed to parse targets");
+    let is_any_target = targets.is_any_target();
 
     let pass = noop();
     macro_rules! add {
@@ -36,7 +37,7 @@ pub fn preset_env(mut c: Config) -> impl Pass {
             let f = transform_data::Feature::$feature;
 
             let enable = !c.exclude.contains(&f)
-                && (c.include.contains(&f) || f.should_enable(&targets, $default));
+                && (is_any_target || c.include.contains(&f) || f.should_enable(&targets, $default));
             if c.debug {
                 println!("{}: {:?}", f.as_str(), enable);
             }
