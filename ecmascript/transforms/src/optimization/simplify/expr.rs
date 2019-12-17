@@ -81,6 +81,18 @@ impl Fold<Expr> for SimplifyExpr {
                 ArrayLit { span, elems: e }.into()
             }
 
+            Expr::New(e) => {
+                if e.callee.is_ident_ref_to(js_word!("String"))
+                    && e.args.is_some()
+                    && e.args.as_ref().unwrap().len() == 1
+                    && e.args.as_ref().unwrap()[0].spread.is_none()
+                {
+                    return *e.args.into_iter().next().unwrap().pop().unwrap().expr;
+                }
+
+                return NewExpr { ..e }.into();
+            }
+
             // be conservative.
             _ => expr,
         }
