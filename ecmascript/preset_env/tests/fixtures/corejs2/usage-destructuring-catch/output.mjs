@@ -1,3 +1,5 @@
 try {
   a();
-} catch ([b, c]) {}
+} catch (param) {
+    var [b, c] = param;
+}
