@@ -1,3 +1,3 @@
-function a(_ref) {
-  var [b, c] = _ref;
+function a(param) {
+  var [b, c] = param;
 }
