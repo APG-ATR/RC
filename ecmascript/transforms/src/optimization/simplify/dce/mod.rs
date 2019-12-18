@@ -17,12 +17,13 @@ struct Remover<'a> {
     top_level: bool,
 }
 
+#[derive(Debug, Default)]
 struct Scope<'a> {
     parent: Option<&'a Scope<'a>>,
     vars: FxHashMap<Id, u64>,
 }
 
-impl<T: StmtLike> Fold<Vec<T>> for Remover
+impl<T: StmtLike> Fold<Vec<T>> for Remover<'_>
 where
     Self: Fold<T>,
 {
@@ -91,7 +92,7 @@ where
     }
 }
 
-impl Fold<Stmt> for Remover {
+impl Fold<Stmt> for Remover<'_> {
     fn fold(&mut self, stmt: Stmt) -> Stmt {
         let stmt = stmt.fold_children(self);
 

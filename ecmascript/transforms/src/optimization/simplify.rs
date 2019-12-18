@@ -2,7 +2,8 @@
 pub use self::dce::dce;
 use self::expr::SimplifyExpr;
 use crate::pass::Pass;
-use swc_common::{chain, Fold};
+use ast::*;
+use swc_common::{chain, Fold, FoldWith};
 
 pub mod dce;
 mod expr;
@@ -24,8 +25,8 @@ pub fn simplifier() -> impl Pass + 'static {
 
 struct Simplifier;
 
-impl Fold<Progrqm> for Simplifier {
-    fn fold(&mut self, p: Progrqm) -> Progrqm {
+impl Fold<Program> for Simplifier {
+    fn fold(&mut self, p: Program) -> Program {
         p.fold_with(&mut expr_simplifier()).fold_with(&mut dce())
     }
 }
