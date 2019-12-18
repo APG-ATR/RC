@@ -4,6 +4,7 @@ use crate::{
 };
 use ast::*;
 use fxhash::FxHashMap;
+use std::f32::consts::E;
 use swc_common::{fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, Spanned, DUMMY_SP};
 
 #[cfg(test)]
@@ -306,6 +307,15 @@ impl Fold<Stmt> for Remover<'_> {
                 SwitchStmt { ..s }.into()
             }
 
+            Stmt::For(
+                s
+                @
+                ForStmt {
+                    test: Some(box Expr::Lit(Lit::Bool(Bool { value: false, .. }))),
+                    ..
+                },
+            ) => EmptyStmt { span: s.span }.into(),
+
             _ => stmt,
         }
     }
@@ -407,7 +417,18 @@ impl Fold<ForStmt> for Remover<'_> {
                 _ => Some(e),
             }),
             update: s.update.and_then(|e| ignore_result(*e).map(Box::new)),
-            test: s.test.and_then(|e| ignore_result(*e).map(Box::new)),
+            test: s.test.and_then(|e| {
+                let span = e.span();
+                if let Known(value) = e.as_pure_bool() {
+                    if value {
+                        return None;
+                    } else {
+                        return Some(box Expr::Lit(Lit::Bool(Bool { span, value: false })));
+                    }
+                }
+
+                ignore_result(*e).map(Box::new)
+            }),
             ..s
         }
     }
