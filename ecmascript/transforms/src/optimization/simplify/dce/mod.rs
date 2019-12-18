@@ -220,9 +220,49 @@ impl Fold<Pat> for Remover<'_> {
 
         match p {
             Pat::Assign(p)
-                if p.right.is_undefined() || (p.right.is_void() && is_literal(&p.right)) =>
+                if p.right.is_undefined()
+                    || match *p.right {
+                        Expr::Unary(UnaryExpr {
+                            op: op!("void"),
+                            ref arg,
+                            ..
+                        }) => is_literal(&arg),
+                        _ => false,
+                    } =>
             {
-                return *p.left
+                return *p.left;
+            }
+            _ => {}
+        }
+
+        p
+    }
+}
+
+impl Fold<ObjectPatProp> for Remover<'_> {
+    fn fold(&mut self, p: ObjectPatProp) -> ObjectPatProp {
+        let p = p.fold_children(self);
+
+        match p {
+            ObjectPatProp::Assign(AssignPatProp {
+                span,
+                key,
+                value: Some(expr),
+            }) if expr.is_undefined()
+                || match *expr {
+                    Expr::Unary(UnaryExpr {
+                        op: op!("void"),
+                        ref arg,
+                        ..
+                    }) => is_literal(&arg),
+                    _ => false,
+                } =>
+            {
+                return ObjectPatProp::Assign(AssignPatProp {
+                    span,
+                    key,
+                    value: None,
+                });
             }
             _ => {}
         }
