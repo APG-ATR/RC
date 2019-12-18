@@ -4,7 +4,7 @@ use crate::{
 };
 use ast::*;
 use fxhash::FxHashMap;
-use swc_common::{fold::VisitWith, Fold, FoldWith, DUMMY_SP};
+use swc_common::{fold::VisitWith, util::map::Map, Fold, FoldWith, DUMMY_SP};
 
 #[cfg(test)]
 mod tests;
@@ -123,77 +123,11 @@ impl Fold<Stmt> for Remover<'_> {
             // `1;` -> `;`
             Stmt::Expr(ExprStmt {
                 span,
-                expr: box node,
+                expr: box expr,
                 ..
-            }) => match node {
-                Expr::Lit(Lit::Num(..)) | Expr::Lit(Lit::Bool(..)) | Expr::Lit(Lit::Regex(..)) => {
-                    Stmt::Empty(EmptyStmt { span })
-                }
-
-                Expr::Array(ArrayLit {
-                    span, mut elems, ..
-                }) => {
-                    elems.retain(|v| match v {
-                        Some(ExprOrSpread {
-                            spread: Some(..), ..
-                        }) => true,
-                        None => false,
-                        Some(ExprOrSpread {
-                            spread: None,
-                            ref expr,
-                        }) => expr.may_have_side_effects(),
-                    });
-
-                    if elems.is_empty() {
-                        Stmt::Empty(EmptyStmt { span })
-                    } else {
-                        Stmt::Expr(ExprStmt {
-                            span,
-                            expr: box Expr::Array(ArrayLit { span, elems }),
-                        })
-                    }
-                }
-
-                Expr::Object(ObjectLit { props, .. }) if props.is_empty() => {
-                    Stmt::Empty(EmptyStmt { span })
-                }
-
-                Expr::Call(CallExpr {
-                    span,
-                    callee: ExprOrSuper::Expr(ref callee),
-                    args,
-                    ..
-                }) if callee.is_pure_callee() => Stmt::Expr(ExprStmt {
-                    span,
-                    expr: box Expr::Array(ArrayLit {
-                        span,
-                        elems: args.into_iter().map(Some).collect(),
-                    }),
-                })
-                .fold_with(self),
-
-                Expr::TaggedTpl(TaggedTpl { tag, exprs, .. }) if tag.is_pure_callee() => {
-                    Stmt::Expr(ExprStmt {
-                        span: DUMMY_SP,
-                        expr: box preserve_effects(span, *undefined(span), exprs),
-                    })
-                    .fold_with(self)
-                }
-
-                //
-                // Function expressions are useless if they are not used.
-                //
-                // As function expressions cannot start with 'function',
-                // this will be reached only if other things
-                // are removed while folding children.
-                Expr::Fn(FnExpr {
-                    function: Function { span, .. },
-                    ..
-                }) => Stmt::Empty(EmptyStmt { span }),
-                _ => Stmt::Expr(ExprStmt {
-                    span,
-                    expr: box node,
-                }),
+            }) => match ignore_result(expr) {
+                Some(e) => Stmt::Expr(ExprStmt { span, expr: box e }),
+                None => Stmt::Empty(EmptyStmt { span: DUMMY_SP }),
             },
 
             Stmt::Block(BlockStmt { span, stmts }) => {
@@ -318,5 +252,83 @@ impl Fold<ObjectPatProp> for Remover<'_> {
         }
 
         p
+    }
+}
+
+impl Fold<SeqExpr> for Remover<'_> {
+    fn fold(&mut self, e: SeqExpr) -> SeqExpr {
+        let e = e.fold_children(self);
+
+        SeqExpr {
+            exprs: e
+                .exprs
+                .into_iter()
+                .filter_map(|e| ignore_result(*e).map(Box::new))
+                .collect(),
+            ..e
+        }
+    }
+}
+
+/// Ignores the result.
+///
+/// Returns
+///  - [Some] if `e` has a side effect.
+///  - [None] if `e` does not have a side effect.
+fn ignore_result(e: Expr) -> Option<Expr> {
+    match e {
+        Expr::Lit(Lit::Num(..)) | Expr::Lit(Lit::Bool(..)) | Expr::Lit(Lit::Regex(..)) => None,
+
+        Expr::Array(ArrayLit {
+            span, mut elems, ..
+        }) => {
+            elems.retain(|v| match v {
+                Some(ExprOrSpread {
+                    spread: Some(..), ..
+                }) => true,
+                None => false,
+                Some(ExprOrSpread {
+                    spread: None,
+                    ref expr,
+                }) => expr.may_have_side_effects(),
+            });
+
+            if elems.is_empty() {
+                None
+            } else {
+                Some(Expr::Array(ArrayLit { span, elems }))
+            }
+        }
+
+        Expr::Object(ObjectLit { props, .. }) if props.is_empty() => None,
+
+        Expr::Call(CallExpr {
+            span,
+            callee: ExprOrSuper::Expr(ref callee),
+            args,
+            ..
+        }) if callee.is_pure_callee() => ignore_result(Expr::Array(ArrayLit {
+            span,
+            elems: args.into_iter().map(Some).collect(),
+        })),
+
+        Expr::TaggedTpl(TaggedTpl {
+            span, tag, exprs, ..
+        }) if tag.is_pure_callee() => {
+            ignore_result(preserve_effects(span, *undefined(span), exprs))
+        }
+
+        //
+        // Function expressions are useless if they are not used.
+        //
+        // As function expressions cannot start with 'function',
+        // this will be reached only if other things
+        // are removed while folding children.
+        Expr::Fn(FnExpr {
+            function: Function { span, .. },
+            ..
+        }) => None,
+
+        _ => Some(e),
     }
 }
