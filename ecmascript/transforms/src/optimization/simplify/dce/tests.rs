@@ -348,9 +348,9 @@ fn test_remove_useless_ops2() {
     test("f(),true", "f()");
     test("f() + g()", "f(),g()");
 
-    test("for(;;+f()){}", "for(;;f()){}");
-    test("for(+f();;g()){}", "for(f();;g()){}");
-    test("for(;;Math.random(f(),g(),h())){}", "for(;;f(),g(),h()){}");
+    test("for(;;+f()){}", "for(;;f());");
+    test("for(+f();;g()){}", "for(f();;g());");
+    test("for(;;Math.random(f(),g(),h())){}", "for(;;f(),g(),h());");
 
     // The optimization cascades into conditional expressions:
     test("g() && +f()", "g() && f()");
