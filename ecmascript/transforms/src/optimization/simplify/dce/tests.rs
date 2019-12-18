@@ -1100,7 +1100,7 @@ fn test_complex2() {
 
 #[test]
 fn test_complex3() {
-    test("1 && (a() ? b() : 1 + c())", "1 && (a() ? b() : c())");
+    test("1 && (a() ? b() : 1 + c())", "a() ? b() : c()");
 }
 
 #[test]
@@ -1190,9 +1190,9 @@ fn test_call_containing_spread() {
     // be preserved.
     test("Math.sin(...c)", "([...c])");
     test("Math.sin(4, ...c, a)", "([...c])");
-    test("Math.sin(foo(), ...c, bar())", "(foo(), [...c], bar())");
-    test("Math.sin(...a, b, ...c)", "([...a], [...c])");
-    test("Math.sin(...b, ...c)", "([...b], [...c])");
+    test("Math.sin(foo(), ...c, bar())", "([foo(), ...c, bar()])");
+    test("Math.sin(...a, b, ...c)", "([...a, ...c])");
+    test("Math.sin(...b, ...c)", "([...b, ...c])");
 }
 
 #[test]
@@ -1295,8 +1295,8 @@ fn test_array_literal() {
 fn test_array_literal_containing_spread() {
     test_same("([...c])");
     test("([4, ...c, a])", "([...c])");
-    // test("([foo(), ...c, bar()])", "(foo(), [...c], bar())");
-    test("([...a, b, ...c])", "([...a], [...c])");
+    test("([foo(), ...c, bar()])", "([foo(), ...c, bar()])");
+    test("([...a, b, ...c])", "([...a, ...c])");
     test_same("([...b, ...c])"); // It would also be fine if the spreads were
                                  // split apart.
 }
