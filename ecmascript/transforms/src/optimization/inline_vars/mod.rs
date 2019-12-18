@@ -10,8 +10,8 @@ mod tests;
 
 /// Ported from [`InlineVariables`](https://github.com/google/closure-compiler/blob/master/src/com/google/javascript/jscomp/InlineVariables.java)
 /// of the google closure compiler.
-pub fn constant_propagator() -> impl 'static + Pass {
-    Const::default()
+pub fn inline_vars() -> impl 'static + Pass {
+    Inline::default()
 }
 
 type Id = (JsWord, SyntaxContext);
@@ -21,16 +21,16 @@ fn id(i: &Ident) -> Id {
 }
 
 #[derive(Debug, Default)]
-struct Const<'a> {
+struct Inline<'a> {
     scope: Scope<'a>,
 }
 
-impl Const<'_> {
+impl Inline<'_> {
     fn child<T, F>(&mut self, op: F) -> T
     where
-        F: for<'any> FnOnce(&mut Const<'any>) -> T,
+        F: for<'any> FnOnce(&mut Inline<'any>) -> T,
     {
-        let mut c = Const {
+        let mut c = Inline {
             scope: Scope {
                 parent: Some(&self.scope),
                 idents: Default::default(),
@@ -79,13 +79,13 @@ impl Scope<'_> {
     }
 }
 
-impl Fold<Function> for Const<'_> {
+impl Fold<Function> for Inline<'_> {
     fn fold(&mut self, f: Function) -> Function {
         self.child(|c| f.fold_children(c))
     }
 }
 
-impl Fold<AssignExpr> for Const<'_> {
+impl Fold<AssignExpr> for Inline<'_> {
     fn fold(&mut self, e: AssignExpr) -> AssignExpr {
         let e = e.fold_children(self);
 
@@ -103,7 +103,7 @@ impl Fold<AssignExpr> for Const<'_> {
     }
 }
 
-impl Fold<VarDecl> for Const<'_> {
+impl Fold<VarDecl> for Inline<'_> {
     fn fold(&mut self, v: VarDecl) -> VarDecl {
         let v = v.fold_children(self);
 
@@ -123,7 +123,7 @@ impl Fold<VarDecl> for Const<'_> {
     }
 }
 
-impl Fold<Expr> for Const<'_> {
+impl Fold<Expr> for Inline<'_> {
     fn fold(&mut self, e: Expr) -> Expr {
         let e = e.fold_children(self);
 
