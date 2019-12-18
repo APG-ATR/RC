@@ -1,8 +1,15 @@
 use super::dce;
+use crate::optimization::expr_simplifier;
+use swc_common::chain;
 
 macro_rules! test_stmt {
     ($l:expr, $r:expr) => {
-        test_transform!(::swc_ecma_parser::Syntax::default(), |_| dce(), $l, $r)
+        test_transform!(
+            ::swc_ecma_parser::Syntax::default(),
+            |_| chain!(expr_simplifier(), dce()),
+            $l,
+            $r
+        )
     };
     ($l:expr, $r:expr,) => {
         test_expr!($l, $r);
@@ -10,13 +17,7 @@ macro_rules! test_stmt {
 }
 
 fn test(src: &str, expected: &str) {
-    test_transform!(
-        ::swc_ecma_parser::Syntax::default(),
-        |_| dce(),
-        src,
-        expected,
-        true
-    )
+    test_stmt!(src, expected)
 }
 
 /// Should not modify expression.
@@ -105,7 +106,8 @@ fn test_fold_block_with_declaration() {
 }
 
 /** Try to remove spurious blocks with multiple children * * * * * * * * * *
- ** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
+ ** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ **   * **/
 #[test]
 fn test_fold_blocks_with_many_children() {
     test("function f() { if (false) {} }", "function f(){}");
