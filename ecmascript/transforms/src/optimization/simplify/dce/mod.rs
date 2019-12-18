@@ -286,12 +286,9 @@ fn ignore_result(e: Expr) -> Option<Expr> {
             let right = ignore_result(*right);
 
             match (left, right) {
-                (Some(l), Some(r)) => Some(Expr::Bin(BinExpr {
-                    span,
-                    op,
-                    left: box l,
-                    right: box r,
-                })),
+                (Some(l), Some(r)) => {
+                    ignore_result(preserve_effects(span, *undefined(span), vec![box l, box r]))
+                }
                 (Some(l), None) => Some(l),
                 (None, Some(r)) => Some(r),
                 (None, None) => None,
