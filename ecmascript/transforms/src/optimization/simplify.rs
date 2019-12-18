@@ -1,7 +1,7 @@
 //! Ported from closure compiler.
 pub use self::dce::dce;
 use self::expr::SimplifyExpr;
-use crate::pass::Pass;
+use crate::{optimization::inline_vars, pass::Pass};
 use ast::*;
 use swc_common::{Fold, FoldWith};
 
@@ -25,6 +25,8 @@ struct Simplifier;
 
 impl Fold<Program> for Simplifier {
     fn fold(&mut self, p: Program) -> Program {
-        p.fold_with(&mut expr_simplifier()).fold_with(&mut dce())
+        p.fold_with(&mut expr_simplifier())
+            .fold_with(&mut inline_vars(Default::default()))
+            .fold_with(&mut dce())
     }
 }
