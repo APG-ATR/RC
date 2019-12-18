@@ -27,7 +27,7 @@ struct Simplifier;
 
 impl Fold<Program> for Simplifier {
     fn fold(&mut self, p: Program) -> Program {
-        p.fold_with(&mut expr_simplifier())
+        p.fold_with(&mut expr_simplifier()).fold_with(self)
     }
 }
 
