@@ -315,6 +315,10 @@ pub trait ExprExt {
     ///for expressions with side-effects.
     fn as_bool(&self) -> (Purity, BoolValue) {
         let expr = self.as_expr_kind();
+        if expr.is_ident_ref_to(js_word!("undefined")) {
+            return (Pure, Known(false));
+        }
+
         let val = match *expr {
             Expr::Paren(ref e) => return e.expr.as_bool(),
             Expr::Seq(SeqExpr { ref exprs, .. }) => return exprs.last().unwrap().as_bool(),
