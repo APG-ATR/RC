@@ -260,11 +260,7 @@ impl Fold<SeqExpr> for Remover<'_> {
         let e = e.fold_children(self);
 
         SeqExpr {
-            exprs: e
-                .exprs
-                .into_iter()
-                .filter_map(|e| ignore_result(*e).map(Box::new))
-                .collect(),
+            exprs: e.exprs.move_flat_map(|e| ignore_result(*e).map(Box::new)),
             ..e
         }
     }
@@ -278,6 +274,28 @@ impl Fold<SeqExpr> for Remover<'_> {
 fn ignore_result(e: Expr) -> Option<Expr> {
     match e {
         Expr::Lit(Lit::Num(..)) | Expr::Lit(Lit::Bool(..)) | Expr::Lit(Lit::Regex(..)) => None,
+
+        Expr::Bin(BinExpr {
+            span,
+            left,
+            op,
+            right,
+        }) => {
+            let left = ignore_result(*left);
+            let right = ignore_result(*right);
+
+            match (left, right) {
+                (Some(l), Some(r)) => Expr::Bin(BinExpr {
+                    span,
+                    op,
+                    left: box l,
+                    right: box r,
+                }),
+                (Some(l), None) => l,
+                (None, Some(r)) => r,
+                (None, None) => None,
+            }
+        }
 
         Expr::Array(ArrayLit {
             span, mut elems, ..
