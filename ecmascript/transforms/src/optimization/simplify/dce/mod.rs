@@ -237,18 +237,13 @@ impl Fold<Stmt> for Remover<'_> {
                 });
 
                 if let Some(i) = selected {
-                    let mut stmts = s.cases.remove(i).cons;
+                    let stmts = s.cases.remove(i).cons;
 
-                    if stmts.is_empty() {
-                        return Stmt::Empty(EmptyStmt { span: s.span });
-                    } else if stmts.len() == 1 {
-                        return stmts.remove(0);
-                    } else {
-                        return Stmt::Block(BlockStmt {
-                            span: s.span,
-                            stmts,
-                        });
-                    }
+                    return Stmt::Block(BlockStmt {
+                        span: s.span,
+                        stmts,
+                    })
+                    .fold_with(self);
                 }
 
                 SwitchStmt { ..s }.into()
@@ -336,7 +331,7 @@ impl Fold<Expr> for Remover<'_> {
                 span,
                 op: op!("="),
                 left: PatOrExpr::Pat(box Pat::Ident(ref l)),
-                right: Expr::Ident(ref r),
+                right: box Expr::Ident(ref r),
             }) if l.sym == r.sym && l.span.ctxt() == r.span.ctxt() => return *undefined(span),
             _ => {}
         }
