@@ -4,7 +4,7 @@ use crate::{
 };
 use ast::*;
 use fxhash::FxHashMap;
-use swc_common::{fold::VisitWith, util::map::Map, Fold, FoldWith, DUMMY_SP};
+use swc_common::{fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, DUMMY_SP};
 
 #[cfg(test)]
 mod tests;
@@ -271,6 +271,7 @@ impl Fold<SeqExpr> for Remover<'_> {
 /// Returns
 ///  - [Some] if `e` has a side effect.
 ///  - [None] if `e` does not have a side effect.
+#[inline(never)]
 fn ignore_result(e: Expr) -> Option<Expr> {
     match e {
         Expr::Lit(Lit::Num(..)) | Expr::Lit(Lit::Bool(..)) | Expr::Lit(Lit::Regex(..)) => None,
@@ -285,17 +286,27 @@ fn ignore_result(e: Expr) -> Option<Expr> {
             let right = ignore_result(*right);
 
             match (left, right) {
-                (Some(l), Some(r)) => Expr::Bin(BinExpr {
+                (Some(l), Some(r)) => Some(Expr::Bin(BinExpr {
                     span,
                     op,
                     left: box l,
                     right: box r,
-                }),
-                (Some(l), None) => l,
-                (None, Some(r)) => r,
+                })),
+                (Some(l), None) => Some(l),
+                (None, Some(r)) => Some(r),
                 (None, None) => None,
             }
         }
+
+        Expr::Unary(UnaryExpr { span, op, arg }) => match op {
+            op!("void")
+            | op!("typeof")
+            | op!(unary, "+")
+            | op!(unary, "-")
+            | op!("!")
+            | op!("~") => ignore_result(*arg),
+            _ => Some(Expr::Unary(UnaryExpr { span, op, arg })),
+        },
 
         Expr::Array(ArrayLit {
             span, mut elems, ..
