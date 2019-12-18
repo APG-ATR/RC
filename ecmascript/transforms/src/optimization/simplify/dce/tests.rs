@@ -107,7 +107,7 @@ fn test_fold_block_with_declaration() {
 
 /** Try to remove spurious blocks with multiple children * * * * * * * * * *
  ** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- **   * * **/
+ **   * * * * * * * **/
 #[test]
 fn test_fold_blocks_with_many_children() {
     test("function f() { if (false) {} }", "function f(){}");

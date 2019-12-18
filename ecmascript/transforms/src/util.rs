@@ -696,9 +696,12 @@ pub trait ExprExt {
             | Expr::This(..)
             | Expr::PrivateName(..)
             | Expr::TsConstAssertion(..) => false,
+
             Expr::Paren(ref e) => e.expr.may_have_side_effects(),
+
             // Function expression does not have any side effect if it's not used.
             Expr::Fn(..) | Expr::Arrow(ArrowExpr { .. }) => false,
+
             // TODO
             Expr::Class(..) => true,
             Expr::Array(ArrayLit { ref elems, .. }) => elems
@@ -716,6 +719,11 @@ pub trait ExprExt {
             Expr::Tpl(_) => true,
             Expr::TaggedTpl(_) => true,
             Expr::MetaProp(_) => true,
+
+            Expr::Member(MemberExpr {
+                obj: ExprOrSuper::Expr(ref obj),
+                ..
+            }) if obj.is_ident_ref_to(js_word!("Math")) => false,
 
             Expr::Await(_)
             | Expr::Yield(_)

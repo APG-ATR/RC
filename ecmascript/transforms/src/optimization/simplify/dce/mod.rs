@@ -4,7 +4,7 @@ use crate::{
 };
 use ast::*;
 use fxhash::FxHashMap;
-use swc_common::{fold::VisitWith, Fold, FoldWith};
+use swc_common::{fold::VisitWith, Fold, FoldWith, DUMMY_SP};
 
 #[cfg(test)]
 mod tests;
@@ -136,6 +136,17 @@ impl Fold<Stmt> for Remover<'_> {
 
                 Expr::Object(ObjectLit { ref props, .. }) if props.is_empty() => {
                     Stmt::Empty(EmptyStmt { span })
+                }
+
+                Expr::Call(CallExpr { span, args, .. }) if !node.may_have_side_effects() => {
+                    Stmt::Expr(ExprStmt {
+                        span,
+                        expr: box Expr::Array(ArrayLit {
+                            span,
+                            elems: args.into_iter().map(Some).collect(),
+                        })
+                        .fold_with(self),
+                    })
                 }
 
                 //
