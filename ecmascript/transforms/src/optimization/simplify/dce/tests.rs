@@ -51,7 +51,7 @@ fn compiled_out_simple() {
 }
 
 #[test]
-fn testRemoveNoOpLabelledStatement() {
+fn test_remove_no_op_labelled_statement() {
     test("a: break a;", "");
     test("a: { break a; }", "");
 
@@ -63,7 +63,7 @@ fn testRemoveNoOpLabelledStatement() {
 }
 
 #[test]
-fn testFoldBlock() {
+fn test_fold_block() {
     test("{{foo()}}", "foo()");
     test("{foo();{}}", "foo()");
     test("{{foo()}{}}", "foo()");
@@ -91,7 +91,7 @@ fn testFoldBlock() {
 }
 
 #[test]
-fn testFoldBlockWithDeclaration() {
+fn test_fold_block_with_declaration() {
     test_same("{let x}");
     test_same("function f() {let x}");
     test_same("{const x = 1}");
@@ -105,9 +105,9 @@ fn testFoldBlockWithDeclaration() {
 }
 
 /** Try to remove spurious blocks with multiple children * * * * * * * * * *
- ** * * * * * **/
+ ** * * * * * * * * * * * * * * * * * **/
 #[test]
-fn testFoldBlocksWithManyChildren() {
+fn test_fold_blocks_with_many_children() {
     test("function f() { if (false) {} }", "function f(){}");
     test(
         "function f() { { if (false) {} if (true) {} {} } }",
@@ -124,7 +124,7 @@ fn testFoldBlocksWithManyChildren() {
 }
 
 #[test]
-fn testIf() {
+fn test_if() {
     test("if (1){ x=1; } else { x = 2;}", "x=1");
     test("if (false){ x = 1; } else { x = 2; }", "x=2");
     test("if (undefined){ x = 1; } else { x = 2; }", "x=2");
@@ -139,7 +139,7 @@ fn testIf() {
 }
 
 #[test]
-fn testHook() {
+fn test_hook() {
     test("true ? a() : b()", "a()");
     test("false ? a() : b()", "b()");
 
@@ -177,7 +177,7 @@ fn testHook() {
 }
 
 #[test]
-fn testConstantConditionWithSideEffect1() {
+fn test_constant_condition_with_side_effect1() {
     test("if (b=true) x=1;", "b=true;x=1");
     test("if (b=/ab/) x=1;", "b=/ab/;x=1");
     test("if (b=/ab/){ x=1; } else { x=2; }", "b=/ab/;x=1");
@@ -192,7 +192,7 @@ fn testConstantConditionWithSideEffect1() {
 }
 
 #[test]
-fn testConstantConditionWithSideEffect2() {
+fn test_constant_condition_with_side_effect2() {
     test("(b=true)?x=1:x=2;", "b=true,x=1");
     test("(b=false)?x=1:x=2;", "b=false,x=2");
     test("if (b=/ab/) x=1;", "b=/ab/;x=1");
@@ -203,7 +203,7 @@ fn testConstantConditionWithSideEffect2() {
 }
 
 #[test]
-fn testVarLifting() {
+fn test_var_lifting() {
     test("if(true)var a", "var a");
     test("if(false)var a", "var a");
 
@@ -211,7 +211,7 @@ fn testVarLifting() {
 }
 
 #[test]
-fn testLetConstLifting() {
+fn test_let_const_lifting() {
     test("if(true) {const x = 1}", "{const x = 1}");
     test("if(false) {const x = 1}", "");
     test("if(true) {let x}", "{let x}");
@@ -219,7 +219,7 @@ fn testLetConstLifting() {
 }
 
 #[test]
-fn testFoldUselessFor() {
+fn test_fold_useless_for() {
     test("for(;false;) { foo() }", "");
     test("for(;void 0;) { foo() }", "");
     test("for(;undefined;) { foo() }", "");
@@ -234,7 +234,7 @@ fn testFoldUselessFor() {
 }
 
 #[test]
-fn testFoldUselessDo() {
+fn test_fold_useless_do() {
     test("do { foo() } while(false);", "foo()");
     test("do { foo() } while(void 0);", "foo()");
     test("do { foo() } while(undefined);", "foo()");
@@ -274,12 +274,12 @@ fn testFoldUselessDo() {
 }
 
 #[test]
-fn testFoldEmptyDo() {
+fn test_fold_empty_do() {
     test("do { } while(true);", "for (;;);");
 }
 
 #[test]
-fn testMinimizeLoop_withConstantCondition_vanillaFor() {
+fn test_minimize_loop_with_constant_condition_vanilla_for() {
     test("for(;true;) foo()", "for(;;) foo()");
     test("for(;0;) foo()", "");
     test("for(;0.0;) foo()", "");
@@ -290,7 +290,7 @@ fn testMinimizeLoop_withConstantCondition_vanillaFor() {
 }
 
 #[test]
-fn testMinimizeLoop_withConstantCondition_doWhile() {
+fn test_minimize_loop_with_constant_condition_do_while() {
     test("do { foo(); } while (true)", "do { foo(); } while (true);");
     test("do { foo(); } while (0)", "foo();");
     test("do { foo(); } while (0.0)", "foo();");
@@ -301,7 +301,7 @@ fn testMinimizeLoop_withConstantCondition_doWhile() {
 }
 
 #[test]
-fn testFoldConstantCommaExpressions() {
+fn test_fold_constant_comma_expressions() {
     test("if (true, false) {foo()}", "");
     test("if (false, true) {foo()}", "foo()");
     test("true, foo()", "foo()");
@@ -309,12 +309,12 @@ fn testFoldConstantCommaExpressions() {
 }
 
 #[test]
-fn testRemoveUselessOps1() {
+fn test_remove_useless_ops1() {
     test_same("(function () { f(); })();");
 }
 
 #[test]
-fn testRemoveUselessOps2() {
+fn test_remove_useless_ops2() {
     // There are four place where expression results are discarded:
     //  - a top-level expression EXPR_RESULT
     //  - the LHS of a COMMA
@@ -377,7 +377,7 @@ fn testRemoveUselessOps2() {
 }
 
 #[test]
-fn testOptimizeSwitch() {
+fn test_optimize_switch() {
     test("switch(a){}", "");
     test("switch(foo()){}", "foo()");
     test("switch(a){default:}", "");
@@ -546,7 +546,7 @@ fn testOptimizeSwitch() {
 }
 
 #[test]
-fn testOptimizeSwitchBug11536863() {
+fn test_optimize_switch_bug11536863() {
     test(
         "outer: {  switch (2) {\n    case 2:\n      f();\n      break outer;\n  }}",
         "outer: {f(); break outer;}",
@@ -554,7 +554,7 @@ fn testOptimizeSwitchBug11536863() {
 }
 
 #[test]
-fn testOptimizeSwitch2() {
+fn test_optimize_switch2() {
     test(
         "outer: switch (2) {\n  case 2:\n    f();\n    break outer;\n}",
         "outer: {f(); break outer;}",
@@ -562,7 +562,7 @@ fn testOptimizeSwitch2() {
 }
 
 #[test]
-fn testOptimizeSwitch3() {
+fn test_optimize_switch3() {
     test(
         concat!(
             "switch (1) {",
@@ -584,7 +584,7 @@ fn testOptimizeSwitch3() {
 }
 
 #[test]
-fn testOptimizeSwitchWithLabellessBreak() {
+fn test_optimize_switch_with_labelless_break() {
     test(
         concat!(
             "function f() {",
@@ -643,7 +643,7 @@ fn testOptimizeSwitchWithLabellessBreak() {
 }
 
 #[test]
-fn testOptimizeSwitchWithLabelledBreak() {
+fn test_optimize_switch_with_labelled_break() {
     test(
         concat!(
             "function f() {",
@@ -672,7 +672,7 @@ fn testOptimizeSwitchWithLabelledBreak() {
 }
 
 #[test]
-fn testOptimizeSwitchWithReturn() {
+fn test_optimize_switch_with_return() {
     test(
         concat!(
             "function f() {",
@@ -705,7 +705,7 @@ fn testOptimizeSwitchWithReturn() {
 }
 
 #[test]
-fn testOptimizeSwitchWithThrow() {
+fn test_optimize_switch_with_throw() {
     test(
         concat!(
             "function f() {",
@@ -720,7 +720,7 @@ fn testOptimizeSwitchWithThrow() {
 }
 
 #[test]
-fn testOptimizeSwitchWithContinue() {
+fn test_optimize_switch_with_continue() {
     test(
         concat!(
             "function f() {",
@@ -737,7 +737,7 @@ fn testOptimizeSwitchWithContinue() {
 }
 
 #[test]
-fn testOptimizeSwitchWithDefaultCaseWithFallthru() {
+fn test_optimize_switch_with_default_case_with_fallthru() {
     test_same(concat!(
         "function f() {",
         "  switch(a) {",
@@ -751,7 +751,7 @@ fn testOptimizeSwitchWithDefaultCaseWithFallthru() {
 
 // GitHub issue #1722: https://github.com/google/closure-compiler/issues/1722
 #[test]
-fn testOptimizeSwitchWithDefaultCase() {
+fn test_optimize_switch_with_default_case() {
     test(
         concat!(
             "function f() {",
@@ -870,37 +870,37 @@ fn testOptimizeSwitchWithDefaultCase() {
 }
 
 #[test]
-fn testRemoveNumber() {
+fn test_remove_number() {
     test("3", "");
 }
 
 #[test]
-fn testRemoveVarGet1() {
+fn test_remove_var_get1() {
     test("a", "");
 }
 
 #[test]
-fn testRemoveVarGet2() {
+fn test_remove_var_get2() {
     test("var a = 1;a", "var a = 1");
 }
 
 #[test]
-fn testRemoveNamespaceGet1() {
+fn test_remove_namespace_get1() {
     test("var a = {};a.b", "var a = {}");
 }
 
 #[test]
-fn testRemoveNamespaceGet2() {
+fn test_remove_namespace_get2() {
     test("var a = {};a.b=1;a.b", "var a = {};a.b=1");
 }
 
 #[test]
-fn testRemovePrototypeGet1() {
+fn test_remove_prototype_get1() {
     test("var a = {};a.prototype.b", "var a = {}");
 }
 
 #[test]
-fn testRemovePrototypeGet2() {
+fn test_remove_prototype_get2() {
     test(
         "var a = {};a.prototype.b = 1;a.prototype.b",
         "var a = {};a.prototype.b = 1",
@@ -908,132 +908,132 @@ fn testRemovePrototypeGet2() {
 }
 
 #[test]
-fn testRemoveAdd1() {
+fn test_remove_add1() {
     test("1 + 2", "");
 }
 
 #[test]
-fn testNoRemoveVar1() {
+fn test_no_remove_var1() {
     test_same("var a = 1");
 }
 
 #[test]
-fn testNoRemoveVar2() {
+fn test_no_remove_var2() {
     test_same("var a = 1, b = 2");
 }
 
 #[test]
-fn testNoRemoveAssign1() {
+fn test_no_remove_assign1() {
     test_same("a = 1");
 }
 
 #[test]
-fn testNoRemoveAssign2() {
+fn test_no_remove_assign2() {
     test_same("a = b = 1");
 }
 
 #[test]
-fn testNoRemoveAssign3() {
+fn test_no_remove_assign3() {
     test("1 + (a = 2)", "a = 2");
 }
 
 #[test]
-fn testNoRemoveAssign4() {
+fn test_no_remove_assign4() {
     test_same("x.a = 1");
 }
 
 #[test]
-fn testNoRemoveAssign5() {
+fn test_no_remove_assign5() {
     test_same("x.a = x.b = 1");
 }
 
 #[test]
-fn testNoRemoveAssign6() {
+fn test_no_remove_assign6() {
     test("1 + (x.a = 2)", "x.a = 2");
 }
 
 #[test]
-fn testNoRemoveCall1() {
+fn test_no_remove_call1() {
     test_same("a()");
 }
 
 #[test]
-fn testNoRemoveCall2() {
+fn test_no_remove_call2() {
     test("a()+b()", "a(),b()");
 }
 
 #[test]
-fn testNoRemoveCall3() {
+fn test_no_remove_call3() {
     test_same("a() && b()");
 }
 
 #[test]
-fn testNoRemoveCall4() {
+fn test_no_remove_call4() {
     test_same("a() || b()");
 }
 
 #[test]
-fn testNoRemoveCall5() {
+fn test_no_remove_call5() {
     test("a() || 1", "a()");
 }
 
 #[test]
-fn testNoRemoveCall6() {
+fn test_no_remove_call6() {
     test_same("1 || a()");
 }
 
 #[test]
-fn testNoRemoveThrow1() {
+fn test_no_remove_throw1() {
     test_same("function f(){throw a()}");
 }
 
 #[test]
-fn testNoRemoveThrow2() {
+fn test_no_remove_throw2() {
     test_same("function f(){throw a}");
 }
 
 #[test]
-fn testNoRemoveThrow3() {
+fn test_no_remove_throw3() {
     test_same("function f(){throw 10}");
 }
 
 #[test]
-fn testRemoveInControlStructure1() {
+fn test_remove_in_control_structure1() {
     test("if(x()) 1", "x()");
 }
 
 #[test]
-fn testRemoveInControlStructure3() {
+fn test_remove_in_control_structure3() {
     test("for(1;2;3) 4", "for(;;);");
 }
 
 #[test]
-fn testHook1() {
+fn test_hook1() {
     test("1 ? 2 : 3", "");
 }
 
 #[test]
-fn testHook2() {
+fn test_hook2() {
     test("x ? a() : 3", "x && a()");
 }
 
 #[test]
-fn testHook3() {
+fn test_hook3() {
     test("x ? 2 : a()", "x || a()");
 }
 
 #[test]
-fn testHook4() {
+fn test_hook4() {
     test_same("x ? a() : b()");
 }
 
 #[test]
-fn testHook5() {
+fn test_hook5() {
     test("a() ? 1 : 2", "a()");
 }
 
 #[test]
-fn testHook6() {
+fn test_hook6() {
     test("a() ? b() : 2", "a() && b()");
 }
 
@@ -1041,17 +1041,17 @@ fn testHook6() {
 // convert OR into HOOK to save parentheses when the operator
 // precedents would require them.
 #[test]
-fn testHook7() {
+fn test_hook7() {
     test("a() ? 1 : b()", "a() || b()");
 }
 
 #[test]
-fn testHook8() {
+fn test_hook8() {
     test_same("a() ? b() : c()");
 }
 
 #[test]
-fn testHook9() {
+fn test_hook9() {
     test("true ? a() : (function f() {})()", "a()");
     test(
         "false ? a() : (function f() {alert(x)})()",
@@ -1060,7 +1060,7 @@ fn testHook9() {
 }
 
 #[test]
-fn testHook10() {
+fn test_hook10() {
     test("((function () {}), true) ? a() : b()", "a()");
     test(
         "((function () {alert(x)})(), true) ? a() : b()",
@@ -1069,83 +1069,83 @@ fn testHook10() {
 }
 
 #[test]
-fn testShortCircuit1() {
+fn test_short_circuit1() {
     test_same("1 && a()");
 }
 
 #[test]
-fn testShortCircuit2() {
+fn test_short_circuit2() {
     test("1 && a() && 2", "1 && a()");
 }
 
 #[test]
-fn testShortCircuit3() {
+fn test_short_circuit3() {
     test("a() && 1 && 2", "a()");
 }
 
 #[test]
-fn testShortCircuit4() {
+fn test_short_circuit4() {
     test_same("a() && 1 && b()");
 }
 
 #[test]
-fn testComplex1() {
+fn test_complex1() {
     test("1 && a() + b() + c()", "1 && (a(), b(), c())");
 }
 
 #[test]
-fn testComplex2() {
+fn test_complex2() {
     test("1 && (a() ? b() : 1)", "1 && (a() && b())");
 }
 
 #[test]
-fn testComplex3() {
+fn test_complex3() {
     test("1 && (a() ? b() : 1 + c())", "1 && (a() ? b() : c())");
 }
 
 #[test]
-fn testComplex4() {
+fn test_complex4() {
     test("1 && (a() ? 1 : 1 + c())", "1 && (a() || c())");
 }
 
 #[test]
-fn testComplex5() {
+fn test_complex5() {
     // can't simplify LHS of short circuit statements with side effects
     test_same("(a() ? 1 : 1 + c()) && foo()");
 }
 
 #[test]
-fn testNoRemoveFunctionDeclaration1() {
+fn test_no_remove_function_declaration1() {
     test_same("function foo(){}");
 }
 
 #[test]
-fn testNoRemoveFunctionDeclaration2() {
+fn test_no_remove_function_declaration2() {
     test_same("var foo = function (){}");
 }
 
 #[test]
-fn testNoSimplifyFunctionArgs1() {
+fn test_no_simplify_function_args1() {
     test_same("f(1 + 2, 3 + g())");
 }
 
 #[test]
-fn testNoSimplifyFunctionArgs2() {
+fn test_no_simplify_function_args2() {
     test_same("1 && f(1 + 2, 3 + g())");
 }
 
 #[test]
-fn testNoSimplifyFunctionArgs3() {
+fn test_no_simplify_function_args3() {
     test_same("1 && foo(a() ? b() : 1 + c())");
 }
 
 #[test]
-fn testNoRemoveInherits1() {
+fn test_no_remove_inherits1() {
     test_same("var a = {}; this.b = {}; var goog = {}; goog.inherits(b, a)");
 }
 
 #[test]
-fn testNoRemoveInherits2() {
+fn test_no_remove_inherits2() {
     test(
         "var a = {}; this.b = {}; var goog = {}; goog.inherits(b, a) + 1",
         "var a = {}; this.b = {}; var goog = {}; goog.inherits(b, a)",
@@ -1153,12 +1153,12 @@ fn testNoRemoveInherits2() {
 }
 
 #[test]
-fn testNoRemoveInherits3() {
+fn test_no_remove_inherits3() {
     test_same("this.a = {}; var b = {}; b.inherits(a);");
 }
 
 #[test]
-fn testNoRemoveInherits4() {
+fn test_no_remove_inherits4() {
     test(
         "this.a = {}; var b = {}; b.inherits(a) + 1;",
         "this.a = {}; var b = {}; b.inherits(a)",
@@ -1166,17 +1166,17 @@ fn testNoRemoveInherits4() {
 }
 
 #[test]
-fn testRemoveFromLabel1() {
+fn test_remove_from_label1() {
     test("LBL: void 0", "");
 }
 
 #[test]
-fn testRemoveFromLabel2() {
+fn test_remove_from_label2() {
     test("LBL: foo() + 1 + bar()", "LBL: foo(),bar()");
 }
 
 #[test]
-fn testCall() {
+fn test_call() {
     test_same("foo(0)");
     // We use a function with no side-effects, otherwise the entire invocation would
     // be preserved.
@@ -1185,7 +1185,7 @@ fn testCall() {
 }
 
 #[test]
-fn testCall_containingSpread() {
+fn test_call_containing_spread() {
     // We use a function with no side-effects, otherwise the entire invocation would
     // be preserved.
     test("Math.sin(...c)", "([...c])");
@@ -1196,7 +1196,7 @@ fn testCall_containingSpread() {
 }
 
 #[test]
-fn testNew() {
+fn test_new() {
     test_same("new foo(0)");
     // We use a function with no side-effects, otherwise the entire invocation would
     // be preserved.
@@ -1205,7 +1205,7 @@ fn testNew() {
 }
 
 #[test]
-fn testNew_containingSpread() {
+fn test_new_containing_spread() {
     // We use a function with no side-effects, otherwise the entire invocation would
     // be preserved.
     test("new Date(...c)", "([...c])");
@@ -1216,7 +1216,7 @@ fn testNew_containingSpread() {
 }
 
 #[test]
-fn testTaggedTemplateLit_simpleTemplate() {
+fn test_tagged_template_lit_simple_template() {
     test_same("foo`Simple`");
     // We use a function with no side-effects, otherwise the entire invocation would
     // be preserved.
@@ -1225,7 +1225,7 @@ fn testTaggedTemplateLit_simpleTemplate() {
 }
 
 #[test]
-fn testTaggedTemplateLit_substitutingTemplate() {
+fn test_tagged_template_lit_substituting_template() {
     test_same("foo`Complex ${butSafe}`");
     // We use a function with no side-effects, otherwise the entire invocation would
     // be preserved.
@@ -1234,7 +1234,7 @@ fn testTaggedTemplateLit_substitutingTemplate() {
 }
 
 #[test]
-fn testFoldAssign() {
+fn test_fold_assign() {
     test("x=x", "");
     test_same("x=xy");
     test_same("x=x + 1");
@@ -1244,7 +1244,7 @@ fn testFoldAssign() {
 }
 
 #[test]
-fn testTryCatchFinally() {
+fn test_try_catch_finally() {
     test_same("try {foo()} catch (e) {bar()}");
     test_same("try { try {foo()} catch (e) {bar()}} catch (x) {bar()}");
     test("try {var x = 1} finally {}", "var x = 1;");
@@ -1266,7 +1266,7 @@ fn testTryCatchFinally() {
 }
 
 #[test]
-fn testObjectLiteral() {
+fn test_object_literal() {
     test("({})", "");
     test("({a:1})", "");
     test("({a:foo()})", "foo()");
@@ -1277,7 +1277,7 @@ fn testObjectLiteral() {
 }
 
 #[test]
-fn testArrayLiteral() {
+fn test_array_literal() {
     test("([])", "");
     test("([1])", "");
     test("([a])", "");
@@ -1285,7 +1285,7 @@ fn testArrayLiteral() {
 }
 
 #[test]
-fn testArrayLiteral_containingSpread() {
+fn test_array_literal_containing_spread() {
     test_same("([...c])");
     test("([4, ...c, a])", "([...c])");
     test("([foo(), ...c, bar()])", "(foo(), [...c], bar())");
@@ -1295,13 +1295,13 @@ fn testArrayLiteral_containingSpread() {
 }
 
 #[test]
-fn testAwait() {
+fn test_await() {
     test_same("async function f() { await something(); }");
     test_same("async function f() { await some.thing(); }");
 }
 
 #[test]
-fn testEmptyPatternInDeclarationRemoved() {
+fn test_empty_pattern_in_declaration_removed() {
     test("var [] = [];", "");
     test("let [] = [];", "");
     test("const [] = [];", "");
@@ -1310,7 +1310,7 @@ fn testEmptyPatternInDeclarationRemoved() {
 }
 
 #[test]
-fn testEmptyArrayPatternInAssignRemoved() {
+fn test_empty_array_pattern_in_assign_removed() {
     test("({} = {});", "");
     test("({} = foo());", "foo()");
     test("[] = [];", "");
@@ -1318,13 +1318,13 @@ fn testEmptyArrayPatternInAssignRemoved() {
 }
 
 #[test]
-fn testEmptyPatternInParamsNotRemoved() {
+fn test_empty_pattern_in_params_not_removed() {
     test_same("function f([], a) {}");
     test_same("function f({}, a) {}");
 }
 
 #[test]
-fn testEmptyPatternInForOfLoopNotRemoved() {
+fn test_empty_pattern_in_for_of_loop_not_removed() {
     test_same("for (let [] of foo()) {}");
     test_same("for (const [] of foo()) {}");
     test_same("for ([] of foo()) {}");
@@ -1332,7 +1332,7 @@ fn testEmptyPatternInForOfLoopNotRemoved() {
 }
 
 #[test]
-fn testEmptySlotInArrayPatternRemoved() {
+fn test_empty_slot_in_array_pattern_removed() {
     test("[,,] = foo();", "foo()");
     test("[a,b,,] = foo();", "[a,b] = foo();");
     test("[a,[],b,[],[]] = foo();", "[a,[],b] = foo();");
@@ -1342,13 +1342,13 @@ fn testEmptySlotInArrayPatternRemoved() {
 }
 
 #[test]
-fn testEmptySlotInArrayPatternWithDefaultValueMaybeRemoved() {
+fn test_empty_slot_in_array_pattern_with_default_value_maybe_removed() {
     test("[a,[] = 0] = [];", "[a] = [];");
     test_same("[a,[] = foo()] = [];");
 }
 
 #[test]
-fn testEmptyKeyInObjectPatternRemoved() {
+fn test_empty_key_in_object_pattern_removed() {
     test("const {f: {}} = {};", "");
     test("const {f: []} = {};", "");
     test("const {f: {}, g} = {};", "const {g} = {};");
@@ -1357,7 +1357,7 @@ fn testEmptyKeyInObjectPatternRemoved() {
 }
 
 #[test]
-fn testEmptyKeyInObjectPatternWithDefaultValueMaybeRemoved() {
+fn test_empty_key_in_object_pattern_with_default_value_maybe_removed() {
     test("const {f: {} = 0} = {};", "");
     // In theory the following case could be reduced to `foo()`, but that gets more
     // complicated to implement for object patterns with multiple keys with side
@@ -1367,13 +1367,13 @@ fn testEmptyKeyInObjectPatternWithDefaultValueMaybeRemoved() {
 }
 
 #[test]
-fn testEmptyKeyInObjectPatternNotRemovedWithObjectRest() {
+fn test_empty_key_in_object_pattern_not_removed_with_object_rest() {
     test_same("const {f: {}, ...g} = foo()");
     test_same("const {f: [], ...g} = foo()");
 }
 
 #[test]
-fn testUndefinedDefaultParameterRemoved() {
+fn test_undefined_default_parameter_removed() {
     test(
         "function f(x=undefined,y) {  }", //
         "function f(x,y)             {  }",
@@ -1389,7 +1389,7 @@ fn testUndefinedDefaultParameterRemoved() {
 }
 
 #[test]
-fn testPureVoidDefaultParameterRemoved() {
+fn test_pure_void_default_parameter_removed() {
     test(
         "function f(x = void 0) {  }", //
         "function f(x         ) {  }",
@@ -1405,20 +1405,20 @@ fn testPureVoidDefaultParameterRemoved() {
 }
 
 #[test]
-fn testNoDefaultParameterNotRemoved() {
+fn test_no_default_parameter_not_removed() {
     test_same("function f(x,y) {  }");
     test_same("function f(x) {  }");
     test_same("function f() {  }");
 }
 
 #[test]
-fn testEffectfulDefaultParameterNotRemoved() {
+fn test_effectful_default_parameter_not_removed() {
     test_same("function f(x = void console.log(1)) {  }");
     test_same("function f(x = void f()) { alert(x); }");
 }
 
 #[test]
-fn testDestructuringUndefinedDefaultParameter() {
+fn test_destructuring_undefined_default_parameter() {
     test(
         "function f({a=undefined,b=1,c}) {  }", //
         "function f({a          ,b=1,c}) {  }",
@@ -1442,7 +1442,7 @@ fn testDestructuringUndefinedDefaultParameter() {
 }
 
 #[test]
-fn testUndefinedDefaultObjectPatterns() {
+fn test_undefined_default_object_patterns() {
     test(
         "const {a = undefined} = obj;", //
         "const {a} = obj;",
@@ -1454,7 +1454,7 @@ fn testUndefinedDefaultObjectPatterns() {
 }
 
 #[test]
-fn testDoNotRemoveGetterOnlyAccess() {
+fn test_do_not_remove_getter_only_access() {
     test_same(concat!(
         "var a = {", //
         "  get property() {}",
@@ -1472,7 +1472,7 @@ fn testDoNotRemoveGetterOnlyAccess() {
 }
 
 #[test]
-fn testDoNotRemoveNestedGetterOnlyAccess() {
+fn test_do_not_remove_nested_getter_only_access() {
     test_same(concat!(
         "var a = {", //
         "  b: { get property() {} }",
@@ -1482,7 +1482,7 @@ fn testDoNotRemoveNestedGetterOnlyAccess() {
 }
 
 #[test]
-fn testRemoveAfterNestedGetterOnlyAccess() {
+fn test_remove_after_nested_getter_only_access() {
     test(
         concat!(
             "var a = {", //
@@ -1500,7 +1500,7 @@ fn testRemoveAfterNestedGetterOnlyAccess() {
 }
 
 #[test]
-fn testRetainSetterOnlyAccess() {
+fn test_retain_setter_only_access() {
     test_same(concat!(
         "var a = {", //
         "  set property(v) {}",
@@ -1510,7 +1510,7 @@ fn testRetainSetterOnlyAccess() {
 }
 
 #[test]
-fn testDoNotRemoveGetterSetterAccess() {
+fn test_do_not_remove_getter_setter_access() {
     test_same(concat!(
         "var a = {", //
         "  get property() {},",
@@ -1521,7 +1521,7 @@ fn testDoNotRemoveGetterSetterAccess() {
 }
 
 #[test]
-fn testDoNotRemoveSetSetterToGetter() {
+fn test_do_not_remove_set_setter_to_getter() {
     test_same(concat!(
         "var a = {", //
         "  get property() {},",
@@ -1532,7 +1532,7 @@ fn testDoNotRemoveSetSetterToGetter() {
 }
 
 #[test]
-fn testDoNotRemoveAccessIfOtherPropertyIsGetter() {
+fn test_do_not_remove_access_if_other_property_is_getter() {
     test_same(concat!(
         "var a = {", //
         "  get property() {}",
@@ -1558,7 +1558,7 @@ fn testDoNotRemoveAccessIfOtherPropertyIsGetter() {
 }
 
 #[test]
-fn testFunctionCallReferencesGetterIsNotRemoved() {
+fn test_function_call_references_getter_is_not_removed() {
     test_same(concat!(
         "var a = {", //
         "  get property() {}",
@@ -1569,7 +1569,7 @@ fn testFunctionCallReferencesGetterIsNotRemoved() {
 }
 
 #[test]
-fn testFunctionCallReferencesSetterIsNotRemoved() {
+fn test_function_call_references_setter_is_not_removed() {
     test_same(concat!(
         "var a = {", //
         "  set property(v) {}",
