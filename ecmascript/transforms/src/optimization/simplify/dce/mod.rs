@@ -130,11 +130,31 @@ impl Fold<Stmt> for Remover<'_> {
                     Stmt::Empty(EmptyStmt { span })
                 }
 
-                Expr::Array(ArrayLit { ref elems, .. }) if elems.is_empty() => {
-                    Stmt::Empty(EmptyStmt { span })
+                Expr::Array(ArrayLit {
+                    span, mut elems, ..
+                }) => {
+                    elems.retain(|v| match v {
+                        Some(ExprOrSpread {
+                            spread: Some(..), ..
+                        }) => true,
+                        None => false,
+                        Some(ExprOrSpread {
+                            spread: None,
+                            ref expr,
+                        }) => expr.may_have_side_effects(),
+                    });
+
+                    if elems.is_empty() {
+                        Stmt::Empty(EmptyStmt { span })
+                    } else {
+                        Stmt::Expr(ExprStmt {
+                            span,
+                            expr: box Expr::Array(ArrayLit { span, elems }),
+                        })
+                    }
                 }
 
-                Expr::Object(ObjectLit { ref props, .. }) if props.is_empty() => {
+                Expr::Object(ObjectLit { props, .. }) if props.is_empty() => {
                     Stmt::Empty(EmptyStmt { span })
                 }
 
@@ -148,15 +168,16 @@ impl Fold<Stmt> for Remover<'_> {
                     expr: box Expr::Array(ArrayLit {
                         span,
                         elems: args.into_iter().map(Some).collect(),
-                    })
-                    .fold_with(self),
-                }),
+                    }),
+                })
+                .fold_with(self),
 
                 Expr::TaggedTpl(TaggedTpl { tag, exprs, .. }) if tag.is_pure_callee() => {
                     Stmt::Expr(ExprStmt {
                         span: DUMMY_SP,
-                        expr: box preserve_effects(span, *undefined(span), exprs).fold_with(self),
+                        expr: box preserve_effects(span, *undefined(span), exprs),
                     })
+                    .fold_with(self)
                 }
 
                 //
@@ -164,7 +185,7 @@ impl Fold<Stmt> for Remover<'_> {
                 //
                 // As function expressions cannot start with 'function',
                 // this will be reached only if other things
-                // are removed while folding chilren.
+                // are removed while folding children.
                 Expr::Fn(FnExpr {
                     function: Function { span, .. },
                     ..
