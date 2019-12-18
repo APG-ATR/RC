@@ -17,7 +17,7 @@ pub fn dce() -> impl Pass + 'static {
 #[derive(Debug, Default)]
 struct Remover<'a> {
     scope: Scope<'a>,
-    top_level: bool,
+    not_top_level: bool,
 }
 
 #[derive(Debug, Default)]
@@ -37,8 +37,8 @@ where
     Self: Fold<T>,
 {
     fn fold(&mut self, stmts: Vec<T>) -> Vec<T> {
-        let top_level = self.top_level;
-        self.top_level = false;
+        let top_level = !self.not_top_level;
+        self.not_top_level = true;
 
         let mut buf = Vec::with_capacity(stmts.len());
 
