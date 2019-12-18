@@ -634,7 +634,9 @@ fn ignore_return_value(expr: Box<Expr>) -> Option<Box<Expr>> {
 fn handle_expr_stmt(expr: Expr) -> Expr {
     match expr {
         // It's important for arrow pass to work properly.
-        Expr::Object(..) | Expr::Class(..) | Expr::Fn(..) => expr.wrap_with_paren(),
+        Expr::Object(..) | Expr::Class(..) | Expr::Fn(..) | Expr::Array(..) => {
+            expr.wrap_with_paren()
+        }
 
         // ({ a } = foo)
         Expr::Assign(AssignExpr {
