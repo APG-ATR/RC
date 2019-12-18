@@ -4,7 +4,7 @@ use crate::{
 };
 use ast::*;
 use fxhash::FxHashMap;
-use swc_common::{Fold, FoldWith, DUMMY_SP};
+use swc_common::{fold::VisitWith, Fold, FoldWith, DUMMY_SP};
 
 #[cfg(test)]
 mod tests;
@@ -91,9 +91,11 @@ where
                             let mut v = DestructuringFinder { found: &mut idents };
                             var.visit_with(&mut v);
 
-                            self.scope
-                                .vars
-                                .extend(idents.into_iter().map(|(sym, span)| (sym, span.ctxt())));
+                            self.scope.vars.extend(
+                                idents
+                                    .into_iter()
+                                    .map(|(sym, span)| ((sym, span.ctxt()), VarInfo::default())),
+                            );
 
                             Stmt::Decl(Decl::Var(var))
                         }
