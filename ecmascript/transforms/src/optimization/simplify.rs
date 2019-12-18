@@ -3,7 +3,7 @@ pub use self::dce::dce;
 use self::expr::SimplifyExpr;
 use crate::pass::Pass;
 use ast::*;
-use swc_common::{chain, Fold, FoldWith};
+use swc_common::{Fold, FoldWith};
 
 pub mod dce;
 mod expr;

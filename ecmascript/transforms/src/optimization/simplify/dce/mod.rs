@@ -4,7 +4,7 @@ use crate::{
 };
 use ast::*;
 use fxhash::FxHashMap;
-use swc_common::{Fold, FoldWith, SyntaxContext, DUMMY_SP};
+use swc_common::{Fold, FoldWith, DUMMY_SP};
 
 /// Ported from `PeepholeRemoveDeadCode` of google closure compiler.
 pub fn dce() -> impl Pass + 'static {

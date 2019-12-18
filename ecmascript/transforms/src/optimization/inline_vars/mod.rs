@@ -7,8 +7,7 @@ use ast::*;
 use hashbrown::HashMap;
 use serde::Deserialize;
 use std::cell::RefCell;
-use swc_atoms::JsWord;
-use swc_common::{Fold, FoldWith, SyntaxContext};
+use swc_common::{Fold, FoldWith};
 
 #[cfg(test)]
 mod tests;
