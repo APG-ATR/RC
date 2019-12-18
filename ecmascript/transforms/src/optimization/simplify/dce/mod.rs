@@ -213,6 +213,10 @@ impl Fold<Stmt> for Remover<'_> {
             }
 
             Stmt::Switch(mut s) => {
+                if s.cases.is_empty() {
+                    return Stmt::Empty(EmptyStmt { span: s.span });
+                }
+
                 let selected = s.cases.iter().position(|case| {
                     if let Some(ref test) = case.test {
                         return match (&**test, &*s.discriminant) {
