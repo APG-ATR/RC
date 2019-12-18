@@ -139,7 +139,7 @@ fn fold_member_expr(e: MemberExpr) -> Expr {
         /// [a, b].length
         Len,
 
-        Index(u32),
+        Index(i64),
 
         /// ({}).foo
         IndexStr(JsWord),
@@ -172,17 +172,22 @@ fn fold_member_expr(e: MemberExpr) -> Expr {
             })),
 
             // 'foo'[1]
-            KnownOp::Index(idx) if (idx as usize) < value.len() => Expr::Lit(Lit::Str(Str {
-                value: value
-                    .chars()
-                    .nth(idx as _)
-                    .unwrap_or_else(|| panic!("failed to index char?"))
-                    .to_string()
-                    .into(),
-                span,
-                has_escape: false,
-            })),
-
+            KnownOp::Index(idx) if (idx as usize) < value.len() => {
+                return if idx < 0 {
+                    *undefined(span)
+                } else {
+                    Expr::Lit(Lit::Str(Str {
+                        value: value
+                            .chars()
+                            .nth(idx as _)
+                            .unwrap_or_else(|| panic!("failed to index char?"))
+                            .to_string()
+                            .into(),
+                        span,
+                        has_escape: false,
+                    }))
+                }
+            }
             _ => Expr::Member(MemberExpr {
                 obj: ExprOrSuper::Expr(box obj),
                 ..e
@@ -253,7 +258,7 @@ fn fold_member_expr(e: MemberExpr) -> Expr {
 
         // { foo: true }['foo']
         Expr::Object(ObjectLit { mut props, span }) => match op {
-            KnownOp::IndexStr(key) => {
+            KnownOp::IndexStr(key) if is_literal(&props) => {
                 // do nothing if spread exists
                 let has_spread = props.iter().any(|prop| match prop {
                     PropOrSpread::Spread(..) => true,
