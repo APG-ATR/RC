@@ -361,7 +361,7 @@ fn test_remove_useless_ops2() {
     test("+x() * 2", "x()");
     test("-(+x() * 2)", "x()");
     test("2 -(+x() * 2)", "x()");
-    test("x().foo", "x()");
+    //test("x().foo", "x()");
     test_same("x().foo()");
 
     test_same("x++");
