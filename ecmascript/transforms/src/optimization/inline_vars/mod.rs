@@ -6,8 +6,6 @@ use swc_atoms::JsWord;
 use swc_common::{Fold, FoldWith, SyntaxContext};
 
 #[cfg(test)]
-mod const_tests;
-#[cfg(test)]
 mod tests;
 
 /// Ported from [`InlineVariables`](https://github.com/google/closure-compiler/blob/master/src/com/google/javascript/jscomp/InlineVariables.java)
