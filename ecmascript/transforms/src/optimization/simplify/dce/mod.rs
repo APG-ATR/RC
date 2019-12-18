@@ -280,6 +280,22 @@ impl Fold<SeqExpr> for Remover<'_> {
     }
 }
 
+impl Fold<ForStmt> for Remover<'_> {
+    fn fold(&mut self, s: ForStmt) -> ForStmt {
+        let s = s.fold_children(self);
+
+        ForStmt {
+            init: s.init.and_then(|e| match e {
+                VarDeclOrExpr::Expr(e) => ignore_result(*e).map(Box::new).map(VarDeclOrExpr::from),
+                _ => Some(e),
+            }),
+            update: s.update.and_then(|e| ignore_result(*e).map(Box::new)),
+            test: s.test.and_then(|e| ignore_result(*e).map(Box::new)),
+            ..s
+        }
+    }
+}
+
 /// Ignores the result.
 ///
 /// Returns
