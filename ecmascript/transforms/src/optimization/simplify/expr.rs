@@ -111,8 +111,9 @@ impl Fold<Expr> for SimplifyExpr {
                     && e.args.is_some()
                     && e.args.as_ref().unwrap().len() == 1
                     && e.args.as_ref().unwrap()[0].spread.is_none()
+                    && is_literal(&e.args.as_ref().unwrap()[0].expr)
                 {
-                    let e = &*e.args.iter().next().unwrap().pop().unwrap().expr;
+                    let e = &*e.args.into_iter().next().unwrap().pop().unwrap().expr;
                     if let Known(value) = e.as_string() {
                         return Expr::Lit(Lit::Str(Str {
                             span: e.span(),
@@ -120,6 +121,7 @@ impl Fold<Expr> for SimplifyExpr {
                             has_escape: false,
                         }));
                     }
+                    unreachable!()
                 }
 
                 return NewExpr { ..e }.into();
