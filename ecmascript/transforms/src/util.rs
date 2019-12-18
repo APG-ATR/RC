@@ -1458,3 +1458,15 @@ where
         Expr::Seq(SeqExpr { exprs, span })
     }
 }
+
+pub fn prop_name_eq(p: &PropName, key: &str) -> bool {
+    match &*p {
+        PropName::Ident(i) => i.sym == *key,
+        PropName::Str(s) => s.value == *key,
+        PropName::Num(_) => false,
+        PropName::Computed(e) => match &*e.expr {
+            Expr::Lit(Lit::Str(Str { value, .. })) => *value == *key,
+            _ => false,
+        },
+    }
+}

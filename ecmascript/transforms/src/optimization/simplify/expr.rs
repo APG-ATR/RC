@@ -1,6 +1,6 @@
 use crate::util::*;
 use ast::{Ident, Lit, *};
-use std::iter;
+use std::{iter, iter::once};
 use swc_atoms::{js_word, JsWord};
 use swc_common::{Fold, FoldWith, Span, Spanned};
 
@@ -185,7 +185,6 @@ fn fold_member_expr(e: MemberExpr) -> Expr {
                 _ => false,
             } && !obj.may_have_side_effects() =>
         {
-            println!("indexing");
             // do nothing if spread exists
             let has_spread = elems.iter().any(|elem| {
                 elem.as_ref()
@@ -194,8 +193,6 @@ fn fold_member_expr(e: MemberExpr) -> Expr {
             });
 
             if has_spread {
-                println!("indexing: has_spread");
-
                 return Expr::Member(MemberExpr {
                     obj: ExprOrSuper::Expr(box Expr::Array(ArrayLit { span, elems })),
                     ..e
@@ -215,10 +212,63 @@ fn fold_member_expr(e: MemberExpr) -> Expr {
         }
 
         // { foo: true }['foo']
-        Expr::Object(ObjectLit { props, span }) => match op {
-            // TODO
-            // KnownOp::IndexStr(key) => {
-            // }
+        Expr::Object(ObjectLit { mut props, span }) => match op {
+            KnownOp::IndexStr(key) => {
+                // do nothing if spread exists
+                let has_spread = props.iter().any(|prop| match prop {
+                    PropOrSpread::Spread(..) => true,
+                    _ => false,
+                });
+
+                if has_spread {
+                    return Expr::Member(MemberExpr {
+                        obj: ExprOrSuper::Expr(box Expr::Object(ObjectLit { props, span })),
+                        ..e
+                    });
+                }
+
+                let idx = props.iter().rev().position(|p| match &*p {
+                    PropOrSpread::Prop(p) => match &**p {
+                        Prop::Shorthand(i) => i.sym == key,
+                        Prop::KeyValue(k) => prop_name_eq(&k.key, &key),
+                        Prop::Assign(p) => p.key.sym == key,
+                        Prop::Getter(..) => false,
+                        Prop::Setter(..) => false,
+                        // TODO
+                        Prop::Method(..) => false,
+                    },
+                    _ => unreachable!(),
+                });
+                //
+
+                match idx {
+                    Some(i) => {
+                        let v = props.remove(i);
+
+                        preserve_effects(
+                            span,
+                            match v {
+                                PropOrSpread::Prop(p) => match *p {
+                                    Prop::Shorthand(i) => Expr::Ident(i),
+                                    Prop::KeyValue(p) => *p.value,
+                                    Prop::Assign(p) => *p.value,
+                                    Prop::Getter(..) => unreachable!(),
+                                    Prop::Setter(..) => unreachable!(),
+                                    // TODO
+                                    Prop::Method(..) => unreachable!(),
+                                },
+                                _ => unreachable!(),
+                            },
+                            once(box Expr::Object(ObjectLit { props, span })),
+                        )
+                    }
+                    None => preserve_effects(
+                        span,
+                        *undefined(span),
+                        once(box Expr::Object(ObjectLit { props, span })),
+                    ),
+                }
+            }
             _ => Expr::Member(MemberExpr {
                 obj: ExprOrSuper::Expr(box Expr::Object(ObjectLit { props, span })),
                 ..e
