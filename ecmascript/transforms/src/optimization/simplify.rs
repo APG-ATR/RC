@@ -23,6 +23,12 @@ pub fn simplifier() -> impl Pass + 'static {
 
 struct Simplifier;
 
+impl Fold<Program> for Simplifier {
+    fn fold(&mut self, p: Program) -> Program {
+        p.fold_with(&mut expr_simplifier())
+    }
+}
+
 impl<T: StmtLike> Fold<Vec<T>> for Simplifier
 where
     Self: Fold<T>,
@@ -90,8 +96,6 @@ where
 
 impl Fold<Stmt> for Simplifier {
     fn fold(&mut self, stmt: Stmt) -> Stmt {
-        // Simplify expressions.
-        let stmt = stmt.fold_children(&mut SimplifyExpr);
         let stmt = stmt.fold_children(self);
 
         match stmt {
