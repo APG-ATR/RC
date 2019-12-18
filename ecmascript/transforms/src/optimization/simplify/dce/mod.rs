@@ -62,7 +62,7 @@ where
                         }
 
                         Stmt::Block(BlockStmt { stmts, .. }) => {
-                            buf.extend(stmts.into_iter().map(T::from_stmt));
+                            buf.extend(stmts.fold_with(self).into_iter().map(T::from_stmt));
                             continue;
                         }
 
