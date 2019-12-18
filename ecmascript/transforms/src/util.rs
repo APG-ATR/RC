@@ -690,6 +690,10 @@ pub trait ExprExt {
     }
 
     fn is_pure_callee(&self) -> bool {
+        if self.is_ident_ref_to(js_word!("Date")) {
+            return true;
+        }
+
         match *self.as_expr_kind() {
             Expr::Member(MemberExpr {
                 obj: ExprOrSuper::Expr(ref obj),

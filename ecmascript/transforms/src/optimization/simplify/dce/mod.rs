@@ -509,6 +509,18 @@ fn ignore_result(e: Expr) -> Option<Expr> {
             }
         }
 
+        Expr::New(NewExpr {
+            span,
+            ref callee,
+            args,
+            ..
+        }) if callee.is_pure_callee() => ignore_result(Expr::Array(ArrayLit {
+            span,
+            elems: args
+                .map(|args| args.into_iter().map(Some).collect())
+                .unwrap_or_else(Default::default),
+        })),
+
         Expr::Call(CallExpr {
             span,
             callee: ExprOrSuper::Expr(ref callee),

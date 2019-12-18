@@ -1131,7 +1131,7 @@ fn test_no_simplify_function_args1() {
 
 #[test]
 fn test_no_simplify_function_args2() {
-    test("1 && f(1 + 2, 3 + g())", "f(1 + 2, 3 + g())");
+    test("1 && f(1 + 2, 3 + g())", "f(3, 3 + g())");
 }
 
 #[test]
