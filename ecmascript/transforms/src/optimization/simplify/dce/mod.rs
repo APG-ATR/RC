@@ -207,6 +207,48 @@ impl Fold<Stmt> for Remover<'_> {
                 })
             }
 
+            Stmt::Switch(mut s) => {
+                let selected = s.cases.iter().position(|case| {
+                    if let Some(ref test) = case.test {
+                        return match (&**test, &*s.discriminant) {
+                            (
+                                &Expr::Lit(Lit::Str(Str {
+                                    value: ref test, ..
+                                })),
+                                &Expr::Lit(Lit::Str(Str { value: ref d, .. })),
+                            ) => *test == *d,
+                            (
+                                &Expr::Lit(Lit::Num(Number { value: test, .. })),
+                                &Expr::Lit(Lit::Num(Number { value: d, .. })),
+                            ) => test == d,
+                            (&Expr::Ident(ref test), &Expr::Ident(ref d)) => {
+                                test.sym == d.sym && test.span.ctxt() == d.span.ctxt()
+                            }
+                            _ => false,
+                        };
+                    }
+
+                    false
+                });
+
+                if let Some(i) = selected {
+                    let mut stmts = s.cases.remove(i).cons;
+
+                    if stmts.is_empty() {
+                        return Stmt::Empty(EmptyStmt { span: s.span });
+                    } else if stmts.len() == 1 {
+                        return stmts.remove(0);
+                    } else {
+                        return Stmt::Block(BlockStmt {
+                            span: s.span,
+                            stmts,
+                        });
+                    }
+                }
+
+                SwitchStmt { ..s }.into()
+            }
+
             _ => stmt,
         }
     }
