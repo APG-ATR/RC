@@ -393,7 +393,11 @@ pub trait ExprExt {
             _ => Unknown,
         };
 
-        (MayBeImpure, val)
+        if expr.may_have_side_effects() {
+            (MayBeImpure, val)
+        } else {
+            (Pure, val)
+        }
     }
 
     /// Emulates javascript Number() cast function.
