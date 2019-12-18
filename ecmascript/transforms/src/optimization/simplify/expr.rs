@@ -9,6 +9,20 @@ mod tests;
 
 pub(super) struct SimplifyExpr;
 
+impl Fold<Pat> for SimplifyExpr {
+    #[inline(always)]
+    fn fold(&mut self, p: Pat) -> Pat {
+        match p {
+            Pat::Assign(a) => AssignPat {
+                right: a.right.fold_with(self),
+                ..a
+            }
+            .into(),
+            _ => p,
+        }
+    }
+}
+
 impl Fold<Expr> for SimplifyExpr {
     /// Ported from [optimizeSubtree](https://github.com/google/closure-compiler/blob/9203e01b/src/com/google/javascript/jscomp/PeepholeFoldConstants.java#L74-L98)
     fn fold(&mut self, expr: Expr) -> Expr {
