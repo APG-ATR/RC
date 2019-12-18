@@ -17,13 +17,13 @@ fn test(src: &str, expected: &str) {
 }
 
 /// Should not modify expression.
-fn testSame(s: &str) {
+fn test_same(s: &str) {
     test(s, s)
 }
 
 #[test]
-fn testPassDoesntProduceInvalidCode1() {
-    testSame(
+fn test_pass_doesnt_produce_invalid_code1() {
+    test_same(
         "function f(x = void 0) {
   var z;
     {
@@ -37,14 +37,14 @@ fn testPassDoesntProduceInvalidCode1() {
 }
 
 #[test]
-fn testPassDoesntProduceInvalidCode2() {
-    testSame(concat!(
+fn test_pass_doesnt_produce_invalid_code2() {
+    test_same(concat!(
         "function f(x = void 0) {{var z;const y = {};x && (y['x'] = x);z = y;}return z;}",
     ));
 }
 
 #[test]
-fn testPassDoesntProduceInvalidCode3() {
+fn test_pass_doesnt_produce_invalid_code3() {
     test(
         concat!("function f(x = void 0) {var z;const y = {};x && (y['x'] = x);z = y;{return z;}}"),
         concat!("function f(x = void 0) {const y = {};x && (y['x'] = x);{return y;}}"),
@@ -54,47 +54,47 @@ fn testPassDoesntProduceInvalidCode3() {
 // Test respect for scopes and blocks
 
 #[test]
-fn testInlineGlobal() {
+fn test_inline_global() {
     test("var x = 1; var z = x;", "var z = 1;");
 }
 
 #[test]
-fn testNoInlineAnnotation() {
-    testSame("/** @noinline */ var x = 1; var z = x;");
+fn test_no_inline_annotation() {
+    test_same("/** @noinline */ var x = 1; var z = x;");
 }
 
 #[test]
-fn testNoInlineExportedName() {
-    testSame("var _x = 1; var z = _x;");
+fn test_no_inline_exported_name() {
+    test_same("var _x = 1; var z = _x;");
 }
 
 #[test]
-fn testNoInlineExportedName2() {
-    testSame("var f = function() {}; var _x = f;var y = function() { _x(); }; var _y = f;");
+fn test_no_inline_exported_name2() {
+    test_same("var f = function() {}; var _x = f;var y = function() { _x(); }; var _y = f;");
 }
 
 #[test]
-fn testDoNotInlineIncrement() {
-    testSame("var x = 1; x++;");
+fn test_do_not_inline_increment() {
+    test_same("var x = 1; x++;");
 }
 
 #[test]
-fn testDoNotInlineDecrement() {
-    testSame("var x = 1; x--;");
+fn test_do_not_inline_decrement() {
+    test_same("var x = 1; x--;");
 }
 
 #[test]
-fn testDoNotInlineIntoLhsOfAssign() {
-    testSame("var x = 1; x += 3;");
+fn test_do_not_inline_into_lhs_of_assign() {
+    test_same("var x = 1; x += 3;");
 }
 
 #[test]
-fn testInlineIntoRhsOfAssign() {
+fn test_inline_into_rhs_of_assign() {
     test("var x = 1; var y = x;", "var y = 1;");
 }
 
 #[test]
-fn testInlineInFunction1() {
+fn test_inline_in_function1() {
     test(
         "function baz() { var x = 1; var z = x; }",
         "function baz() { var z = 1; }",
@@ -102,7 +102,7 @@ fn testInlineInFunction1() {
 }
 
 #[test]
-fn testInlineInFunction2() {
+fn test_inline_in_function2() {
     test(
         "function baz() { var a = new obj();result = a;}",
         "function baz() { result = new obj()}",
@@ -110,22 +110,22 @@ fn testInlineInFunction2() {
 }
 
 #[test]
-fn testInlineInFunction3() {
-    testSame("function baz() { var a = new obj();(function(){a;})();result = a;}");
+fn test_inline_in_function3() {
+    test_same("function baz() { var a = new obj();(function(){a;})();result = a;}");
 }
 
 #[test]
-fn testInlineInFunction4() {
-    testSame("function baz() { var a = new obj();foo.result = a;}");
+fn test_inline_in_function4() {
+    test_same("function baz() { var a = new obj();foo.result = a;}");
 }
 
 #[test]
-fn testInlineInFunction5() {
-    testSame("function baz() { var a = (foo = new obj());foo.x();result = a;}");
+fn test_inline_in_function5() {
+    test_same("function baz() { var a = (foo = new obj());foo.x();result = a;}");
 }
 
 #[test]
-fn testInlineInFunction6() {
+fn test_inline_in_function6() {
     test(
         "function baz() { { var x = 1; var z = x; } }",
         "function baz() { { var z = 1; } }",
@@ -133,7 +133,7 @@ fn testInlineInFunction6() {
 }
 
 #[test]
-fn testInlineInFunction7() {
+fn test_inline_in_function7() {
     test(
         "function baz() { var x = 1; { var z = x; } }",
         "function baz() { { var z = 1; } }",
@@ -141,12 +141,12 @@ fn testInlineInFunction7() {
 }
 
 #[test]
-fn testInlineIntoArrowFunction1() {
+fn test_inline_into_arrow_function1() {
     test("var x = 0; var f = () => x + 1;", "var f = () => 0 + 1;");
 }
 
 #[test]
-fn testInlineIntoArrowFunction2() {
+fn test_inline_into_arrow_function2() {
     test(
         "var x = 0; var f = () => { return x + 1; }",
         "var f = () => { return 0 + 1; }",
@@ -154,59 +154,59 @@ fn testInlineIntoArrowFunction2() {
 }
 
 #[test]
-fn testDoNotExitConditional1() {
-    testSame("if (true) { var x = 1; } var z = x;");
+fn test_do_not_exit_conditional1() {
+    test_same("if (true) { var x = 1; } var z = x;");
 }
 
 #[test]
-fn testDoNotExitConditional2() {
-    testSame("if (true) var x = 1; var z = x;");
+fn test_do_not_exit_conditional2() {
+    test_same("if (true) var x = 1; var z = x;");
 }
 
 #[test]
-fn testDoNotExitConditional3() {
-    testSame("var x; if (true) x=1; var z = x;");
+fn test_do_not_exit_conditional3() {
+    test_same("var x; if (true) x=1; var z = x;");
 }
 
 #[test]
-fn testDoNotExitLoop() {
-    testSame("while (z) { var x = 3; } var y = x;");
+fn test_do_not_exit_loop() {
+    test_same("while (z) { var x = 3; } var y = x;");
 }
 
 #[test]
-fn testDoNotExitForLoop() {
+fn test_do_not_exit_for_loop() {
     test(
         "for (var i = 1; false; false) var z = i;",
         "for (;false;false) var z = 1;",
     );
-    testSame("for (; false; false) var i = 1; var z = i;");
-    testSame("for (var i in {}); var z = i;");
+    test_same("for (; false; false) var i = 1; var z = i;");
+    test_same("for (var i in {}); var z = i;");
 }
 
 #[test]
-fn testDoNotEnterSubscope() {
-    testSame("var x = function() {  var self = this;   return function() { var y = self; };}");
-    testSame("var x = function() {  var y = [1];   return function() { var z = y; };}");
+fn test_do_not_enter_subscope() {
+    test_same("var x = function() {  var self = this;   return function() { var y = self; };}");
+    test_same("var x = function() {  var y = [1];   return function() { var z = y; };}");
 }
 
 #[test]
-fn testDoNotExitTry() {
-    testSame("try { var x = y; } catch (e) {} var z = y; ");
-    testSame("try { throw e; var x = 1; } catch (e) {} var z = x; ");
+fn test_do_not_exit_try() {
+    test_same("try { var x = y; } catch (e) {} var z = y; ");
+    test_same("try { throw e; var x = 1; } catch (e) {} var z = x; ");
 }
 
 #[test]
-fn testDoNotEnterCatch() {
-    testSame("try { } catch (e) { var z = e; } ");
+fn test_do_not_enter_catch() {
+    test_same("try { } catch (e) { var z = e; } ");
 }
 
 #[test]
-fn testDoNotEnterFinally() {
-    testSame("try { throw e; var x = 1; } catch (e) {} finally  { var z = x; } ");
+fn test_do_not_enter_finally() {
+    test_same("try { throw e; var x = 1; } catch (e) {} finally  { var z = x; } ");
 }
 
 #[test]
-fn testInsideIfConditional() {
+fn test_inside_if_conditional() {
     test(
         "var a = foo(); if (a) { alert(3); }",
         "if (foo()) { alert(3); }",
@@ -218,7 +218,7 @@ fn testInsideIfConditional() {
 }
 
 #[test]
-fn testOnlyReadAtInitialization() {
+fn test_only_read_at_initialization() {
     test("var a; a = foo();", "foo();");
     test(
         "var a; if (a = foo()) { alert(3); }",
@@ -254,7 +254,7 @@ fn testOnlyReadAtInitialization() {
 }
 
 #[test]
-fn testImmutableWithSingleReferenceAfterInitialzation() {
+fn test_immutable_with_single_reference_after_initialzation() {
     test("var a; a = 1;", "1;");
     test("var a; if (a = 1) { alert(3); }", "if (1) { alert(3); }");
     test("var a; switch (a = 1) {}", "switch(1) {}");
@@ -287,46 +287,46 @@ fn testImmutableWithSingleReferenceAfterInitialzation() {
 }
 
 #[test]
-fn testSingleReferenceAfterInitialzation() {
+fn test_single_reference_after_initialzation() {
     test("var a; a = foo();a;", "foo();");
-    testSame("var a; if (a = foo()) { alert(3); } a;");
-    testSame("var a; switch (a = foo()) {} a;");
-    testSame("var a; function f(){ return a = foo(); } a;");
-    testSame("function f(){ var a; return a = foo(); a;}");
-    testSame("var a; with (a = foo()) { alert(3); } a;");
-    testSame("var a; b = (a = foo()); a;");
-    testSame("var a; while(a = foo()) { alert(3); } a;");
-    testSame("var a; for(;a = foo();) { alert(3); } a;");
-    testSame("var a; do {} while(a = foo()) { alert(3); } a;");
+    test_same("var a; if (a = foo()) { alert(3); } a;");
+    test_same("var a; switch (a = foo()) {} a;");
+    test_same("var a; function f(){ return a = foo(); } a;");
+    test_same("function f(){ var a; return a = foo(); a;}");
+    test_same("var a; with (a = foo()) { alert(3); } a;");
+    test_same("var a; b = (a = foo()); a;");
+    test_same("var a; while(a = foo()) { alert(3); } a;");
+    test_same("var a; for(;a = foo();) { alert(3); } a;");
+    test_same("var a; do {} while(a = foo()) { alert(3); } a;");
 }
 
 #[test]
-fn testInsideIfBranch() {
-    testSame("var a = foo(); if (1) { alert(a); }");
+fn test_inside_if_branch() {
+    test_same("var a = foo(); if (1) { alert(a); }");
 }
 
 #[test]
-fn testInsideAndConditional() {
+fn test_inside_and_conditional() {
     test("var a = foo(); a && alert(3);", "foo() && alert(3);");
 }
 
 #[test]
-fn testInsideAndBranch() {
-    testSame("var a = foo(); 1 && alert(a);");
+fn test_inside_and_branch() {
+    test_same("var a = foo(); 1 && alert(a);");
 }
 
 #[test]
-fn testInsideOrBranch() {
-    testSame("var a = foo(); 1 || alert(a);");
+fn test_inside_or_branch() {
+    test_same("var a = foo(); 1 || alert(a);");
 }
 
 #[test]
-fn testInsideHookBranch() {
-    testSame("var a = foo(); 1 ? alert(a) : alert(3)");
+fn test_inside_hook_branch() {
+    test_same("var a = foo(); 1 ? alert(a) : alert(3)");
 }
 
 #[test]
-fn testInsideHookConditional() {
+fn test_inside_hook_conditional() {
     test(
         "var a = foo(); a ? alert(1) : alert(3)",
         "foo() ? alert(1) : alert(3)",
@@ -334,18 +334,18 @@ fn testInsideHookConditional() {
 }
 
 #[test]
-fn testInsideOrBranchInsideIfConditional() {
-    testSame("var a = foo(); if (x || a) {}");
+fn test_inside_or_branch_inside_if_conditional() {
+    test_same("var a = foo(); if (x || a) {}");
 }
 
 #[test]
-fn testInsideOrBranchInsideIfConditionalWithConstant() {
+fn test_inside_or_branch_inside_if_conditional_with_constant() {
     // We don't inline non-immutable constants into branches.
-    testSame("var a = [false]; if (x || a) {}");
+    test_same("var a = [false]; if (x || a) {}");
 }
 
 #[test]
-fn testCrossFunctionsAsLeftLeaves() {
+fn test_cross_functions_as_left_leaves() {
     //// Ensures getNext() understands how to walk past a function leaf
     //test(
     //new String[] { "var x = function() {};", "",
@@ -356,7 +356,7 @@ fn testCrossFunctionsAsLeftLeaves() {
     //"var cow = function() {}; var z = x;"},
     //new String[] { "", "",
     //"var cow = function() {}; var z = function() {};" });
-    //testSame(
+    //test_same(
     //new String[] { "var x = a;", "",
     //"(function() { a++; })(); var z = x;"});
     //test(
@@ -364,7 +364,7 @@ fn testCrossFunctionsAsLeftLeaves() {
     //"function cow() { a++; }; cow(); var z = x;"},
     //new String[] { "var x = a;", "",
     //";(function cow(){ a++; })(); var z = x;"});
-    //testSame(
+    //test_same(
     //new String[] { "var x = a;", "",
     //"cow(); var z = x; function cow() { a++; };"});
 }
@@ -372,87 +372,87 @@ fn testCrossFunctionsAsLeftLeaves() {
 // Test movement of constant values
 
 #[test]
-fn testDoCrossFunction() {
+fn test_do_cross_function() {
     // We know foo() does not affect x because we require that x is only
     // referenced twice.
     test("var x = 1; foo(); var z = x;", "foo(); var z = 1;");
 }
 
 #[test]
-fn testDoNotCrossReferencingFunction() {
-    testSame("var f = function() { var z = x; };var x = 1;f();var z = x;f();");
+fn test_do_not_cross_referencing_function() {
+    test_same("var f = function() { var z = x; };var x = 1;f();var z = x;f();");
 }
 
 // Test tricky declarations and references
 
 #[test]
-fn testChainedAssignment() {
+fn test_chained_assignment() {
     test("var a = 2, b = 2; var c = b;", "var a = 2; var c = 2;");
     test("var a = 2, b = 2; var c = a;", "var b = 2; var c = 2;");
     test(
         "var a = b = 2; var f = 3; var c = a;",
         "var f = 3; var c = b = 2;",
     );
-    testSame("var a = b = 2; var c = b;");
+    test_same("var a = b = 2; var c = b;");
 }
 
 #[test]
-fn testForIn() {
-    testSame("for (var i in j) { var c = i; }");
-    testSame("var i = 0; for (i in j) ;");
-    testSame("var i = 0; for (i in j) { var c = i; }");
-    testSame("i = 0; for (var i in j) { var c = i; }");
-    testSame("var j = {'key':'value'}; for (var i in j) {print(i)};");
+fn test_for_in() {
+    test_same("for (var i in j) { var c = i; }");
+    test_same("var i = 0; for (i in j) ;");
+    test_same("var i = 0; for (i in j) { var c = i; }");
+    test_same("i = 0; for (var i in j) { var c = i; }");
+    test_same("var j = {'key':'value'}; for (var i in j) {print(i)};");
 }
 
 // Test movement of values that have (may) side effects
 
 #[test]
-fn testDoCrossNewVariables() {
+fn test_do_cross_new_variables() {
     test("var x = foo(); var z = x;", "var z = foo();");
 }
 
 #[test]
-fn testDoNotCrossFunctionCalls() {
-    testSame("var x = foo(); bar(); var z = x;");
+fn test_do_not_cross_function_calls() {
+    test_same("var x = foo(); bar(); var z = x;");
 }
 
 // Test movement of values that are complex but lack side effects
 
 #[test]
-fn testDoNotCrossAssignment() {
-    testSame("var x = {}; var y = x.a; x.a = 1; var z = y;");
-    testSame("var a = this.id; foo(this.id = 3, a);");
+fn test_do_not_cross_assignment() {
+    test_same("var x = {}; var y = x.a; x.a = 1; var z = y;");
+    test_same("var a = this.id; foo(this.id = 3, a);");
 }
 
 #[test]
-fn testDoNotCrossDelete() {
-    testSame("var x = {}; var y = x.a; delete x.a; var z = y;");
+fn test_do_not_cross_delete() {
+    test_same("var x = {}; var y = x.a; delete x.a; var z = y;");
 }
 
 #[test]
-fn testDoNotCrossAssignmentPlus() {
-    testSame("var a = b; b += 2; var c = a;");
+fn test_do_not_cross_assignment_plus() {
+    test_same("var a = b; b += 2; var c = a;");
 }
 
 #[test]
-fn testDoNotCrossIncrement() {
-    testSame("var a = b.c; b.c++; var d = a;");
+fn test_do_not_cross_increment() {
+    test_same("var a = b.c; b.c++; var d = a;");
 }
 
 #[test]
-fn testDoNotCrossConstructor() {
-    testSame("var a = b; new Foo(); var c = a;");
+fn test_do_not_cross_constructor() {
+    test_same("var a = b; new Foo(); var c = a;");
 }
 
 #[test]
-fn testDoCrossVar() {
+fn test_do_cross_var() {
     // Assumes we do not rely on undefined variables (not technically correct!)
     test("var a = b; var b = 3; alert(a)", "alert(3);");
 }
 
 #[test]
-fn testOverlappingInLines() {
+fn test_overlapping_in_lines() {
     let source = "a = function(el, x, opt_y) {   var cur = bar(el);   opt_y = x.y;   x = x.x;   \
                   var dx = x - cur.x;   var dy = opt_y - cur.y;  foo(el, el.offsetLeft + dx, \
                   el.offsetTop + dy); };";
@@ -463,7 +463,7 @@ fn testOverlappingInLines() {
 }
 
 #[test]
-fn testOverlappingInlineFunctions() {
+fn test_overlapping_inline_functions() {
     let source = "a = function() {   var b = function(args) {var n;};   var c = function(args) \
                   {};   d(b,c); };";
     let expected = "a = function() {   d(function(args){var n;}, function(args){}); };";
@@ -472,7 +472,7 @@ fn testOverlappingInlineFunctions() {
 }
 
 #[test]
-fn testInlineIntoLoops() {
+fn test_inline_into_loops() {
     test(
         "var x = true; while (true) alert(x);",
         "while (true) alert(true);",
@@ -481,25 +481,25 @@ fn testInlineIntoLoops() {
         "var x = true; while (true) for (var i in {}) alert(x);",
         "while (true) for (var i in {}) alert(true);",
     );
-    testSame("var x = [true]; while (true) alert(x);");
+    test_same("var x = [true]; while (true) alert(x);");
 }
 
 #[test]
-fn testInlineIntoFunction() {
+fn test_inline_into_function() {
     test(
         "var x = false; var f = function() { alert(x); };",
         "var f = function() { alert(false); };",
     );
-    testSame("var x = [false]; var f = function() { alert(x); };");
+    test_same("var x = [false]; var f = function() { alert(x); };");
 }
 
 #[test]
-fn testNoInlineIntoNamedFunction() {
-    testSame("f(); var x = false; function f() { alert(x); };");
+fn test_no_inline_into_named_function() {
+    test_same("f(); var x = false; function f() { alert(x); };");
 }
 
 #[test]
-fn testInlineIntoNestedNonHoistedNamedFunctions() {
+fn test_inline_into_nested_non_hoisted_named_functions() {
     test(
         "f(); var x = false; if (false) function f() { alert(x); };",
         "f(); if (false) function f() { alert(false); };",
@@ -507,28 +507,28 @@ fn testInlineIntoNestedNonHoistedNamedFunctions() {
 }
 
 #[test]
-fn testNoInlineIntoNestedNamedFunctions() {
-    testSame("f(); var x = false; function f() { if (false) { alert(x); } };");
+fn test_no_inline_into_nested_named_functions() {
+    test_same("f(); var x = false; function f() { if (false) { alert(x); } };");
 }
 
 #[test]
-fn testNoInlineMutatedVariable() {
-    testSame("var x = false; if (true) { var y = x; x = true; }");
+fn test_no_inline_mutated_variable() {
+    test_same("var x = false; if (true) { var y = x; x = true; }");
 }
 
 #[test]
-fn testInlineImmutableMultipleTimes() {
+fn test_inline_immutable_multiple_times() {
     test("var x = null; var y = x, z = x;", "var y = null, z = null;");
     test("var x = 3; var y = x, z = x;", "var y = 3, z = 3;");
 }
 
 #[test]
-fn testNoInlineStringMultipleTimesIfNotWorthwhile() {
-    testSame("var x = 'abcdefghijklmnopqrstuvwxyz'; var y = x, z = x;");
+fn test_no_inline_string_multiple_times_if_not_worthwhile() {
+    test_same("var x = 'abcdefghijklmnopqrstuvwxyz'; var y = x, z = x;");
 }
 
 #[test]
-fn testInlineStringMultipleTimesWhenAliasingAllStrings() {
+fn test_inline_string_multiple_times_when_aliasing_all_strings() {
     test(
         "var x = 'abcdefghijklmnopqrstuvwxyz'; var y = x, z = x;",
         "var y = 'abcdefghijklmnopqrstuvwxyz',     z = 'abcdefghijklmnopqrstuvwxyz';",
@@ -536,17 +536,17 @@ fn testInlineStringMultipleTimesWhenAliasingAllStrings() {
 }
 
 #[test]
-fn testNoInlineBackwards() {
-    testSame("var y = x; var x = null;");
+fn test_no_inline_backwards() {
+    test_same("var y = x; var x = null;");
 }
 
 #[test]
-fn testNoInlineOutOfBranch() {
-    testSame("if (true) var x = null; var y = x;");
+fn test_no_inline_out_of_branch() {
+    test_same("if (true) var x = null; var y = x;");
 }
 
 #[test]
-fn testInterferingInLines() {
+fn test_interfering_in_lines() {
     test(
         "var a = 3; var f = function() { var x = a; alert(x); };",
         "var f = function() { alert(3); };",
@@ -554,7 +554,7 @@ fn testInterferingInLines() {
 }
 
 #[test]
-fn testInlineIntoTryCatch() {
+fn test_inline_into_try_catch() {
     test(
         "var a = true; try { var b = a; } catch (e) { var c = a + b; var d = true; } finally { \
          var f = a + b + c + d; }",
@@ -566,7 +566,7 @@ fn testInlineIntoTryCatch() {
 // Make sure that we still inline constants that are not provably
 // written before they're read.
 #[test]
-fn testInlineConstants() {
+fn test_inline_constants() {
     test(
         "function foo() { return XXX; } var XXX = true;",
         "function foo() { return true; }",
@@ -574,12 +574,12 @@ fn testInlineConstants() {
 }
 
 #[test]
-fn testInlineStringWhenWorthwhile() {
+fn test_inline_string_when_worthwhile() {
     test("var x = 'a'; foo(x, x, x);", "foo('a', 'a', 'a');");
 }
 
 #[test]
-fn testInlineConstantAlias() {
+fn test_inline_constant_alias() {
     test(
         "var XXX = new Foo(); q(XXX); var YYY = XXX; bar(YYY)",
         "var XXX = new Foo(); q(XXX); bar(XXX)",
@@ -587,7 +587,7 @@ fn testInlineConstantAlias() {
 }
 
 #[test]
-fn testInlineConstantAliasWithNonConstant() {
+fn test_inline_constant_alias_with_non_constant() {
     test(
         "var XXX = new Foo(); q(XXX); var y = XXX; bar(y); baz(y)",
         "var XXX = new Foo(); q(XXX); bar(XXX); baz(XXX)",
@@ -595,7 +595,7 @@ fn testInlineConstantAliasWithNonConstant() {
 }
 
 #[test]
-fn testCascadingInLines() {
+fn test_cascading_in_lines() {
     test(
         "var XXX = 4; function f() { var YYY = XXX; bar(YYY); baz(YYY); }",
         "function f() { bar(4); baz(4); }",
@@ -603,14 +603,14 @@ fn testCascadingInLines() {
 }
 
 #[test]
-fn testNoInlineGetpropIntoCall() {
+fn test_no_inline_getprop_into_call() {
     test("var a = b; a();", "b();");
     test("var a = b.c; f(a);", "f(b.c);");
-    testSame("var a = b.c; a();");
+    test_same("var a = b.c; a();");
 }
 
 #[test]
-fn testInlineFunctionDeclaration() {
+fn test_inline_function_declaration() {
     test(
         "var f = function () {}; var a = f;",
         "var a = function () {};",
@@ -621,38 +621,38 @@ fn testInlineFunctionDeclaration() {
     );
     test("var f = function () {}; foo(f);", "foo(function () {});");
 
-    testSame("var f = function () {}; function g() {var a = f;}");
-    testSame("var f = function () {}; function g() {h(f);}");
+    test_same("var f = function () {}; function g() {var a = f;}");
+    test_same("var f = function () {}; function g() {h(f);}");
 }
 
 #[test]
 fn test2388531() {
-    testSame("var f = function () {};var g = function () {};goog.inherits(f, g);");
-    testSame("var f = function () {};var g = function () {};goog$inherits(f, g);");
+    test_same("var f = function () {};var g = function () {};goog.inherits(f, g);");
+    test_same("var f = function () {};var g = function () {};goog$inherits(f, g);");
 }
 
 #[test]
-fn testRecursiveFunction1() {
-    testSame("var x = 0; (function x() { return x ? x() : 3; })();");
+fn test_recursive_function1() {
+    test_same("var x = 0; (function x() { return x ? x() : 3; })();");
 }
 
 #[test]
-fn testRecursiveFunction2() {
-    testSame("function y() { return y(); }");
+fn test_recursive_function2() {
+    test_same("function y() { return y(); }");
 }
 
 #[test]
-fn testUnreferencedBleedingFunction() {
-    testSame("var x = function y() {}");
+fn test_unreferenced_bleeding_function() {
+    test_same("var x = function y() {}");
 }
 
 #[test]
-fn testReferencedBleedingFunction() {
-    testSame("var x = function y() { return y(); }");
+fn test_referenced_bleeding_function() {
+    test_same("var x = function y() { return y(); }");
 }
 
 #[test]
-fn testInlineAliases1() {
+fn test_inline_aliases1() {
     test(
         "var x = this.foo(); this.bar(); var y = x; this.baz(y);",
         "var x = this.foo(); this.bar(); this.baz(x);",
@@ -660,7 +660,7 @@ fn testInlineAliases1() {
 }
 
 #[test]
-fn testInlineAliases1b() {
+fn test_inline_aliases1b() {
     test(
         "var x = this.foo(); this.bar(); var y; y = x; this.baz(y);",
         "var x = this.foo(); this.bar(); x; this.baz(x);",
@@ -668,7 +668,7 @@ fn testInlineAliases1b() {
 }
 
 #[test]
-fn testInlineAliases1c() {
+fn test_inline_aliases1c() {
     test(
         "var x; x = this.foo(); this.bar(); var y = x; this.baz(y);",
         "var x; x = this.foo(); this.bar(); this.baz(x);",
@@ -676,7 +676,7 @@ fn testInlineAliases1c() {
 }
 
 #[test]
-fn testInlineAliases1d() {
+fn test_inline_aliases1d() {
     test(
         "var x; x = this.foo(); this.bar(); var y; y = x; this.baz(y);",
         "var x; x = this.foo(); this.bar(); x; this.baz(x);",
@@ -684,7 +684,7 @@ fn testInlineAliases1d() {
 }
 
 #[test]
-fn testInlineAliases2() {
+fn test_inline_aliases2() {
     test(
         "var x = this.foo(); this.bar(); function f() { var y = x; this.baz(y); }",
         "var x = this.foo(); this.bar(); function f() { this.baz(x); }",
@@ -692,7 +692,7 @@ fn testInlineAliases2() {
 }
 
 #[test]
-fn testInlineAliases2b() {
+fn test_inline_aliases2b() {
     test(
         "var x = this.foo(); this.bar(); function f() { var y; y = x; this.baz(y); }",
         "var x = this.foo(); this.bar(); function f() { this.baz(x); }",
@@ -700,7 +700,7 @@ fn testInlineAliases2b() {
 }
 
 #[test]
-fn testInlineAliases2c() {
+fn test_inline_aliases2c() {
     test(
         "var x; x = this.foo(); this.bar(); function f() { var y = x; this.baz(y); }",
         "var x; x = this.foo(); this.bar(); function f() { this.baz(x); }",
@@ -708,7 +708,7 @@ fn testInlineAliases2c() {
 }
 
 #[test]
-fn testInlineAliases2d() {
+fn test_inline_aliases2d() {
     test(
         "var x; x = this.foo(); this.bar(); function f() { var y; y = x; this.baz(y); }",
         "var x; x = this.foo(); this.bar(); function f() { this.baz(x); }",
@@ -716,7 +716,7 @@ fn testInlineAliases2d() {
 }
 
 #[test]
-fn testInlineAliasesInLoop() {
+fn test_inline_aliases_in_loop() {
     test(
         "function f() {   var x = extern();  for (var i = 0; i < 5; i++) {    (function() {       \
          var y = x; window.setTimeout(function() { extern(y); }, 0);     })();  }}",
@@ -726,102 +726,102 @@ fn testInlineAliasesInLoop() {
 }
 
 #[test]
-fn testNoInlineAliasesInLoop() {
-    testSame(
+fn test_no_inline_aliases_in_loop() {
+    test_same(
         "function f() {   for (var i = 0; i < 5; i++) {    var x = extern();    (function() {       var y = x; window.setTimeout(function() { extern(y); }, 0);     })();  }}",
     );
 }
 
 #[test]
-fn testNoInlineAliases1() {
-    testSame("var x = this.foo(); this.bar(); var y = x; x = 3; this.baz(y);");
+fn test_no_inline_aliases1() {
+    test_same("var x = this.foo(); this.bar(); var y = x; x = 3; this.baz(y);");
 }
 
 #[test]
-fn testNoInlineAliases1b() {
-    testSame("var x = this.foo(); this.bar(); var y; y = x; x = 3; this.baz(y);");
+fn test_no_inline_aliases1b() {
+    test_same("var x = this.foo(); this.bar(); var y; y = x; x = 3; this.baz(y);");
 }
 
 #[test]
-fn testNoInlineAliases2() {
-    testSame("var x = this.foo(); this.bar(); var y = x; y = 3; this.baz(y); ");
+fn test_no_inline_aliases2() {
+    test_same("var x = this.foo(); this.bar(); var y = x; y = 3; this.baz(y); ");
 }
 
 #[test]
-fn testNoInlineAliases2b() {
-    testSame("var x = this.foo(); this.bar(); var y; y = x; y = 3; this.baz(y); ");
+fn test_no_inline_aliases2b() {
+    test_same("var x = this.foo(); this.bar(); var y; y = x; y = 3; this.baz(y); ");
 }
 
 #[test]
-fn testNoInlineAliases3() {
-    testSame(
+fn test_no_inline_aliases3() {
+    test_same(
         "var x = this.foo(); this.bar(); function f() { var y = x; g(); this.baz(y); } function \
          g() { x = 3; }",
     );
 }
 
 #[test]
-fn testNoInlineAliases3b() {
-    testSame(
+fn test_no_inline_aliases3b() {
+    test_same(
         "var x = this.foo(); this.bar(); function f() { var y; y = x; g(); this.baz(y); } \
          function g() { x = 3; }",
     );
 }
 
 #[test]
-fn testNoInlineAliases4() {
-    testSame("var x = this.foo(); this.bar(); function f() { var y = x; y = 3; this.baz(y); }");
+fn test_no_inline_aliases4() {
+    test_same("var x = this.foo(); this.bar(); function f() { var y = x; y = 3; this.baz(y); }");
 }
 
 #[test]
-fn testNoInlineAliases4b() {
-    testSame("var x = this.foo(); this.bar(); function f() { var y; y = x; y = 3; this.baz(y); }");
+fn test_no_inline_aliases4b() {
+    test_same("var x = this.foo(); this.bar(); function f() { var y; y = x; y = 3; this.baz(y); }");
 }
 
 #[test]
-fn testNoInlineAliases5() {
-    testSame("var x = this.foo(); this.bar(); var y = x; this.bing();this.baz(y); x = 3;");
+fn test_no_inline_aliases5() {
+    test_same("var x = this.foo(); this.bar(); var y = x; this.bing();this.baz(y); x = 3;");
 }
 
 #[test]
-fn testNoInlineAliases5b() {
-    testSame("var x = this.foo(); this.bar(); var y; y = x; this.bing();this.baz(y); x = 3;");
+fn test_no_inline_aliases5b() {
+    test_same("var x = this.foo(); this.bar(); var y; y = x; this.bing();this.baz(y); x = 3;");
 }
 
 #[test]
-fn testNoInlineAliases6() {
-    testSame("var x = this.foo(); this.bar(); var y = x; this.bing();this.baz(y); y = 3;");
+fn test_no_inline_aliases6() {
+    test_same("var x = this.foo(); this.bar(); var y = x; this.bing();this.baz(y); y = 3;");
 }
 
 #[test]
-fn testNoInlineAliases6b() {
-    testSame("var x = this.foo(); this.bar(); var y; y = x; this.bing();this.baz(y); y = 3;");
+fn test_no_inline_aliases6b() {
+    test_same("var x = this.foo(); this.bar(); var y; y = x; this.bing();this.baz(y); y = 3;");
 }
 
 #[test]
-fn testNoInlineAliases7() {
-    testSame(
+fn test_no_inline_aliases7() {
+    test_same(
         "var x = this.foo(); this.bar(); function f() { var y = x; this.bing(); this.baz(y); x = \
          3; }",
     );
 }
 
 #[test]
-fn testNoInlineAliases7b() {
-    testSame(
+fn test_no_inline_aliases7b() {
+    test_same(
         "var x = this.foo(); this.bar(); function f() { var y; y = x; this.bing(); this.baz(y); x \
          = 3; }",
     );
 }
 
 #[test]
-fn testNoInlineAliases8() {
-    testSame("var x = this.foo(); this.bar(); function f() { var y = x; this.baz(y); y = 3; }");
+fn test_no_inline_aliases8() {
+    test_same("var x = this.foo(); this.bar(); function f() { var y = x; this.baz(y); y = 3; }");
 }
 
 #[test]
-fn testNoInlineAliases8b() {
-    testSame("var x = this.foo(); this.bar(); function f() { var y; y = x; this.baz(y); y = 3; }");
+fn test_no_inline_aliases8b() {
+    test_same("var x = this.foo(); this.bar(); function f() { var y; y = x; this.baz(y); y = 3; }");
 }
 
 //#[test]
@@ -834,11 +834,11 @@ fn testNoInlineAliases8b() {
 //        expected("z = f(y.a, y);"),
 //    );
 //    // z.b can be changed by the call to y, so x can not be inlined.
-//    testSame(externs(EXTERNS), srcs("var x = f(y.a, y); z.b = x;"));
+//    test_same(externs(EXTERNS), srcs("var x = f(y.a, y); z.b = x;"));
 //}
 
 #[test]
-fn testInlineParameterAlias1() {
+fn test_inline_parameter_alias1() {
     test(
         "function f(x) {  var y = x;  g();  y;y;}",
         "function f(x) {  g();  x;x;}",
@@ -846,7 +846,7 @@ fn testInlineParameterAlias1() {
 }
 
 #[test]
-fn testInlineParameterAlias2() {
+fn test_inline_parameter_alias2() {
     test(
         "function f(x) {  var y; y = x;  g();  y;y;}",
         "function f(x) {  x;  g();  x;x;}",
@@ -854,7 +854,7 @@ fn testInlineParameterAlias2() {
 }
 
 #[test]
-fn testInlineFunctionAlias1a() {
+fn test_inline_function_alias1a() {
     test(
         "function f(x) {}var y = f;g();y();y();",
         "var y = function f(x) {};g();y();y();",
@@ -862,7 +862,7 @@ fn testInlineFunctionAlias1a() {
 }
 
 #[test]
-fn testInlineFunctionAlias1b() {
+fn test_inline_function_alias1b() {
     test(
         "function f(x) {};f;var y = f;g();y();y();",
         "function f(x) {};f;g();f();f();",
@@ -870,7 +870,7 @@ fn testInlineFunctionAlias1b() {
 }
 
 #[test]
-fn testInlineFunctionAlias2a() {
+fn test_inline_function_alias2a() {
     test(
         "function f(x) {}var y; y = f;g();y();y();",
         "var y; y = function f(x) {};g();y();y();",
@@ -878,7 +878,7 @@ fn testInlineFunctionAlias2a() {
 }
 
 #[test]
-fn testInlineFunctionAlias2b() {
+fn test_inline_function_alias2b() {
     test(
         "function f(x) {};f; var y; y = f;g();y();y();",
         "function f(x) {};f; f;g();f();f();",
@@ -886,18 +886,18 @@ fn testInlineFunctionAlias2b() {
 }
 
 #[test]
-fn testInlineSwitchVar() {
+fn test_inline_switch_var() {
     test("var x = y; switch (x) {}", "switch (y) {}");
 }
 
 #[test]
-fn testInlineSwitchLet() {
+fn test_inline_switch_let() {
     test("let x = y; switch (x) {}", "switch (y) {}");
 }
 
 // Successfully inlines 'values' and 'e'
 #[test]
-fn testInlineIntoForLoop1() {
+fn test_inline_into_for_loop1() {
     test(
         concat!(
             "function calculate_hashCode() {",
@@ -927,7 +927,7 @@ fn testInlineIntoForLoop1() {
 // Inlines 'e' but fails to inline 'values'
 // TODO(tbreisacher): Investigate and see if we can improve this.
 #[test]
-fn testInlineIntoForLoop2() {
+fn test_inline_into_for_loop2() {
     test(
         concat!(
             "function calculate_hashCode() {",
@@ -956,8 +956,8 @@ fn testInlineIntoForLoop2() {
 // This used to be inlined, but regressed when we switched to the ES6 scope
 // creator.
 #[test]
-fn testNoInlineCatchAliasVar1() {
-    testSame(concat!(
+fn test_no_inline_catch_alias_var1() {
+    test_same(concat!(
         "try {",
         "} catch (e) {",
         "  var y = e;",
@@ -970,8 +970,8 @@ fn testNoInlineCatchAliasVar1() {
 // This used to be inlined, but regressed when we switched to the ES6 scope
 // creator.
 #[test]
-fn testNoInlineCatchAliasVar2() {
-    testSame(concat!(
+fn test_no_inline_catch_alias_var2() {
+    test_same(concat!(
         "try {",
         "} catch (e) {",
         "  var y; y = e;",
@@ -982,7 +982,7 @@ fn testNoInlineCatchAliasVar2() {
 }
 
 #[test]
-fn testInlineCatchAliasLet1() {
+fn test_inline_catch_alias_let1() {
     test(
         concat!(
             "try {",
@@ -997,7 +997,7 @@ fn testInlineCatchAliasLet1() {
 }
 
 #[test]
-fn testInlineCatchAliasLet2() {
+fn test_inline_catch_alias_let2() {
     test(
         concat!(
             "try {",
@@ -1012,7 +1012,7 @@ fn testInlineCatchAliasLet2() {
 }
 
 #[test]
-fn testInlineThis() {
+fn test_inline_this() {
     test(
         concat!(
             "/** @constructor */",
@@ -1037,7 +1037,7 @@ fn testInlineThis() {
 }
 
 #[test]
-fn testVarInBlock1() {
+fn test_var_in_block1() {
     test(
         "function f(x) { if (true) {var y = x; y; y;} }",
         "function f(x) { if (true) {x; x;} }",
@@ -1045,7 +1045,7 @@ fn testVarInBlock1() {
 }
 
 #[test]
-fn testVarInBlock2() {
+fn test_var_in_block2() {
     test(
         "function f(x) { switch (0) { case 0: { var y = x; y; y; } } }",
         "function f(x) { switch (0) { case 0: { x; x; } } }",
@@ -1053,7 +1053,7 @@ fn testVarInBlock2() {
 }
 
 #[test]
-fn testLocalsOnly1() {
+fn test_locals_only1() {
     test_cfg(
         Config { locals_only: true },
         "var x=1; x; function f() {var x = 1; x;}",
@@ -1062,42 +1062,42 @@ fn testLocalsOnly1() {
 }
 
 #[test]
-fn testInlineUndefined1() {
+fn test_inline_undefined1() {
     test("var x; x;", "void 0;");
 }
 
 #[test]
-fn testInlineUndefined2() {
-    testSame("var x; x++;");
+fn test_inline_undefined2() {
+    test_same("var x; x++;");
 }
 
 #[test]
-fn testInlineUndefined3() {
-    testSame("var x; var x;");
+fn test_inline_undefined3() {
+    test_same("var x; var x;");
 }
 
 #[test]
-fn testInlineUndefined4() {
+fn test_inline_undefined4() {
     test("var x; x; x;", "void 0; void 0;");
 }
 
 #[test]
-fn testInlineUndefined5() {
-    testSame("var x; for(x in a) {}");
+fn test_inline_undefined5() {
+    test_same("var x; for(x in a) {}");
 }
 
 #[test]
-fn testIssue90() {
+fn test_issue90() {
     test("var x; x && alert(1)", "void 0 && alert(1)");
 }
 
 #[test]
-fn testRenamePropertyFunction() {
-    testSame("var JSCompiler_renameProperty; JSCompiler_renameProperty('foo')");
+fn test_rename_property_function() {
+    test_same("var JSCompiler_renameProperty; JSCompiler_renameProperty('foo')");
 }
 
 #[test]
-fn testThisAlias() {
+fn test_this_alias() {
     test(
         "function f() { var a = this; a.y(); a.z(); }",
         "function f() { this.y(); this.z(); }",
@@ -1105,49 +1105,49 @@ fn testThisAlias() {
 }
 
 #[test]
-fn testThisEscapedAlias() {
-    testSame("function f() { var a = this; var g = function() { a.y(); }; a.z(); }");
+fn test_this_escaped_alias() {
+    test_same("function f() { var a = this; var g = function() { a.y(); }; a.z(); }");
 }
 
 #[test]
-fn testInlineNamedFunction() {
+fn test_inline_named_function() {
     test("function f() {} f();", "(function f(){})()");
 }
 
 #[test]
-fn testIssue378ModifiedArguments1() {
-    testSame(
+fn test_issue378_modified_arguments1() {
+    test_same(
         "function g(callback) {\n  var f = callback;\n  arguments[0] = this;\n  f.apply(this, \
          arguments);\n}",
     );
 }
 
 #[test]
-fn testIssue378ModifiedArguments2() {
-    testSame(
+fn test_issue378_modified_arguments2() {
+    test_same(
         "function g(callback) {\n  /** @const */\n  var f = callback;\n  arguments[0] = this;\n  \
          f.apply(this, arguments);\n}",
     );
 }
 
 #[test]
-fn testIssue378EscapedArguments1() {
-    testSame(
+fn test_issue378_escaped_arguments1() {
+    test_same(
         "function g(callback) {\n  var f = callback;\n  h(arguments,this);\n  f.apply(this, \
          arguments);\n}\nfunction h(a,b) {\n  a[0] = b;}",
     );
 }
 
 #[test]
-fn testIssue378EscapedArguments2() {
-    testSame(
+fn test_issue378_escaped_arguments2() {
+    test_same(
         "function g(callback) {\n  /** @const */\n  var f = callback;\n  h(arguments,this);\n  \
          f.apply(this);\n}\nfunction h(a,b) {\n  a[0] = b;}",
     );
 }
 
 #[test]
-fn testIssue378EscapedArguments3() {
+fn test_issue378_escaped_arguments3() {
     test(
         "function g(callback) {\n  var f = callback;\n  f.apply(this, arguments);\n}\n",
         "function g(callback) {\n  callback.apply(this, arguments);\n}\n",
@@ -1155,15 +1155,15 @@ fn testIssue378EscapedArguments3() {
 }
 
 #[test]
-fn testIssue378EscapedArguments4() {
-    testSame(
+fn test_issue378escaped_arguments4() {
+    test_same(
         "function g(callback) {\n  var f = callback;\n  h(arguments[0],this);\n  f.apply(this, \
          arguments);\n}\nfunction h(a,b) {\n  a[0] = b;}",
     );
 }
 
 #[test]
-fn testIssue378ArgumentsRead1() {
+fn test_issue378arguments_read1() {
     test(
         "function g(callback) {\n  var f = callback;\n  var g = arguments[0];\n  f.apply(this, \
          arguments);\n}",
@@ -1172,7 +1172,7 @@ fn testIssue378ArgumentsRead1() {
 }
 
 #[test]
-fn testIssue378ArgumentsRead2() {
+fn test_issue378arguments_read2() {
     test(
         "function g(callback) {\n  var f = callback;\n  h(arguments[0],this);\n  f.apply(this, \
          arguments[0]);\n}\nfunction h(a,b) {\n  a[0] = b;}",
@@ -1182,7 +1182,7 @@ fn testIssue378ArgumentsRead2() {
 }
 
 #[test]
-fn testArgumentsModifiedInOuterFunction() {
+fn test_arguments_modified_in_outer_function() {
     test(
         "function g(callback) {\n  var f = callback;\n  arguments[0] = this;\n  f.apply(this, \
          arguments);\n  function inner(callback) {    var x = callback;\n    x.apply(this);\n  }}",
@@ -1192,7 +1192,7 @@ fn testArgumentsModifiedInOuterFunction() {
 }
 
 #[test]
-fn testArgumentsModifiedInInnerFunction() {
+fn test_arguments_modified_in_inner_function() {
     test(
         "function g(callback) {\n  var f = callback;\n  f.apply(this, arguments);\n  function inner(callback) {    var x = callback;\n    arguments[0] = this;\n    x.apply(this);\n  }}",
         "function g(callback) {\n  callback.apply(this, arguments);\n  function inner(callback) {    var x = callback;\n    arguments[0] = this;\n    x.apply(this);\n  }}",
@@ -1203,24 +1203,24 @@ fn testArgumentsModifiedInInnerFunction() {
 //fn testNoInlineRedeclaredExterns() {
 //    let externs = "var test = 1;";
 //    let code = "/** @suppress {duplicate} */ var test = 2;alert(test);";
-//    testSame(externs(externs), code);
+//    test_same(externs(externs), code);
 //}
 
 #[test]
-fn testBug6598844() {
-    testSame(
+fn test_bug6598844() {
+    test_same(
         "function F() { this.a = 0; }F.prototype.inc = function() { this.a++; return 10; \
          };F.prototype.bar = function() { var x = this.inc(); this.a += x; };",
     );
 }
 
 #[test]
-fn testExternalIssue1053() {
-    testSame("var u; function f() { u = Random(); var x = u; f(); alert(x===u)}");
+fn test_external_issue1053() {
+    test_same("var u; function f() { u = Random(); var x = u; f(); alert(x===u)}");
 }
 
 #[test]
-fn testHoistedFunction1() {
+fn test_hoisted_function1() {
     test(
         "var x = 1; function f() { return x; }",
         "function f() { return 1; }",
@@ -1228,19 +1228,19 @@ fn testHoistedFunction1() {
 }
 
 #[test]
-fn testHoistedFunction2() {
-    testSame(
+fn test_hoisted_function2() {
+    test_same(
         "var impl_0;b(a());function a() { impl_0 = {}; }function b() { window['f'] = impl_0; }",
     );
 }
 
 #[test]
-fn testHoistedFunction3() {
-    testSame("var impl_0;b();impl_0 = 1;function b() { window['f'] = impl_0; }");
+fn test_hoisted_function3() {
+    test_same("var impl_0;b();impl_0 = 1;function b() { window['f'] = impl_0; }");
 }
 
 #[test]
-fn testHoistedFunction4() {
+fn test_hoisted_function4() {
     test(
         "var impl_0;impl_0 = 1;b();function b() { window['f'] = impl_0; }",
         "1; b(); function b() { window['f'] = 1; }",
@@ -1248,12 +1248,12 @@ fn testHoistedFunction4() {
 }
 
 #[test]
-fn testHoistedFunction5() {
-    testSame("a();var debug = 1;function b() { return debug; }function a() { return b(); }");
+fn test_hoisted_function5() {
+    test_same("a();var debug = 1;function b() { return debug; }function a() { return b(); }");
 }
 
 #[test]
-fn testHoistedFunction6() {
+fn test_hoisted_function6() {
     test(
         "var debug = 1;a();function b() { return debug; }function a() { return b(); }",
         "a();function b() { return 1; }function a() { return b(); }",
@@ -1261,7 +1261,7 @@ fn testHoistedFunction6() {
 }
 
 #[test]
-fn testIssue354() {
+fn test_issue354() {
     test(
         "var enabled = true;function Widget() {}Widget.prototype = {  frob: function() {    \
          search();  }};function search() {  if (enabled)    alert(1);  else    \
@@ -1274,16 +1274,16 @@ fn testIssue354() {
 
 // Test respect for scopes and blocks
 #[test]
-fn testIssue1177() {
-    testSame("function x_64(){var x_7;for(;;);var x_68=x_7=x_7;}");
-    testSame("function x_64(){var x_7;for(;;);var x_68=x_7=x_7++;}");
-    testSame("function x_64(){var x_7;for(;;);var x_68=x_7=x_7*2;}");
+fn test_issue1177() {
+    test_same("function x_64(){var x_7;for(;;);var x_68=x_7=x_7;}");
+    test_same("function x_64(){var x_7;for(;;);var x_68=x_7=x_7++;}");
+    test_same("function x_64(){var x_7;for(;;);var x_68=x_7=x_7*2;}");
 }
 
 // GitHub issue #1234: https://github.com/google/closure-compiler/issues/1234
 #[test]
-fn testSwitchGithubIssue1234() {
-    testSame(concat!(
+fn test_switch_github_issue1234() {
+    test_same(concat!(
         "var x;
         switch ('a') {
           case 'a':
@@ -1297,7 +1297,7 @@ fn testSwitchGithubIssue1234() {
 }
 
 #[test]
-fn testLetConst() {
+fn test_let_const() {
     test(
         concat!(
             "function f(x) {",
@@ -1346,7 +1346,7 @@ fn testLetConst() {
 }
 
 #[test]
-fn testGenerators() {
+fn test_generators() {
     test(
         concat!("function* f() {", "  let x = 1;", "  yield x;", "}"),
         concat!("function* f() {", "  yield 1;", "}"),
@@ -1359,14 +1359,14 @@ fn testGenerators() {
 }
 
 #[test]
-fn testForOf() {
-    testSame(" var i = 0; for(i of n) {}");
+fn test_for_of() {
+    test_same(" var i = 0; for(i of n) {}");
 
-    testSame("for( var i of n) { var x = i; }");
+    test_same("for( var i of n) { var x = i; }");
 }
 
 #[test]
-fn testTemplateStrings() {
+fn test_template_strings() {
     test(" var name = 'Foo'; `Hello ${name}`", "`Hello ${'Foo'}`");
 
     test(
@@ -1378,7 +1378,7 @@ fn testTemplateStrings() {
 }
 
 #[test]
-fn testTaggedTemplateLiterals() {
+fn test_tagged_template_literals() {
     test(
         concat!(
             "var name = 'Foo';",
@@ -1434,7 +1434,7 @@ fn testTaggedTemplateLiterals() {
 }
 
 #[test]
-fn testDestructuring() {
+fn test_destructuring() {
     test(
         "var [a, b, c] = [1, 2, 3]
             var x = a;
@@ -1443,11 +1443,11 @@ fn testDestructuring() {
             a; a;",
     );
 
-    testSame("var x = 1; ({[0]: x} = {});");
+    test_same("var x = 1; ({[0]: x} = {});");
 }
 
 #[test]
-fn testFunctionInlinedAcrossScript() {
+fn test_function_inlined_across_script() {
     test(
         "function f() {}
 use(f);",
