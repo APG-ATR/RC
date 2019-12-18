@@ -248,11 +248,13 @@ impl Fold<Stmt> for Remover<'_> {
                             return false;
                         }
                         match v {
-                            Stmt::Break(BreakStmt { label: None, .. })
-                            | Stmt::Return(..)
-                            | Stmt::Throw(..) => {
+                            Stmt::Break(BreakStmt { label: None, .. }) => {
                                 done = true;
                                 false
+                            }
+                            Stmt::Return(..) | Stmt::Throw(..) => {
+                                done = true;
+                                true
                             }
                             _ => true,
                         }
