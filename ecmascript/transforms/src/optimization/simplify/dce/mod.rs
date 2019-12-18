@@ -4,7 +4,7 @@ use crate::{
 };
 use ast::*;
 use fxhash::FxHashMap;
-use swc_common::{fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, DUMMY_SP};
+use swc_common::{fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, Spanned, DUMMY_SP};
 
 #[cfg(test)]
 mod tests;
@@ -537,6 +537,26 @@ fn ignore_result(e: Expr) -> Option<Expr> {
             exprs.extend(last);
 
             Some(Expr::Seq(SeqExpr { span, exprs }))
+        }
+
+        Expr::Cond(CondExpr {
+            span,
+            test,
+            cons,
+            alt,
+        }) => {
+            let cons_span = cons.span();
+            let alt_span = alt.span();
+            Some(Expr::Cond(CondExpr {
+                span,
+                test,
+                cons: ignore_result(*cons)
+                    .map(Box::new)
+                    .unwrap_or_else(|| undefined(cons_span)),
+                alt: ignore_result(*alt)
+                    .map(Box::new)
+                    .unwrap_or_else(|| undefined(alt_span)),
+            }))
         }
 
         _ => Some(e),
