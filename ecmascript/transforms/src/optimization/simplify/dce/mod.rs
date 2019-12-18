@@ -403,10 +403,28 @@ impl Fold<Pat> for Remover<'_> {
             {
                 return *p.left;
             }
+
             _ => {}
         }
 
         p
+    }
+}
+
+impl Fold<ArrayPat> for Remover<'_> {
+    fn fold(&mut self, p: ArrayPat) -> ArrayPat {
+        let mut p: ArrayPat = p.fold_children(self);
+
+        let i = p.elems.iter().rposition(|v| match v {
+            Some(Pat::Array(ref p)) if p.elems.is_empty() => true,
+            _ => false,
+        });
+
+        if let Some(i) = i {
+            p.elems.drain(i..);
+        }
+
+        ArrayPat { ..p }
     }
 }
 
