@@ -527,23 +527,44 @@ fn ignore_result(e: Expr) -> Option<Expr> {
             op,
             right,
         }) => {
-            let right = if let Some(right) = ignore_result(*right) {
-                box right
-            } else {
-                return ignore_result(*left);
-            };
+            if op == op!("&&") {
+                let right = if let Some(right) = ignore_result(*right) {
+                    box right
+                } else {
+                    return ignore_result(*left);
+                };
 
-            let l = left.as_pure_bool();
+                let l = left.as_pure_bool();
 
-            if let Known(l) = l {
-                Some(Expr::Lit(Lit::Bool(Bool { span, value: l })))
+                if let Known(l) = l {
+                    Some(Expr::Lit(Lit::Bool(Bool { span, value: l })))
+                } else {
+                    Some(Expr::Bin(BinExpr {
+                        span,
+                        left,
+                        op,
+                        right,
+                    }))
+                }
             } else {
-                Some(Expr::Bin(BinExpr {
-                    span,
-                    left,
-                    op,
-                    right,
-                }))
+                debug_assert_eq!(op, op!("||"));
+
+                let l = left.as_pure_bool();
+
+                if let Known(l) = l {
+                    if l {
+                        None
+                    } else {
+                        ignore_result(*right)
+                    }
+                } else {
+                    Some(Expr::Bin(BinExpr {
+                        span,
+                        left,
+                        op,
+                        right,
+                    }))
+                }
             }
         }
 
