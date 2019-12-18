@@ -287,7 +287,19 @@ fn ignore_result(e: Expr) -> Option<Expr> {
 
             match (left, right) {
                 (Some(l), Some(r)) => {
-                    ignore_result(preserve_effects(span, *undefined(span), vec![box l, box r]))
+                    if op == op!("&&") || op == op!("||") {
+                        Some(
+                            BinExpr {
+                                span,
+                                left: box l,
+                                op,
+                                right: box r,
+                            }
+                            .into(),
+                        )
+                    } else {
+                        ignore_result(preserve_effects(span, *undefined(span), vec![box l, box r]))
+                    }
                 }
                 (Some(l), None) => Some(l),
                 (None, Some(r)) => Some(r),

@@ -107,7 +107,8 @@ fn test_fold_block_with_declaration() {
 
 /** Try to remove spurious blocks with multiple children * * * * * * * * * *
  ** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- **   * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
+ **   * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ **     * * * * * * **/
 #[test]
 fn test_fold_blocks_with_many_children() {
     test("function f() { if (false) {} }", "function f(){}");
@@ -1072,12 +1073,12 @@ fn test_hook10() {
 
 #[test]
 fn test_short_circuit1() {
-    test_same("1 && a()");
+    test("1 && a()", "a()");
 }
 
 #[test]
 fn test_short_circuit2() {
-    test("1 && a() && 2", "1 && a()");
+    test("1 && a() && 2", "a()");
 }
 
 #[test]
