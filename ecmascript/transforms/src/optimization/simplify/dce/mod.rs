@@ -353,10 +353,21 @@ fn ignore_result(e: Expr) -> Option<Expr> {
         // As function expressions cannot start with 'function',
         // this will be reached only if other things
         // are removed while folding children.
-        Expr::Fn(FnExpr {
-            function: Function { span, .. },
-            ..
-        }) => None,
+        Expr::Fn(..) => None,
+
+        Expr::Seq(SeqExpr {
+            span, mut exprs, ..
+        }) => {
+            if exprs.is_empty() {
+                return None;
+            }
+
+            let last = ignore_result(*exprs.pop().unwrap()).map(Box::new);
+
+            exprs.extend(last);
+
+            Some(Expr::Seq(SeqExpr { span, exprs }))
+        }
 
         _ => Some(e),
     }
