@@ -11,7 +11,7 @@ mod tests;
 
 /// Ported from [`InlineVariables`](https://github.com/google/closure-compiler/blob/master/src/com/google/javascript/jscomp/InlineVariables.java)
 /// of the google closure compiler.
-pub fn inline_vars(c: Config) -> impl 'static + Pass {
+pub fn inline_vars(_: Config) -> impl 'static + Pass {
     Inline {
         scope: Default::default(),
     }
