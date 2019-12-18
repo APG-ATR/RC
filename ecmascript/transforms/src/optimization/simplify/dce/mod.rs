@@ -487,10 +487,10 @@ impl Fold<Expr> for Remover<'_> {
 
         match e {
             Expr::Assign(AssignExpr {
-                span,
                 op: op!("="),
                 left: PatOrExpr::Pat(box Pat::Ident(ref l)),
                 right: box Expr::Ident(r),
+                ..
             }) if l.sym == r.sym && l.span.ctxt() == r.span.ctxt() => return Expr::Ident(r),
 
             Expr::Assign(AssignExpr {
@@ -560,10 +560,10 @@ fn ignore_result(e: Expr) -> Option<Expr> {
         Expr::Paren(ParenExpr { expr, .. }) => ignore_result(*expr),
 
         Expr::Assign(AssignExpr {
-            span,
             op: op!("="),
             left: PatOrExpr::Pat(box Pat::Ident(ref l)),
             right: box Expr::Ident(r),
+            ..
         }) if l.sym == r.sym && l.span.ctxt() == r.span.ctxt() => None,
 
         Expr::Bin(BinExpr {
