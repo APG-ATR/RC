@@ -351,21 +351,18 @@ impl Fold<Stmt> for Remover<'_> {
             }
 
             Stmt::DoWhile(s) => {
-                if let (purity, Known(v)) = s.test.as_bool() {
+                if let Known(v) = s.test.as_pure_bool() {
                     if v {
-                        Stmt::DoWhile(DoWhileStmt {
-                            test: box Expr::Lit(Lit::Bool(Bool {
-                                span: s.test.span(),
-                                value: true,
-                            })),
-                            ..s
+                        // `for(;;);` is shorter than `do ; while(true);`
+                        Stmt::For(ForStmt {
+                            span: s.span,
+                            init: None,
+                            test: None,
+                            update: None,
+                            body: s.body,
                         })
                     } else {
-                        if purity.is_pure() {
-                            *s.body
-                        } else {
-                            Stmt::DoWhile(DoWhileStmt { ..s })
-                        }
+                        *s.body
                     }
                 } else {
                     Stmt::DoWhile(s)
