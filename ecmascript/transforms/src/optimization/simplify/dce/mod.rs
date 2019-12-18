@@ -3,20 +3,39 @@ use crate::{
     util::{StmtLike, *},
 };
 use ast::*;
-use swc_common::{Fold, FoldWith, DUMMY_SP};
+use fxhash::FxHashMap;
+use swc_common::{Fold, FoldWith, SyntaxContext, DUMMY_SP};
 
+/// Ported from `PeepholeRemoveDeadCode` of google closure compiler.
 pub fn dce() -> impl Pass + 'static {
     Remover::default()
 }
 
+type Id = (JsWord, SyntaxContext);
+
+fn id(i: &Ident) -> Id {
+    (i.sym.clone(), i.span.ctxt())
+}
+
 #[derive(Debug, Default)]
-struct Remover {}
+struct Remover<'a> {
+    scope: Scope<'a>,
+    top_level: bool,
+}
+
+struct Scope<'a> {
+    parent: Option<&'a Scope<'a>>,
+    vars: FxHashMap<Id, u64>,
+}
 
 impl<T: StmtLike> Fold<Vec<T>> for Remover
 where
     Self: Fold<T>,
 {
     fn fold(&mut self, stmts: Vec<T>) -> Vec<T> {
+        let top_level = self.top_level;
+        self.top_level = false;
+
         let mut buf = Vec::with_capacity(stmts.len());
 
         for stmt_like in stmts {
@@ -62,6 +81,9 @@ where
                             };
                             node
                         }
+
+                        Stmt::Decl(Decl::Var(VarDecl {})) => {}
+
                         _ => stmt,
                     };
 
@@ -77,7 +99,7 @@ where
     }
 }
 
-impl Fold<Stmt> for Simplifier {
+impl Fold<Stmt> for Remover {
     fn fold(&mut self, stmt: Stmt) -> Stmt {
         let stmt = stmt.fold_children(self);
 

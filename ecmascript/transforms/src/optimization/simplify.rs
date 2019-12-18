@@ -1,11 +1,10 @@
 //! Ported from closure compiler.
 pub use self::dce::dce;
 use self::expr::SimplifyExpr;
-use crate::{pass::Pass, util::*};
-use ast::*;
-use swc_common::{Fold, FoldWith, DUMMY_SP};
+use crate::pass::Pass;
+use swc_common::chain;
 
-mod dce;
+pub mod dce;
 mod expr;
 #[cfg(test)]
 mod tests;
