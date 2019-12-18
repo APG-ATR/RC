@@ -1,4 +1,4 @@
-use crate::pass::Pass;
+use crate::{pass::Pass, scope::ScopeKind};
 use ast::*;
 use hashbrown::HashMap;
 use serde::Deserialize;
@@ -35,13 +35,14 @@ struct Inline<'a> {
 }
 
 impl Inline<'_> {
-    fn child<T, F>(&mut self, op: F) -> T
+    fn child<T, F>(&mut self, kind: ScopeKind, op: F) -> T
     where
         F: for<'any> FnOnce(&mut Inline<'any>) -> T,
     {
         let mut c = Inline {
             scope: Scope {
                 parent: Some(&self.scope),
+                kind,
                 idents: Default::default(),
             },
         };
@@ -53,6 +54,7 @@ impl Inline<'_> {
 #[derive(Debug, Default)]
 struct Scope<'a> {
     parent: Option<&'a Scope<'a>>,
+    kind: ScopeKind,
     /// Stored only if value is statically known.
     idents: RefCell<HashMap<Id, Expr>>,
 }
@@ -90,7 +92,20 @@ impl Scope<'_> {
 
 impl Fold<Function> for Inline<'_> {
     fn fold(&mut self, f: Function) -> Function {
-        self.child(|c| f.fold_children(c))
+        self.child(ScopeKind::Fn, |folder| Function {
+            params: f.params.fold_with(folder),
+            body: match f.body {
+                Some(bs) => Some(bs.fold_children(folder)),
+                None => None,
+            },
+            ..f
+        })
+    }
+}
+
+impl Fold<BlockStmt> for Inline<'_> {
+    fn fold(&mut self, s: BlockStmt) -> BlockStmt {
+        self.child(ScopeKind::Block, |c| s.fold_children(c))
     }
 }
 
@@ -98,14 +113,16 @@ impl Fold<AssignExpr> for Inline<'_> {
     fn fold(&mut self, e: AssignExpr) -> AssignExpr {
         let e = e.fold_children(self);
 
-        match e.left {
-            PatOrExpr::Pat(box Pat::Ident(ref i)) => match *e.right {
-                Expr::Lit(..) if e.op == op!("=") => {
-                    self.scope.idents.get_mut().insert(id(i), *e.right.clone());
-                }
-                _ => self.scope.remove(i),
-            },
-            _ => {}
+        if e.op == op!("=") {
+            match e.left {
+                PatOrExpr::Pat(box Pat::Ident(ref i)) => match *e.right {
+                    Expr::Lit(..) | Expr::Ident(..) => {
+                        self.scope.idents.get_mut().insert(id(i), *e.right.clone());
+                    }
+                    _ => self.scope.remove(i),
+                },
+                _ => {}
+            }
         }
 
         e
@@ -119,7 +136,7 @@ impl Fold<VarDecl> for Inline<'_> {
         for decl in &v.decls {
             match decl.name {
                 Pat::Ident(ref i) => match decl.init {
-                    Some(ref e @ box Expr::Lit(..)) => {
+                    Some(ref e @ box Expr::Lit(..)) | Some(ref e @ box Expr::Ident(..)) => {
                         self.scope.idents.get_mut().insert(id(i), *e.clone());
                     }
                     _ => self.scope.remove(i),
