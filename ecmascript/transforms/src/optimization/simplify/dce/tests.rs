@@ -1131,12 +1131,12 @@ fn test_no_simplify_function_args1() {
 
 #[test]
 fn test_no_simplify_function_args2() {
-    test_same("1 && f(1 + 2, 3 + g())");
+    test("1 && f(1 + 2, 3 + g())", "f(1 + 2, 3 + g())");
 }
 
 #[test]
 fn test_no_simplify_function_args3() {
-    test_same("1 && foo(a() ? b() : 1 + c())");
+    test("1 && foo(a() ? b() : 1 + c())", "foo(a() ? b() : 1 + c())");
 }
 
 #[test]
@@ -1251,7 +1251,7 @@ fn test_try_catch_finally() {
     test_same("try {var x = 1} finally {x()}");
     test(
         "function f() { return; try{var x = 1}finally{} }",
-        "function f() { return; var x = 1; }",
+        "function f() { return; }",
     );
     test("try {} finally {x()}", "x()");
     test("try {} catch (e) { bar()} finally {x()}", "x()");

@@ -442,10 +442,14 @@ fn ignore_result(e: Expr) -> Option<Expr> {
         },
 
         Expr::Array(ArrayLit { span, elems, .. }) => {
+            let mut has_spread = false;
             let elems = elems.move_flat_map(|v| match v {
                 Some(ExprOrSpread {
                     spread: Some(..), ..
-                }) => Some(v),
+                }) => {
+                    has_spread = true;
+                    Some(v)
+                }
                 None => None,
                 Some(ExprOrSpread { spread: None, expr }) => ignore_result(*expr).map(|expr| {
                     Some(ExprOrSpread {
@@ -458,7 +462,15 @@ fn ignore_result(e: Expr) -> Option<Expr> {
             if elems.is_empty() {
                 None
             } else {
-                Some(Expr::Array(ArrayLit { span, elems }))
+                if has_spread {
+                    Some(Expr::Array(ArrayLit { span, elems }))
+                } else {
+                    ignore_result(preserve_effects(
+                        span,
+                        *undefined(span),
+                        elems.into_iter().map(|v| v.unwrap().expr),
+                    ))
+                }
             }
         }
 

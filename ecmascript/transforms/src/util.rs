@@ -696,6 +696,15 @@ pub trait ExprExt {
                 ..
             }) if obj.is_ident_ref_to(js_word!("Math")) => true,
 
+            Expr::Fn(FnExpr {
+                function:
+                    Function {
+                        body: Some(BlockStmt { ref stmts, .. }),
+                        ..
+                    },
+                ..
+            }) if stmts.is_empty() => true,
+
             _ => false,
         }
     }
