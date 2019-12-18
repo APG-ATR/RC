@@ -327,6 +327,24 @@ impl Fold<SeqExpr> for Remover<'_> {
     }
 }
 
+impl Fold<Expr> for Remover<'_> {
+    fn fold(&mut self, e: Expr) -> Expr {
+        let e: Expr = e.fold_children(self);
+
+        match e {
+            Expr::Assign(AssignExpr {
+                span,
+                op: op!("="),
+                left: PatOrExpr::Pat(box Pat::Ident(ref l)),
+                right: Expr::Ident(ref r),
+            }) if l.sym == r.sym && l.span.ctxt() == r.span.ctxt() => return *undefined(span),
+            _ => {}
+        }
+
+        e
+    }
+}
+
 impl Fold<ForStmt> for Remover<'_> {
     fn fold(&mut self, s: ForStmt) -> ForStmt {
         let s = s.fold_children(self);
