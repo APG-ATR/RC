@@ -1105,7 +1105,7 @@ fn test_complex3() {
 
 #[test]
 fn test_complex4() {
-    test("1 && (a() ? 1 : 1 + c())", "1 && (a() || c())");
+    test("1 && (a() ? 1 : 1 + c())", "a() || c()");
 }
 
 #[test]
