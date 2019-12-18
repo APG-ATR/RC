@@ -458,7 +458,24 @@ fn ignore_result(e: Expr) -> Option<Expr> {
             }
         }
 
-        Expr::Object(ObjectLit { props, .. }) if props.is_empty() => None,
+        Expr::Object(ObjectLit { span, props, .. }) => {
+            let props = props.move_flat_map(|v| match v {
+                PropOrSpread::Spread(..) => Some(v),
+                PropOrSpread::Prop(ref p) => {
+                    if is_literal(&p) {
+                        None
+                    } else {
+                        Some(v)
+                    }
+                }
+            });
+
+            if props.is_empty() {
+                None
+            } else {
+                Some(Expr::Object(ObjectLit { span, props }))
+            }
+        }
 
         Expr::Call(CallExpr {
             span,
