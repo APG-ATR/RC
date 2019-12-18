@@ -237,8 +237,27 @@ impl Fold<Stmt> for Remover<'_> {
                     false
                 });
 
+                let remove_break = |stmts: &mut Vec<Stmt>| {
+                    let mut done = false;
+                    stmts.retain(|v| {
+                        if done {
+                            return false;
+                        }
+                        match v {
+                            Stmt::Break(BreakStmt { label: None, .. })
+                            | Stmt::Return(..)
+                            | Stmt::Throw(..) => {
+                                done = true;
+                                false
+                            }
+                            _ => true,
+                        }
+                    })
+                };
+
                 if let Some(i) = selected {
-                    let stmts = s.cases.remove(i).cons;
+                    let mut stmts = s.cases.remove(i).cons;
+                    remove_break(&mut stmts);
 
                     return Stmt::Block(BlockStmt {
                         span: s.span,
@@ -250,7 +269,8 @@ impl Fold<Stmt> for Remover<'_> {
                         Expr::Lit(..) => {
                             let idx = s.cases.iter().position(|v| v.test.is_none());
                             if let Some(i) = idx {
-                                let stmts = s.cases.remove(i).cons;
+                                let mut stmts = s.cases.remove(i).cons;
+                                remove_break(&mut stmts);
 
                                 return Stmt::Block(BlockStmt {
                                     span: s.span,
