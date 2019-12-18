@@ -322,7 +322,10 @@ pub trait ExprExt {
         let val = match *expr {
             Expr::Paren(ref e) => return e.expr.as_bool(),
             Expr::Seq(SeqExpr { ref exprs, .. }) => return exprs.last().unwrap().as_bool(),
-            Expr::Assign(AssignExpr { ref right, .. }) => return right.as_bool(),
+            Expr::Assign(AssignExpr { ref right, .. }) => {
+                let (_, v) = right.as_bool();
+                return (MayBeImpure, v);
+            }
 
             Expr::Unary(UnaryExpr {
                 op: op!("!"),
