@@ -464,6 +464,15 @@ impl Fold<Expr> for Remover<'_> {
                 left: PatOrExpr::Pat(box Pat::Ident(ref l)),
                 right: box Expr::Ident(ref r),
             }) if l.sym == r.sym && l.span.ctxt() == r.span.ctxt() => return *undefined(span),
+
+            Expr::Assign(AssignExpr {
+                span,
+                op: op!("="),
+                left: PatOrExpr::Pat(box Pat::Array(ref arr)),
+                right,
+            }) if arr.elems.is_empty() || arr.elems.iter().all(|v| v.is_none()) => {
+                return *right;
+            }
             _ => {}
         }
 
