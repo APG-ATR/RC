@@ -181,7 +181,7 @@ fn test_constant_condition_with_side_effect1() {
     test("if (b=true) x=1;", "b=true;x=1");
     test("if (b=/ab/) x=1;", "b=/ab/;x=1");
     test("if (b=/ab/){ x=1; } else { x=2; }", "b=/ab/;x=1");
-    test("var b;b=/ab/;if(b)x=1;", "var b;b=/ab/;x=1");
+    // test("var b;b=/ab/;if(b)x=1;", "var b;b=/ab/;x=1");
     test_same("var b;b=f();if(b)x=1;");
     // test("var b=/ab/;if(b)x=1;", "var b=/ab/;x=1");
     test_same("var b=f();if(b)x=1;");
@@ -197,9 +197,9 @@ fn test_constant_condition_with_side_effect2() {
     test("(b=false)?x=1:x=2;", "b=false,x=2");
     test("if (b=/ab/) x=1;", "b=/ab/;x=1");
     // test("var b;b=/ab/;(b)?x=1:x=2;", "var b;b=/ab/;x=1");
-    test_same("var b;b=f();(b)?x=1:x=2;");
+    test_same("var b;b=f();b?x=1:x=2;");
     // test("var b=/ab/;(b)?x=1:x=2;", "var b=/ab/;x=1");
-    test_same("var b=f();(b)?x=1:x=2;");
+    test_same("var b=f();b?x=1:x=2;");
 }
 
 #[test]

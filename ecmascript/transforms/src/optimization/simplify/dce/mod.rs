@@ -473,6 +473,15 @@ impl Fold<Expr> for Remover<'_> {
             }) if arr.elems.is_empty() || arr.elems.iter().all(|v| v.is_none()) => {
                 return *right;
             }
+
+            Expr::Assign(AssignExpr {
+                op: op!("="),
+                left: PatOrExpr::Pat(box Pat::Object(ref obj)),
+                right,
+                ..
+            }) if obj.props.is_empty() => {
+                return *right;
+            }
             _ => {}
         }
 
