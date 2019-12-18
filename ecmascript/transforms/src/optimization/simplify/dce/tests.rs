@@ -779,7 +779,7 @@ fn test_optimize_switch_with_default_case() {
         "bar();",
     );
 
-    test_same("switch (x) { default: if (a) { break; } bar(); }");
+    test_same("switch (x) { default: if (a) break; bar(); }");
 
     // Potentially foldable
     test_same(concat!(
