@@ -220,7 +220,15 @@ impl Fold<Stmt> for Remover<'_> {
 
             Stmt::Switch(mut s) => {
                 if s.cases.is_empty() {
-                    return Stmt::Empty(EmptyStmt { span: s.span });
+                    match ignore_result(*s.discriminant) {
+                        Some(expr) => {
+                            return Stmt::Expr(ExprStmt {
+                                span: s.span,
+                                expr: box expr,
+                            })
+                        }
+                        None => return Stmt::Empty(EmptyStmt { span: s.span }),
+                    }
                 }
 
                 let selected = s.cases.iter().position(|case| {

@@ -732,7 +732,7 @@ fn test_optimize_switch_with_continue() {
             "  }",
             "}",
         ),
-        "function f() { for (;;) { continue; } }",
+        "function f() { for (;;) continue; }",
     );
 }
 
