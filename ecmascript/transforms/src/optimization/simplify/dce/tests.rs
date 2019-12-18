@@ -1332,10 +1332,10 @@ fn test_empty_pattern_in_params_not_removed() {
 
 #[test]
 fn test_empty_pattern_in_for_of_loop_not_removed() {
-    test_same("for (let [] of foo()) {}");
-    test_same("for (const [] of foo()) {}");
-    test_same("for ([] of foo()) {}");
-    test_same("for ({} of foo()) {}");
+    test_same("for (let [] of foo());");
+    test_same("for (const [] of foo());");
+    test_same("for ([] of foo());");
+    test_same("for ({} of foo());");
 }
 
 #[test]
