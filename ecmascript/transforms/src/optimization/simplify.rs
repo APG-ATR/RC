@@ -7,8 +7,6 @@ use swc_common::{Fold, FoldWith};
 
 pub mod dce;
 mod expr;
-#[cfg(test)]
-mod tests;
 
 /// Not intended for general use. Use [simplifier] instead.
 ///

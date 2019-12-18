@@ -6,6 +6,9 @@ use ast::*;
 use fxhash::FxHashMap;
 use swc_common::{Fold, FoldWith, DUMMY_SP};
 
+#[cfg(test)]
+mod tests;
+
 /// Ported from `PeepholeRemoveDeadCode` of google closure compiler.
 pub fn dce() -> impl Pass + 'static {
     Remover::default()
@@ -20,7 +23,13 @@ struct Remover<'a> {
 #[derive(Debug, Default)]
 struct Scope<'a> {
     parent: Option<&'a Scope<'a>>,
-    vars: FxHashMap<Id, u64>,
+    vars: FxHashMap<Id, VarInfo>,
+}
+
+#[derive(Debug, Default)]
+struct VarInfo {
+    /// Count of usage.
+    cnt: usize,
 }
 
 impl<T: StmtLike> Fold<Vec<T>> for Remover<'_>
@@ -75,6 +84,18 @@ where
                                 }),
                             };
                             node
+                        }
+
+                        Stmt::Decl(Decl::Var(var)) => {
+                            let mut idents = vec![];
+                            let mut v = DestructuringFinder { found: &mut idents };
+                            var.visit_with(&mut v);
+
+                            self.scope
+                                .vars
+                                .extend(idents.into_iter().map(|(sym, span)| (sym, span.ctxt())));
+
+                            Stmt::Decl(Decl::Var(var))
                         }
 
                         _ => stmt,

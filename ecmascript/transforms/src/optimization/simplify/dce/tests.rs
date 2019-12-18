@@ -1,6 +1,3 @@
-//! Tests related to statements.
-use super::simplifier;
-
 macro_rules! test_stmt {
     ($l:expr, $r:expr) => {
         test_transform!(
