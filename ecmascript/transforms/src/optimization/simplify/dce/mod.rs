@@ -317,18 +317,18 @@ fn ignore_result(e: Expr) -> Option<Expr> {
             _ => Some(Expr::Unary(UnaryExpr { span, op, arg })),
         },
 
-        Expr::Array(ArrayLit {
-            span, mut elems, ..
-        }) => {
-            elems.retain(|v| match v {
+        Expr::Array(ArrayLit { span, elems, .. }) => {
+            let elems = elems.move_flat_map(|v| match v {
                 Some(ExprOrSpread {
                     spread: Some(..), ..
-                }) => true,
-                None => false,
-                Some(ExprOrSpread {
-                    spread: None,
-                    ref expr,
-                }) => expr.may_have_side_effects(),
+                }) => Some(v),
+                None => None,
+                Some(ExprOrSpread { spread: None, expr }) => ignore_result(*expr).map(|expr| {
+                    Some(ExprOrSpread {
+                        spread: None,
+                        expr: box expr,
+                    })
+                }),
             });
 
             if elems.is_empty() {
