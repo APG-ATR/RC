@@ -1126,7 +1126,7 @@ fn test_no_remove_function_declaration2() {
 
 #[test]
 fn test_no_simplify_function_args1() {
-    test_same("f(1 + 2, 3 + g())");
+    test("f(1 + 2, 3 + g())", "f(3, 3 + g())");
 }
 
 #[test]
