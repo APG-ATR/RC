@@ -689,7 +689,22 @@ pub trait ExprExt {
         }
     }
 
+    fn is_pure_callee(&self) -> bool {
+        match *self.as_expr_kind() {
+            Expr::Member(MemberExpr {
+                obj: ExprOrSuper::Expr(ref obj),
+                ..
+            }) if obj.is_ident_ref_to(js_word!("Math")) => true,
+
+            _ => false,
+        }
+    }
+
     fn may_have_side_effects(&self) -> bool {
+        if self.is_pure_callee() {
+            return false;
+        }
+
         match *self.as_expr_kind() {
             Expr::Lit(..)
             | Expr::Ident(..)
@@ -720,11 +735,6 @@ pub trait ExprExt {
             Expr::TaggedTpl(_) => true,
             Expr::MetaProp(_) => true,
 
-            Expr::Member(MemberExpr {
-                obj: ExprOrSuper::Expr(ref obj),
-                ..
-            }) if obj.is_ident_ref_to(js_word!("Math")) => false,
-
             Expr::Await(_)
             | Expr::Yield(_)
             | Expr::Member(_)
@@ -733,7 +743,11 @@ pub trait ExprExt {
 
             // TODO
             Expr::New(_) => true,
-            // TODO
+
+            Expr::Call(CallExpr {
+                callee: ExprOrSuper::Expr(ref callee),
+                ..
+            }) if callee.is_pure_callee() => false,
             Expr::Call(_) => true,
 
             Expr::Seq(SeqExpr { ref exprs, .. }) => exprs.iter().any(|e| e.may_have_side_effects()),

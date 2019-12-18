@@ -138,14 +138,24 @@ impl Fold<Stmt> for Remover<'_> {
                     Stmt::Empty(EmptyStmt { span })
                 }
 
-                Expr::Call(CallExpr { span, args, .. }) if !node.may_have_side_effects() => {
-                    Stmt::Expr(ExprStmt {
+                Expr::Call(CallExpr {
+                    span,
+                    callee: ExprOrSuper::Expr(ref callee),
+                    args,
+                    ..
+                }) if callee.is_pure_callee() => Stmt::Expr(ExprStmt {
+                    span,
+                    expr: box Expr::Array(ArrayLit {
                         span,
-                        expr: box Expr::Array(ArrayLit {
-                            span,
-                            elems: args.into_iter().map(Some).collect(),
-                        })
-                        .fold_with(self),
+                        elems: args.into_iter().map(Some).collect(),
+                    })
+                    .fold_with(self),
+                }),
+
+                Expr::TaggedTpl(TaggedTpl { tag, exprs, .. }) if tag.is_pure_callee() => {
+                    Stmt::Expr(ExprStmt {
+                        span: DUMMY_SP,
+                        expr: box preserve_effects(span, *undefined(span), exprs).fold_with(self),
                     })
                 }
 
