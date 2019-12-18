@@ -565,6 +565,10 @@ fn ignore_result(e: Expr) -> Option<Expr> {
                         ignore_result(*right)
                     }
                 } else {
+                    let right_span = right.span();
+                    let right = ignore_result(*right)
+                        .map(Box::new)
+                        .unwrap_or_else(|| undefined(right_span));
                     Some(Expr::Bin(BinExpr {
                         span,
                         left,
