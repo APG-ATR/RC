@@ -213,3 +213,20 @@ impl Fold<Stmt> for Remover<'_> {
         }
     }
 }
+
+impl Fold<Pat> for Remover<'_> {
+    fn fold(&mut self, p: Pat) -> Pat {
+        let p = p.fold_children(self);
+
+        match p {
+            Pat::Assign(p)
+                if p.right.is_undefined() || (p.right.is_void() && is_literal(&p.right)) =>
+            {
+                return *p.left
+            }
+            _ => {}
+        }
+
+        p
+    }
+}

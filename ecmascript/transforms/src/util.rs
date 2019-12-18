@@ -280,6 +280,19 @@ pub trait ExprExt {
         self.is_ident_ref_to(js_word!("NaN"))
     }
 
+    fn is_undefined(&self) -> bool {
+        self.is_ident_ref_to(js_word!("undefined"))
+    }
+
+    fn is_void(&self) -> bool {
+        match *self.as_expr_kind() {
+            Expr::Unary(UnaryExpr {
+                op: op!("void"), ..
+            }) => true,
+            _ => false,
+        }
+    }
+
     /// Is `self` an IdentifierReference to `id`?
     fn is_ident_ref_to(&self, id: JsWord) -> bool {
         match *self.as_expr_kind() {
