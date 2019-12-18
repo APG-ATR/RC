@@ -670,15 +670,25 @@ fn ignore_result(e: Expr) -> Option<Expr> {
         }) => {
             let cons_span = cons.span();
             let alt_span = alt.span();
+
+            let alt = ignore_result(*alt);
+
+            if alt.is_none() {
+                return ignore_result(Expr::Bin(BinExpr {
+                    span,
+                    left: test,
+                    op: op!("&&"),
+                    right: cons,
+                }));
+            }
+
             Some(Expr::Cond(CondExpr {
                 span,
                 test,
                 cons: ignore_result(*cons)
                     .map(Box::new)
                     .unwrap_or_else(|| undefined(cons_span)),
-                alt: ignore_result(*alt)
-                    .map(Box::new)
-                    .unwrap_or_else(|| undefined(alt_span)),
+                alt: alt.map(Box::new).unwrap_or_else(|| undefined(alt_span)),
             }))
         }
 
