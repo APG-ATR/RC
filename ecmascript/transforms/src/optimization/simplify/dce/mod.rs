@@ -4,7 +4,7 @@ use crate::{
 };
 use ast::*;
 use fxhash::FxHashMap;
-use swc_common::{fold::VisitWith, Fold, FoldWith, DUMMY_SP};
+use swc_common::{fold::VisitWith, Fold, FoldWith};
 
 #[cfg(test)]
 mod tests;
