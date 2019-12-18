@@ -19,7 +19,7 @@ use std::{
 };
 use swc_atoms::{js_word, JsWord};
 use swc_common::{
-    errors::Handler, Fold, FoldWith, Mark, Span, Spanned, Visit, VisitWith, DUMMY_SP,
+    errors::Handler, Fold, FoldWith, Mark, Span, Spanned, SyntaxContext, Visit, VisitWith, DUMMY_SP,
 };
 use unicode_xid::UnicodeXID;
 
@@ -1469,4 +1469,10 @@ pub fn prop_name_eq(p: &PropName, key: &str) -> bool {
             _ => false,
         },
     }
+}
+
+pub type Id = (JsWord, SyntaxContext);
+
+pub fn id(i: &Ident) -> Id {
+    (i.sym.clone(), i.span.ctxt())
 }

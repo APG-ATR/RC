@@ -11,12 +11,6 @@ pub fn dce() -> impl Pass + 'static {
     Remover::default()
 }
 
-type Id = (JsWord, SyntaxContext);
-
-fn id(i: &Ident) -> Id {
-    (i.sym.clone(), i.span.ctxt())
-}
-
 #[derive(Debug, Default)]
 struct Remover<'a> {
     scope: Scope<'a>,

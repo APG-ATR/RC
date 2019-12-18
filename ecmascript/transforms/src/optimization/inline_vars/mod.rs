@@ -1,4 +1,8 @@
-use crate::{pass::Pass, scope::ScopeKind};
+use crate::{
+    pass::Pass,
+    scope::ScopeKind,
+    util::{id, Id},
+};
 use ast::*;
 use hashbrown::HashMap;
 use serde::Deserialize;
@@ -21,12 +25,6 @@ pub fn inline_vars(_: Config) -> impl 'static + Pass {
 pub struct Config {
     #[serde(default)]
     pub locals_only: bool,
-}
-
-type Id = (JsWord, SyntaxContext);
-
-fn id(i: &Ident) -> Id {
-    (i.sym.clone(), i.span.ctxt())
 }
 
 #[derive(Debug, Default)]
