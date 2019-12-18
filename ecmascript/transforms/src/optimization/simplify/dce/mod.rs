@@ -4,6 +4,7 @@ use crate::{
 };
 use ast::*;
 use fxhash::FxHashMap;
+use std::cmp::min;
 use swc_common::{fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, Spanned, DUMMY_SP};
 
 #[cfg(test)]
@@ -415,12 +416,21 @@ impl Fold<ArrayPat> for Remover<'_> {
     fn fold(&mut self, p: ArrayPat) -> ArrayPat {
         let mut p: ArrayPat = p.fold_children(self);
 
-        let i = p.elems.iter().rposition(|v| match v {
-            Some(Pat::Array(ref p)) if p.elems.is_empty() => true,
-            _ => false,
-        });
+        let mut preserved = None;
+        let len = p.elems.len();
+        for (i, p) in p.elems.iter().enumerate() {
+            let can_be_removed = match p {
+                Some(Pat::Array(ref p)) if p.elems.is_empty() => true,
+                Some(Pat::Object(ref p)) if p.props.is_empty() => true,
+                _ => false,
+            };
 
-        if let Some(i) = i {
+            if !can_be_removed {
+                preserved = Some(min(i + 1, len))
+            }
+        }
+
+        if let Some(i) = preserved {
             p.elems.drain(i..);
         }
 
