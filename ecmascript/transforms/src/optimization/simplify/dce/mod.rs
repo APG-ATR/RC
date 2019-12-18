@@ -665,9 +665,6 @@ fn ignore_result(e: Expr) -> Option<Expr> {
             cons,
             alt,
         }) => {
-            let cons_span = cons.span();
-            let alt_span = alt.span();
-
             let alt = if let Some(alt) = ignore_result(*alt) {
                 alt
             } else {
