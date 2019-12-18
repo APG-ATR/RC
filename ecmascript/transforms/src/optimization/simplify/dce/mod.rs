@@ -314,7 +314,17 @@ impl Fold<Stmt> for Remover<'_> {
                     test: Some(box Expr::Lit(Lit::Bool(Bool { value: false, .. }))),
                     ..
                 },
-            ) => EmptyStmt { span: s.span }.into(),
+            ) => {
+                if s.init.is_some() {
+                    Stmt::For(ForStmt {
+                        body: box Stmt::Empty(EmptyStmt { span: s.span }),
+                        update: None,
+                        ..s
+                    })
+                } else {
+                    Stmt::Empty(EmptyStmt { span: s.span })
+                }
+            }
 
             _ => stmt,
         }
