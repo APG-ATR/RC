@@ -1,9 +1,14 @@
 //! Tests related to statements.
-use super::Simplifier;
+use super::simplifier;
 
 macro_rules! test_stmt {
     ($l:expr, $r:expr) => {
-        test_transform!(::swc_ecma_parser::Syntax::default(), |_| Simplifier, $l, $r)
+        test_transform!(
+            ::swc_ecma_parser::Syntax::default(),
+            |_| simplifier(),
+            $l,
+            $r
+        )
     };
     ($l:expr, $r:expr,) => {
         test_expr!($l, $r);
