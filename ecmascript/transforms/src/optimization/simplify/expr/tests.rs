@@ -445,6 +445,10 @@ fn test_unary_ops_2() {
 #[test]
 fn test_unary_ops_3() {
     fold("a=~0xffffffff", "a=0");
+}
+
+#[test]
+fn test_unary_ops_4() {
     fold("a=~~0xffffffff", "a=-1");
 }
 
@@ -959,9 +963,9 @@ fn test_fold_get_elem1() {
     fold("x = [10, 20][-1]", "x = void 0;");
     fold("x = [10, 20][2]", "x = void 0;");
 
-    fold_same("x = [foo(), 0][1]");
+    fold("x = [foo(), 0][1]", "x = (foo(), 0);");
     fold("x = [0, foo()][1]", "x = foo()");
-    fold_same("x = [0, foo()][0]");
+    fold("x = [0, foo()][0]", "x = (foo(), 0)");
     fold_same("for([1][0] in {});");
 }
 

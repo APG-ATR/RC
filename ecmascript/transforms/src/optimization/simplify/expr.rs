@@ -257,7 +257,7 @@ fn fold_member_expr(e: MemberExpr) -> Expr {
                 _ => unreachable!(),
             };
 
-            let e = if elems.len() >= idx as _ {
+            let e = if elems.len() > idx as _ && idx >= 0 {
                 elems.remove(idx as _)
             } else {
                 None
@@ -801,7 +801,7 @@ fn fold_unary(UnaryExpr { span, op, arg }: UnaryExpr) -> Expr {
                 if value.fract() == 0.0 {
                     return Expr::Lit(Lit::Num(Number {
                         span,
-                        value: !(value as i64) as f64,
+                        value: !(value as u32) as i32 as f64,
                     }));
                 }
                 // TODO: Report error
