@@ -60,6 +60,11 @@ where
                             return buf;
                         }
 
+                        Stmt::Block(BlockStmt { stmts, .. }) => {
+                            buf.extend(stmts.into_iter().map(T::from_stmt));
+                            continue;
+                        }
+
                         // Optimize if statement.
                         Stmt::If(IfStmt {
                             test,
