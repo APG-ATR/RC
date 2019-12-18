@@ -59,6 +59,7 @@ where
                             buf.push(stmt_like);
                             return buf;
                         }
+
                         // Optimize if statement.
                         Stmt::If(IfStmt {
                             test,
@@ -120,6 +121,19 @@ impl Fold<Stmt> for Remover<'_> {
         let stmt = stmt.fold_children(self);
 
         match stmt {
+            Stmt::If(IfStmt {
+                span,
+                test,
+                cons: box Stmt::Empty(..),
+                alt: None,
+            }) => {
+                let expr = ignore_result(*test).map(Box::new);
+                match expr {
+                    Some(expr) => Stmt::Expr(ExprStmt { span, expr }),
+                    None => Stmt::Empty(EmptyStmt { span }),
+                }
+            }
+
             // `1;` -> `;`
             Stmt::Expr(ExprStmt {
                 span,
