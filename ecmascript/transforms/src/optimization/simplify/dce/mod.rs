@@ -276,30 +276,20 @@ fn ignore_result(e: Expr) -> Option<Expr> {
     match e {
         Expr::Lit(Lit::Num(..)) | Expr::Lit(Lit::Bool(..)) | Expr::Lit(Lit::Regex(..)) => None,
 
+        Expr::Paren(ParenExpr { expr, .. }) => ignore_result(*expr),
+
         Expr::Bin(BinExpr {
             span,
             left,
             op,
             right,
-        }) => {
+        }) if op != op!("&&") && op != op!("||") => {
             let left = ignore_result(*left);
             let right = ignore_result(*right);
 
             match (left, right) {
                 (Some(l), Some(r)) => {
-                    if op == op!("&&") || op == op!("||") {
-                        Some(
-                            BinExpr {
-                                span,
-                                left: box l,
-                                op,
-                                right: box r,
-                            }
-                            .into(),
-                        )
-                    } else {
-                        ignore_result(preserve_effects(span, *undefined(span), vec![box l, box r]))
-                    }
+                    ignore_result(preserve_effects(span, *undefined(span), vec![box l, box r]))
                 }
                 (Some(l), None) => Some(l),
                 (None, Some(r)) => Some(r),
