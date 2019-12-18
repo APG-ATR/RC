@@ -2,7 +2,7 @@
 pub use self::dce::dce;
 use self::expr::SimplifyExpr;
 use crate::pass::Pass;
-use swc_common::chain;
+use swc_common::{chain, Fold};
 
 pub mod dce;
 mod expr;
@@ -19,11 +19,13 @@ pub fn expr_simplifier() -> impl Pass + 'static {
 /// Ported from `PeepholeRemoveDeadCode` and `PeepholeFoldConstants` of google
 /// closure compiler.
 pub fn simplifier() -> impl Pass + 'static {
-    chain!(expr_simplifier(), dce())
+    Simplifier
 }
 
-// impl Fold<Stmt> for Simplify {
-//     fn fold(&mut self, stmt: Stmt) -> Stmt {
-//         stmt.fold_children(&mut FoldConst)
-//     }
-// }
+struct Simplifier;
+
+impl Fold<Progrqm> for Simplifier {
+    fn fold(&mut self, p: Progrqm) -> Progrqm {
+        p.fold_with(&mut expr_simplifier()).fold_with(&mut dce())
+    }
+}

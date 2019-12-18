@@ -82,8 +82,6 @@ where
                             node
                         }
 
-                        Stmt::Decl(Decl::Var(VarDecl {})) => {}
-
                         _ => stmt,
                     };
 
