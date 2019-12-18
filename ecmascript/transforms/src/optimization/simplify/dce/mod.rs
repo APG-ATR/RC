@@ -226,6 +226,7 @@ impl Fold<Stmt> for Remover<'_> {
                                 &Expr::Lit(Lit::Num(Number { value: test, .. })),
                                 &Expr::Lit(Lit::Num(Number { value: d, .. })),
                             ) => test == d,
+                            (&Expr::Lit(Lit::Null(..)), &Expr::Lit(Lit::Null(..))) => true,
                             (&Expr::Ident(ref test), &Expr::Ident(ref d)) => {
                                 test.sym == d.sym && test.span.ctxt() == d.span.ctxt()
                             }
@@ -244,6 +245,22 @@ impl Fold<Stmt> for Remover<'_> {
                         stmts,
                     })
                     .fold_with(self);
+                } else {
+                    match *s.discriminant {
+                        Expr::Lit(..) => {
+                            let idx = s.cases.iter().position(|v| v.test.is_none());
+                            if let Some(i) = idx {
+                                let stmts = s.cases.remove(i).cons;
+
+                                return Stmt::Block(BlockStmt {
+                                    span: s.span,
+                                    stmts,
+                                })
+                                .fold_with(self);
+                            }
+                        }
+                        _ => {}
+                    }
                 }
 
                 SwitchStmt { ..s }.into()
