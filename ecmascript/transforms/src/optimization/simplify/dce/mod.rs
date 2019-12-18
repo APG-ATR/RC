@@ -127,7 +127,15 @@ impl Fold<Stmt> for Remover<'_> {
                 ..
             }) => match node {
                 Expr::Lit(Lit::Num(..)) | Expr::Lit(Lit::Bool(..)) | Expr::Lit(Lit::Regex(..)) => {
-                    Stmt::Empty(EmptyStmt { span: DUMMY_SP })
+                    Stmt::Empty(EmptyStmt { span })
+                }
+
+                Expr::Array(ArrayLit { ref elems, .. }) if elems.is_empty() => {
+                    Stmt::Empty(EmptyStmt { span })
+                }
+
+                Expr::Object(ObjectLit { ref props, .. }) if props.is_empty() => {
+                    Stmt::Empty(EmptyStmt { span })
                 }
 
                 //
