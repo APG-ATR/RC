@@ -7,6 +7,7 @@ use swc_common::{Fold, FoldWith, Span, Spanned};
 #[cfg(test)]
 mod tests;
 
+/// Ported from [PeepholeFoldConstants](https://github.com/google/closure-compiler/blob/9203e01b/src/com/google/javascript/jscomp/PeepholeFoldConstants.java)
 pub(super) struct SimplifyExpr;
 
 impl Fold<Pat> for SimplifyExpr {
@@ -24,7 +25,6 @@ impl Fold<Pat> for SimplifyExpr {
 }
 
 impl Fold<Expr> for SimplifyExpr {
-    /// Ported from [optimizeSubtree](https://github.com/google/closure-compiler/blob/9203e01b/src/com/google/javascript/jscomp/PeepholeFoldConstants.java#L74-L98)
     fn fold(&mut self, expr: Expr) -> Expr {
         // fold children before doing something more.
         let expr = expr.fold_children(self);
