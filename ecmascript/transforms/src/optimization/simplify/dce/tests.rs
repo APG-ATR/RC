@@ -105,11 +105,8 @@ fn test_fold_block_with_declaration() {
     test_same("{label: var x; let y;}");
 }
 
-/** Try to remove spurious blocks with multiple children * * * * * * * * * *
- ** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- **   * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- **     * * * * * * * * * * * **/
 #[test]
+/// Try to remove spurious blocks with multiple children
 fn test_fold_blocks_with_many_children() {
     test("function f() { if (false) {} }", "function f(){}");
     test(
