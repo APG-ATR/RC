@@ -1090,12 +1090,12 @@ fn test_short_circuit4() {
 
 #[test]
 fn test_complex1() {
-    test("1 && a() + b() + c()", "1 && (a(), b(), c())");
+    test("1 && a() + b() + c()", "a(), b(), c()");
 }
 
 #[test]
 fn test_complex2() {
-    test("1 && (a() ? b() : 1)", "1 && (a() && b())");
+    test("1 && (a() ? b() : 1)", "a() && b()");
 }
 
 #[test]
