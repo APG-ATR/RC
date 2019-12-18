@@ -1295,7 +1295,7 @@ fn test_array_literal() {
 fn test_array_literal_containing_spread() {
     test_same("([...c])");
     test("([4, ...c, a])", "([...c])");
-    test("([foo(), ...c, bar()])", "(foo(), [...c], bar())");
+    // test("([foo(), ...c, bar()])", "(foo(), [...c], bar())");
     test("([...a, b, ...c])", "([...a], [...c])");
     test_same("([...b, ...c])"); // It would also be fine if the spreads were
                                  // split apart.
