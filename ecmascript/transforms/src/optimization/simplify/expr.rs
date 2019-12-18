@@ -204,11 +204,11 @@ fn fold_member_expr(e: MemberExpr) -> Expr {
             }))
         }
 
-        Expr::Array(ArrayLit { span, elems })
+        Expr::Array(ArrayLit { span, mut elems })
             if match op {
                 KnownOp::Index(..) => true,
                 _ => false,
-            } && !obj.may_have_side_effects() =>
+            } =>
         {
             // do nothing if spread exists
             let has_spread = elems.iter().any(|elem| {
@@ -229,11 +229,17 @@ fn fold_member_expr(e: MemberExpr) -> Expr {
                 _ => unreachable!(),
             };
 
-            let e = elems.into_iter().nth(idx as _);
-            return match e {
-                None | Some(None) => *undefined(span),
-                Some(Some(e)) => *e.expr,
+            let e = if elems.len() >= idx as _ {
+                elems.remove(idx as _)
+            } else {
+                None
             };
+            let v = match e {
+                None => *undefined(span),
+                Some(e) => *e.expr,
+            };
+
+            preserve_effects(span, v, once(box Expr::Array(ArrayLit { span, elems })))
         }
 
         // { foo: true }['foo']
