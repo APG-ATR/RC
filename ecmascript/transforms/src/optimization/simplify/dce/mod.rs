@@ -4,7 +4,6 @@ use crate::{
 };
 use ast::*;
 use fxhash::FxHashMap;
-use std::f32::consts::E;
 use swc_common::{fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, Spanned, DUMMY_SP};
 
 #[cfg(test)]
