@@ -139,6 +139,12 @@ impl Fold<Stmt> for Remover<'_> {
                 }
             }
 
+            Stmt::Labeled(LabeledStmt {
+                span,
+                body: box Stmt::Empty(..),
+                ..
+            }) => Stmt::Empty(EmptyStmt { span }),
+
             // `1;` -> `;`
             Stmt::Expr(ExprStmt {
                 span,
