@@ -1,6 +1,7 @@
 use crate::pass::Pass;
 use ast::*;
 use hashbrown::HashMap;
+use serde::Deserialize;
 use std::cell::RefCell;
 use swc_atoms::JsWord;
 use swc_common::{Fold, FoldWith, SyntaxContext};
@@ -10,8 +11,16 @@ mod tests;
 
 /// Ported from [`InlineVariables`](https://github.com/google/closure-compiler/blob/master/src/com/google/javascript/jscomp/InlineVariables.java)
 /// of the google closure compiler.
-pub fn inline_vars() -> impl 'static + Pass {
-    Inline::default()
+pub fn inline_vars(c: Config) -> impl 'static + Pass {
+    Inline {
+        scope: Default::default(),
+    }
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct Config {
+    #[serde(default)]
+    pub locals_only: bool,
 }
 
 type Id = (JsWord, SyntaxContext);

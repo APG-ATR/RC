@@ -6,6 +6,6 @@ pub use self::{
 };
 
 mod inline_globals;
-mod inline_vars;
+pub mod inline_vars;
 mod json_parse;
 mod simplify;
