@@ -8,6 +8,8 @@ use swc_common::{Fold, FoldWith, SyntaxContext};
 #[cfg(test)]
 mod tests;
 
+/// Ported from [`InlineVariables`](https://github.com/google/closure-compiler/blob/master/src/com/google/javascript/jscomp/InlineVariables.java)
+/// of the google closure compiler.
 pub fn constant_propagator() -> impl 'static + Pass {
     Const::default()
 }
