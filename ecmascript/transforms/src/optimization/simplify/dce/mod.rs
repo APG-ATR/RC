@@ -288,7 +288,10 @@ impl Fold<SeqExpr> for Remover<'_> {
 #[inline(never)]
 fn ignore_result(e: Expr) -> Option<Expr> {
     match e {
-        Expr::Lit(Lit::Num(..)) | Expr::Lit(Lit::Bool(..)) | Expr::Lit(Lit::Regex(..)) => None,
+        Expr::Lit(Lit::Num(..))
+        | Expr::Lit(Lit::Bool(..))
+        | Expr::Lit(Lit::Regex(..))
+        | Expr::Ident(..) => None,
 
         Expr::Paren(ParenExpr { expr, .. }) => ignore_result(*expr),
 
