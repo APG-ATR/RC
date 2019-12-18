@@ -502,6 +502,32 @@ fn ignore_result(e: Expr) -> Option<Expr> {
             }
         }
 
+        Expr::Bin(BinExpr {
+            span,
+            left,
+            op,
+            right,
+        }) => {
+            let right = if let Some(right) = ignore_result(*right) {
+                box right
+            } else {
+                return ignore_result(*left);
+            };
+
+            let l = left.as_pure_bool();
+
+            if let Known(l) = l {
+                Some(Expr::Lit(Lit::Bool(Bool { span, value: l })))
+            } else {
+                Some(Expr::Bin(BinExpr {
+                    span,
+                    left,
+                    op,
+                    right,
+                }))
+            }
+        }
+
         Expr::Unary(UnaryExpr { span, op, arg }) => match op {
             op!("void")
             | op!("typeof")
