@@ -74,7 +74,14 @@ where
                         }) => {
                             // check if
                             let node = match test.as_bool() {
-                                (Pure, Known(val)) => {
+                                (purity, Known(val)) => {
+                                    if !purity.is_pure() {
+                                        buf.push(T::from_stmt(Stmt::Expr(ExprStmt {
+                                            span: DUMMY_SP,
+                                            expr: test,
+                                        })));
+                                    }
+
                                     if val {
                                         *cons
                                     } else {
