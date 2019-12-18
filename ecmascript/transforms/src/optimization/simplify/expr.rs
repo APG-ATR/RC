@@ -81,6 +81,31 @@ impl Fold<Expr> for SimplifyExpr {
                 ArrayLit { span, elems: e }.into()
             }
 
+            Expr::Object(ObjectLit { span, props, .. }) => {
+                let should_work = props.iter().any(|p| match &*p {
+                    PropOrSpread::Spread(..) => true,
+                    _ => false,
+                });
+                if !should_work {
+                    return ObjectLit { span, props }.into();
+                }
+
+                let mut ps = Vec::with_capacity(props.len());
+
+                for p in props {
+                    match p {
+                        PropOrSpread::Spread(SpreadElement {
+                            expr: box Expr::Object(ObjectLit { props, .. }),
+                            ..
+                        }) => ps.extend(props),
+
+                        _ => ps.push(p),
+                    }
+                }
+
+                ObjectLit { span, props: ps }.into()
+            }
+
             Expr::New(e) => {
                 if e.callee.is_ident_ref_to(js_word!("String"))
                     && e.args.is_some()
