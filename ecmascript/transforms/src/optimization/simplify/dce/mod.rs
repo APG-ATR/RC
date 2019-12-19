@@ -77,9 +77,7 @@ where
                                 continue;
                             }
 
-                            let has_block_scoped_stuff = stmts.iter().any(is_block_scoped_stuff);
-
-                            if has_block_scoped_stuff {
+                            if !is_ok_to_inline_block(&stmts) {
                                 BlockStmt {
                                     span,
                                     stmts: stmts.fold_with(self),
@@ -955,6 +953,61 @@ fn ignore_result(e: Expr) -> Option<Expr> {
 
         _ => Some(e),
     }
+}
+
+/// # Returns true for
+///
+/// ```js
+/// {
+///    var x = 1;
+/// }
+/// ```
+///
+/// ```js
+/// {
+///    var x;
+///    var y;
+///    var z;
+///    {
+///        var a;
+///        var b;
+///    }
+/// }
+/// ```
+///
+/// ```js
+/// {
+///    var a = 0;
+///    foo();
+/// }
+/// ```
+///
+/// # Returns false for
+///
+/// ```js
+/// a: {
+///    break a;
+///    var x = 1;
+/// }
+/// ```
+fn is_ok_to_inline_block(s: &[Stmt]) -> bool {
+    // variable declared as `var` is hoisted
+    if s.iter().any(|s| match s {
+        Stmt::Decl(Decl::Var(VarDecl {
+            kind: VarDeclKind::Var,
+            ..
+        })) => true,
+        _ => false,
+    }) {
+        return false;
+    }
+
+    // TODO: This may be inlinable if return / throw / break / continue exists
+    if s.iter().any(|s| is_block_scoped_stuff(s)) {
+        return false;
+    }
+
+    true
 }
 
 fn is_block_scoped_stuff(s: &Stmt) -> bool {
