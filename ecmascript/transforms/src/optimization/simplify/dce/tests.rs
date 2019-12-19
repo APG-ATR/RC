@@ -1375,8 +1375,13 @@ fn test_empty_slot_in_array_pattern_removed() {
 }
 
 #[test]
-fn test_empty_slot_in_array_pattern_with_default_value_maybe_removed() {
+#[ignore]
+fn test_empty_slot_in_array_pattern_with_default_value_maybe_removed_1() {
     test("[a,[] = 0] = [];", "[a] = [];");
+}
+
+#[test]
+fn test_empty_slot_in_array_pattern_with_default_value_maybe_removed_2() {
     test_same("[a,[] = foo()] = [];");
 }
 
