@@ -687,7 +687,7 @@ impl Fold<ForStmt> for Remover<'_> {
                     }
                 }
 
-                ignore_result(*e).map(Box::new)
+                Some(e)
             }),
             ..s
         }
