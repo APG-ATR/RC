@@ -270,6 +270,16 @@ struct Hoister {
     vars: Vec<Ident>,
 }
 
+impl Visit<VarDecl> for Hoister {
+    fn visit(&mut self, v: &VarDecl) {
+        if v.kind != VarDeclKind::Var {
+            return;
+        }
+
+        v.visit_children(self)
+    }
+}
+
 impl Visit<Pat> for Hoister {
     fn visit(&mut self, p: &Pat) {
         p.visit_children(self);
