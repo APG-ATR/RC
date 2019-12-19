@@ -254,19 +254,22 @@ fn test_fold_useless_do() {
         "do { try { foo() } catch (e) { break; } } while (0);",
         "try { foo(); } catch (e) { break; }",
     );
-    test_same("do { foo(); break; } while(0)");
+    test("do { foo(); break; } while(0)", "foo();");
     test(
         "do { for (;;) {foo(); continue;} } while(0)",
         "for (;;) {foo(); continue;}",
     );
-    test_same("l1: do { for (;;) { foo() } } while(0)");
+    test(
+        "l1: do { for (;;) { foo() } } while(0)",
+        "l1: for(;;) foo();",
+    );
     test(
         "do { switch (1) { default: foo(); break} } while(0)",
         "foo();",
     );
     test(
         "do { switch (1) { default: foo(); continue} } while(0)",
-        "do { foo(); continue } while(0)",
+        "foo();",
     );
 
     test(
