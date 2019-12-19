@@ -438,6 +438,22 @@ impl Fold<ArrayPat> for Remover<'_> {
     }
 }
 
+impl Fold<ObjectPat> for Remover<'_> {
+    fn fold(&mut self, p: ObjectPat) -> ObjectPat {
+        let mut p = p.fold_children(self);
+
+        p.props.retain(|p| match p {
+            ObjectPatProp::KeyValue(KeyValuePatProp {
+                value: box Pat::Object(p),
+                ..
+            }) if p.props.is_empty() => false,
+            _ => true,
+        });
+
+        p
+    }
+}
+
 impl Fold<ObjectPatProp> for Remover<'_> {
     fn fold(&mut self, p: ObjectPatProp) -> ObjectPatProp {
         let p = p.fold_children(self);
@@ -463,6 +479,7 @@ impl Fold<ObjectPatProp> for Remover<'_> {
                     value: None,
                 });
             }
+
             _ => {}
         }
 
