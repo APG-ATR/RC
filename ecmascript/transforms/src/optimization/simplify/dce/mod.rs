@@ -37,6 +37,7 @@ struct VarInfo {
 impl<T: StmtLike> Fold<Vec<T>> for Remover<'_>
 where
     Self: Fold<T>,
+    T: VisitWith<Hoister>,
 {
     fn fold(&mut self, stmts: Vec<T>) -> Vec<T> {
         let top_level = !self.not_top_level;
@@ -46,7 +47,8 @@ where
 
         let mut buf = Vec::with_capacity(stmts.len());
 
-        for stmt_like in stmts {
+        let mut iter = stmts.into_iter();
+        while let Some(stmt_like) = iter.next() {
             self.normal_block = true;
             let stmt_like = self.fold(stmt_like);
             self.normal_block = false;
@@ -67,12 +69,32 @@ where
                         | Stmt::Return { .. }
                         | Stmt::Continue { .. }
                         | Stmt::Break { .. } => {
+                            let decls: Vec<_> = iter
+                                .flat_map(|t| extract_var_ids(&t))
+                                .map(|i| VarDeclarator {
+                                    span: i.span,
+                                    name: Pat::Ident(i),
+                                    init: None,
+                                    definite: false,
+                                })
+                                .collect();
+                            if !decls.is_empty() {
+                                buf.push(T::from_stmt(Stmt::Decl(Decl::Var(VarDecl {
+                                    span: DUMMY_SP,
+                                    kind: VarDeclKind::Var,
+                                    decls,
+                                    declare: false,
+                                }))));
+                            }
+
                             let stmt_like = T::from_stmt(stmt);
                             buf.push(stmt_like);
+
                             return buf;
                         }
 
                         Stmt::Block(BlockStmt { span, stmts, .. }) => {
+                            dbg!();
                             if stmts.len() == 0 {
                                 continue;
                             }
@@ -1032,6 +1054,8 @@ fn is_ok_to_inline_block(s: &[Stmt]) -> bool {
         _ => false,
     });
 
+    dbg!(last_var);
+
     let last_var = if let Some(pos) = last_var {
         pos
     } else {
@@ -1042,6 +1066,8 @@ fn is_ok_to_inline_block(s: &[Stmt]) -> bool {
         Stmt::Return(..) | Stmt::Throw(..) | Stmt::Break(..) | Stmt::Continue(..) => true,
         _ => false,
     });
+
+    dbg!(last_stopper);
 
     if let Some(last_stopper) = last_stopper {
         last_stopper > last_var

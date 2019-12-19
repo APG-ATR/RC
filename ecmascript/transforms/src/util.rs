@@ -208,15 +208,20 @@ impl<T> IsEmpty for Vec<T> {
     }
 }
 
+/// Extracts hoisted variables
+pub(crate) fn extract_var_ids<T: VisitWith<Hoister>>(node: &T) -> Vec<Ident> {
+    let mut v = Hoister { vars: vec![] };
+    node.visit_with(&mut v);
+    v.vars
+}
+
 pub trait StmtExt {
     fn into_stmt(self) -> Stmt;
     fn as_stmt(&self) -> &Stmt;
 
     /// Extracts hoisted variables
     fn extract_var_ids(&self) -> Vec<Ident> {
-        let mut v = Hoister { vars: vec![] };
-        self.as_stmt().visit_with(&mut v);
-        v.vars
+        extract_var_ids(self.as_stmt())
     }
 
     fn extract_var_ids_as_var(&self) -> Option<VarDecl> {
@@ -266,7 +271,7 @@ impl StmtExt for Box<Stmt> {
     }
 }
 
-struct Hoister {
+pub(crate) struct Hoister {
     vars: Vec<Ident>,
 }
 
