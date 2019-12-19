@@ -420,7 +420,7 @@ impl Fold<Stmt> for Remover<'_> {
                         if let Some(test) = ignore_result(*s.test) {
                             BlockStmt {
                                 span: s.span,
-                                stmts: vec![test.into_stmt(), *s.body],
+                                stmts: vec![*s.body, test.into_stmt()],
                             }
                             .into()
                         } else {
