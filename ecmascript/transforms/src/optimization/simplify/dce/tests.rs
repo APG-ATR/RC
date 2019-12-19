@@ -249,7 +249,7 @@ fn test_fold_useless_do() {
     test("do { var a = 0; } while(!{a:foo()});", "var a=0;foo()");
 
     // Can't fold with break or continues.
-    test_same("do { foo(); continue; } while(0)");
+    test("do { foo(); continue; } while(0)", "foo();");
     test_same("do { try { foo() } catch (e) { break; } } while (0);");
     test_same("do { foo(); break; } while(0)");
     test(
