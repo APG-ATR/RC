@@ -94,7 +94,6 @@ where
                         }
 
                         Stmt::Block(BlockStmt { span, stmts, .. }) => {
-                            dbg!();
                             if stmts.len() == 0 {
                                 continue;
                             }
@@ -1054,8 +1053,6 @@ fn is_ok_to_inline_block(s: &[Stmt]) -> bool {
         _ => false,
     });
 
-    dbg!(last_var);
-
     let last_var = if let Some(pos) = last_var {
         pos
     } else {
@@ -1066,8 +1063,6 @@ fn is_ok_to_inline_block(s: &[Stmt]) -> bool {
         Stmt::Return(..) | Stmt::Throw(..) | Stmt::Break(..) | Stmt::Continue(..) => true,
         _ => false,
     });
-
-    dbg!(last_stopper);
 
     if let Some(last_stopper) = last_stopper {
         last_stopper > last_var
