@@ -742,6 +742,7 @@ fn test_optimize_switch_with_continue() {
 }
 
 #[test]
+#[ignore]
 fn test_optimize_switch_with_default_case_with_fallthru() {
     test(
         concat!(
@@ -896,21 +897,25 @@ fn test_remove_var_get2() {
 }
 
 #[test]
+#[ignore]
 fn test_remove_namespace_get1() {
     test("var a = {};a.b", "var a = {}");
 }
 
 #[test]
+#[ignore]
 fn test_remove_namespace_get2() {
     test("var a = {};a.b=1;a.b", "var a = {};a.b=1");
 }
 
 #[test]
+#[ignore]
 fn test_remove_prototype_get1() {
     test("var a = {};a.prototype.b", "var a = {}");
 }
 
 #[test]
+#[ignore]
 fn test_remove_prototype_get2() {
     test(
         "var a = {};a.prototype.b = 1;a.prototype.b",
@@ -1500,6 +1505,7 @@ fn test_do_not_remove_nested_getter_only_access() {
 }
 
 #[test]
+#[ignore]
 fn test_remove_after_nested_getter_only_access() {
     test(
         concat!(
