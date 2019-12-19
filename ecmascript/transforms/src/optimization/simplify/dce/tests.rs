@@ -150,11 +150,11 @@ fn test_hook() {
     test("(a = false) ? b() : c()", "a = false, c()");
     test(
         "do {f()} while((a = true) ? b() : c())",
-        "do {f()} while((a = true) , b())",
+        "do f(); while(a = true , b())",
     );
     test(
         "do {f()} while((a = false) ? b() : c())",
-        "do {f()} while((a = false) , c())",
+        "do f(); while(a = false , c())",
     );
 
     test("var x = (true) ? 1 : 0", "var x=1");
