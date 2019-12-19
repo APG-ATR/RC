@@ -291,7 +291,7 @@ fn test_minimize_loop_with_constant_condition_vanilla_for() {
 
 #[test]
 fn test_minimize_loop_with_constant_condition_do_while() {
-    test("do { foo(); } while (true)", "do foo(); while (true);");
+    test("do { foo(); } while (true)", "for(;;)foo();");
     test("do { foo(); } while (0)", "foo();");
     test("do { foo(); } while (0.0)", "foo();");
     test("do { foo(); } while (NaN)", "foo();");
