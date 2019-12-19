@@ -395,6 +395,32 @@ impl Fold<Stmt> for Remover<'_> {
                 }
             }
 
+            Stmt::Decl(Decl::Var(v)) => {
+                let decls = v.decls.move_flat_map(|v| {
+                    if !is_literal(&v.init) {
+                        return Some(v);
+                    }
+
+                    //
+                    match &v.name {
+                        Pat::Object(o) if o.props.is_empty() => {
+                            return None;
+                        }
+                        Pat::Array(a) if a.elems.is_empty() => {
+                            return None;
+                        }
+
+                        _ => Some(v),
+                    }
+                });
+
+                if decls.is_empty() {
+                    return Stmt::Empty(EmptyStmt { span: v.span });
+                }
+
+                Stmt::Decl(Decl::Var(VarDecl { decls, ..v }))
+            }
+
             _ => stmt,
         }
     }
@@ -455,6 +481,14 @@ impl Fold<ArrayPat> for Remover<'_> {
 impl Fold<ObjectPat> for Remover<'_> {
     fn fold(&mut self, p: ObjectPat) -> ObjectPat {
         let mut p = p.fold_children(self);
+
+        // Don't remove if there exists a rest pattern
+        if p.props.iter().any(|p| match p {
+            ObjectPatProp::Rest(..) => true,
+            _ => false,
+        }) {
+            return p;
+        }
 
         p.props.retain(|p| match p {
             ObjectPatProp::KeyValue(KeyValuePatProp {
@@ -572,14 +606,6 @@ impl Fold<ForStmt> for Remover<'_> {
             }),
             ..s
         }
-    }
-}
-
-impl Fold<VarDecl> for Remover<'_> {
-    fn fold(&mut self, v: VarDecl) -> VarDecl {
-        let v = v.fold_children(self);
-
-        v
     }
 }
 
