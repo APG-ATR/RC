@@ -19,6 +19,7 @@ pub fn dce() -> impl Pass + 'static {
 struct Remover<'a> {
     scope: Scope<'a>,
     not_top_level: bool,
+    normal_block: bool,
 }
 
 #[derive(Debug, Default)]
@@ -38,18 +39,29 @@ where
     Self: Fold<T>,
 {
     fn fold(&mut self, stmts: Vec<T>) -> Vec<T> {
+        println!("len: {:?}", stmts.len());
         let top_level = !self.not_top_level;
         self.not_top_level = true;
+        let is_block_stmt = self.normal_block;
+        self.normal_block = false;
 
         let mut buf = Vec::with_capacity(stmts.len());
 
         for stmt_like in stmts {
+            self.normal_block = true;
             let stmt_like = self.fold(stmt_like);
+            self.normal_block = false;
+
             let stmt_like = match stmt_like.try_into_stmt() {
                 Ok(stmt) => {
                     let stmt = match stmt {
                         // Remove empty statements.
                         Stmt::Empty(..) => continue,
+
+                        Stmt::Expr(ExprStmt {
+                            expr: box Expr::Lit(..),
+                            ..
+                        }) if is_block_stmt => continue,
 
                         // Control flow
                         Stmt::Throw(..)
@@ -201,7 +213,7 @@ impl Fold<Stmt> for Remover<'_> {
                 if stmts.is_empty() {
                     Stmt::Empty(EmptyStmt { span })
                 } else if stmts.len() == 1 && !is_block_scoped_stuff(&stmts[0]) {
-                    stmts.into_iter().next().unwrap()
+                    stmts.into_iter().next().unwrap().fold_with(self)
                 } else {
                     Stmt::Block(BlockStmt { span, stmts })
                 }
