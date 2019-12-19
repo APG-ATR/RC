@@ -421,13 +421,13 @@ impl Fold<Stmt> for Remover<'_> {
                             BlockStmt {
                                 span: s.span,
                                 stmts: vec![
-                                    prepare_loop_body_for_inlining(*s.body),
+                                    prepare_loop_body_for_inlining(*s.body).fold_with(self),
                                     test.into_stmt(),
                                 ],
                             }
                             .into()
                         } else {
-                            prepare_loop_body_for_inlining(*s.body)
+                            prepare_loop_body_for_inlining(*s.body).fold_with(self)
                         }
                     }
                 } else {
