@@ -1210,8 +1210,8 @@ fn test_new_containing_spread_1() {
     // be preserved.
     test("new Date(...c)", "([...c])");
     test("new Date(4, ...c, a)", "([...c])");
-    test("new Date(...a, b, ...c)", "([...a], [...c])");
-    test("new Date(...b, ...c)", "([...b], [...c])");
+    test("new Date(...a, b, ...c)", "([...a, ...c])");
+    test("new Date(...b, ...c)", "([...b, ...c])");
 }
 
 #[test]
