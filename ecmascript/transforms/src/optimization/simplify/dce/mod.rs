@@ -420,11 +420,14 @@ impl Fold<Stmt> for Remover<'_> {
                         if let Some(test) = ignore_result(*s.test) {
                             BlockStmt {
                                 span: s.span,
-                                stmts: vec![*s.body, test.into_stmt()],
+                                stmts: vec![
+                                    prepare_loop_body_for_inlining(*s.body),
+                                    test.into_stmt(),
+                                ],
                             }
                             .into()
                         } else {
-                            *s.body
+                            prepare_loop_body_for_inlining(*s.body)
                         }
                     }
                 } else {
@@ -964,4 +967,36 @@ fn is_block_scoped_stuff(s: &Stmt) -> bool {
         Stmt::Decl(Decl::Fn(..)) | Stmt::Decl(Decl::Class(..)) => true,
         _ => false,
     }
+}
+
+fn prepare_loop_body_for_inlining(stmt: Stmt) -> Stmt {
+    let span = stmt.span();
+    let mut stmts = match stmt {
+        Stmt::Block(BlockStmt { stmts, .. }) => stmts,
+        _ => vec![stmt],
+    };
+
+    let mut done = false;
+    stmts.retain(|stmt| {
+        if done {
+            return false;
+        }
+
+        match stmt {
+            Stmt::Break(BreakStmt { label: None, .. })
+            | Stmt::Continue(ContinueStmt { label: None, .. }) => {
+                done = true;
+                false
+            }
+
+            Stmt::Return(..) | Stmt::Throw(..) => {
+                done = true;
+                true
+            }
+
+            _ => true,
+        }
+    });
+
+    BlockStmt { span, stmts }.into()
 }
