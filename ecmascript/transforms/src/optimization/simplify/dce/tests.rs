@@ -56,7 +56,7 @@ fn test_remove_no_op_labelled_statement() {
     test("a: break a;", "");
     test("a: { break a; }", "");
 
-    test_same("a: { break a; console.log('unreachable'); }");
+    test("a: { break a; console.log('unreachable'); }", "");
     test_same("a: { break a; var x = 1; } x = 2;");
 
     test_same("b: { var x = 1; } x = 2;");
