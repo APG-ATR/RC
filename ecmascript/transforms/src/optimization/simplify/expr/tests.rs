@@ -16,6 +16,11 @@ fn fold_same(s: &str) {
 }
 
 #[test]
+fn object() {
+    fold("!({a:foo()});", "foo(), false;");
+}
+
+#[test]
 fn test_undefined_comparison1() {
     fold("undefined == undefined", "true");
     fold("undefined == null", "true");
