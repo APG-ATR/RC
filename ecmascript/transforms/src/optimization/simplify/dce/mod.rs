@@ -186,9 +186,6 @@ impl Fold<Stmt> for Remover<'_> {
             Stmt::Block(BlockStmt { span, stmts }) => {
                 if stmts.is_empty() {
                     Stmt::Empty(EmptyStmt { span })
-                } else if stmts.len() == 1 {
-                    // TODO: Check if lexical variable exists.
-                    stmts.into_iter().next().unwrap()
                 } else {
                     Stmt::Block(BlockStmt { span, stmts })
                 }
