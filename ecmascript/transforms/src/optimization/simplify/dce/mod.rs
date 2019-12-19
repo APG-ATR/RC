@@ -151,11 +151,25 @@ impl Fold<Stmt> for Remover<'_> {
                 }
             }
 
+            Stmt::Decl(Decl::Var(v)) if v.decls.is_empty() => {
+                Stmt::Empty(EmptyStmt { span: v.span })
+            }
+
             Stmt::Labeled(LabeledStmt {
                 span,
                 body: box Stmt::Empty(..),
                 ..
             }) => Stmt::Empty(EmptyStmt { span }),
+
+            Stmt::Labeled(LabeledStmt {
+                span,
+                body:
+                    box Stmt::Break(BreakStmt {
+                        label: Some(ref b), ..
+                    }),
+                ref label,
+                ..
+            }) if label.sym == b.sym => Stmt::Empty(EmptyStmt { span }),
 
             // `1;` -> `;`
             Stmt::Expr(ExprStmt {
@@ -558,6 +572,14 @@ impl Fold<ForStmt> for Remover<'_> {
             }),
             ..s
         }
+    }
+}
+
+impl Fold<VarDecl> for Remover<'_> {
+    fn fold(&mut self, v: VarDecl) -> VarDecl {
+        let v = v.fold_children(self);
+
+        v
     }
 }
 
