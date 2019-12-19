@@ -991,23 +991,36 @@ fn ignore_result(e: Expr) -> Option<Expr> {
 /// }
 /// ```
 fn is_ok_to_inline_block(s: &[Stmt]) -> bool {
-    // variable declared as `var` is hoisted
-    if s.iter().any(|s| match s {
-        Stmt::Decl(Decl::Var(VarDecl {
-            kind: VarDeclKind::Var,
-            ..
-        })) => true,
-        _ => false,
-    }) {
-        return false;
-    }
-
     // TODO: This may be inlinable if return / throw / break / continue exists
     if s.iter().any(|s| is_block_scoped_stuff(s)) {
         return false;
     }
 
-    true
+    // variable declared as `var` is hoisted
+    let last_var = s.iter().rposition(|s| match s {
+        Stmt::Decl(Decl::Var(VarDecl {
+            kind: VarDeclKind::Var,
+            ..
+        })) => true,
+        _ => false,
+    });
+
+    let last_var = if let Some(pos) = last_var {
+        pos
+    } else {
+        return true;
+    };
+
+    let last_stopper = s.iter().rposition(|s| match s {
+        Stmt::Return(..) | Stmt::Throw(..) | Stmt::Break(..) | Stmt::Continue(..) => true,
+        _ => false,
+    });
+
+    if let Some(last_stopper) = last_stopper {
+        last_stopper > last_var
+    } else {
+        true
+    }
 }
 
 fn is_block_scoped_stuff(s: &Stmt) -> bool {
