@@ -185,6 +185,7 @@ impl IsEmpty for Stmt {
 }
 
 impl<T: IsEmpty> IsEmpty for Option<T> {
+    #[inline]
     fn is_empty(&self) -> bool {
         match *self {
             Some(ref node) => node.is_empty(),
@@ -194,14 +195,89 @@ impl<T: IsEmpty> IsEmpty for Option<T> {
 }
 
 impl<T: IsEmpty> IsEmpty for Box<T> {
+    #[inline]
     fn is_empty(&self) -> bool {
         <T as IsEmpty>::is_empty(&*self)
     }
 }
 
 impl<T> IsEmpty for Vec<T> {
+    #[inline]
     fn is_empty(&self) -> bool {
         self.is_empty()
+    }
+}
+
+pub trait StmtExt {
+    fn into_stmt(self) -> Stmt;
+    fn as_stmt(&self) -> &Stmt;
+
+    /// Extracts hoisted variables
+    fn extract_var_ids(&self) -> Vec<Ident> {
+        let mut v = Hoister { vars: vec![] };
+        self.as_stmt().visit_with(&mut v);
+        v.vars
+    }
+
+    fn extract_var_ids_as_var(&self) -> Option<VarDecl> {
+        let ids = self.extract_var_ids();
+        if ids.is_empty() {
+            return None;
+        }
+
+        Some(VarDecl {
+            span: DUMMY_SP,
+            kind: VarDeclKind::Var,
+            declare: false,
+            decls: ids
+                .into_iter()
+                .map(|i| VarDeclarator {
+                    span: i.span,
+                    name: Pat::Ident(i),
+                    init: None,
+                    definite: false,
+                })
+                .collect(),
+        })
+    }
+}
+
+impl StmtExt for Stmt {
+    #[inline]
+    fn into_stmt(self) -> Stmt {
+        self
+    }
+
+    #[inline]
+    fn as_stmt(&self) -> &Stmt {
+        self
+    }
+}
+
+impl StmtExt for Box<Stmt> {
+    #[inline]
+    fn into_stmt(self) -> Stmt {
+        *self
+    }
+
+    #[inline]
+    fn as_stmt(&self) -> &Stmt {
+        &**self
+    }
+}
+
+struct Hoister {
+    vars: Vec<Ident>,
+}
+
+impl Visit<Pat> for Hoister {
+    fn visit(&mut self, p: &Pat) {
+        p.visit_children(self);
+
+        match *p {
+            Pat::Ident(ref i) => self.vars.push(i.clone()),
+            _ => {}
+        }
     }
 }
 

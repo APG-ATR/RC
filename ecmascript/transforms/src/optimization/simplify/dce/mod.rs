@@ -367,14 +367,21 @@ impl Fold<Stmt> for Remover<'_> {
                     ..
                 },
             ) => {
+                let decl = s.body.extract_var_ids_as_var();
+                let body = if let Some(var) = decl {
+                    Stmt::Decl(Decl::Var(var))
+                } else {
+                    Stmt::Empty(EmptyStmt { span: s.span })
+                };
+
                 if s.init.is_some() {
                     Stmt::For(ForStmt {
-                        body: box Stmt::Empty(EmptyStmt { span: s.span }),
+                        body: box body,
                         update: None,
                         ..s
                     })
                 } else {
-                    Stmt::Empty(EmptyStmt { span: s.span })
+                    body
                 }
             }
 
