@@ -712,6 +712,8 @@ fn ignore_result(e: Expr) -> Option<Expr> {
         | Expr::Lit(Lit::Regex(..))
         | Expr::Ident(..) => None,
 
+        Expr::Lit(Lit::Str(ref v)) if v.value.is_empty() => None,
+
         Expr::Paren(ParenExpr { expr, .. }) => ignore_result(*expr),
 
         Expr::Assign(AssignExpr {
