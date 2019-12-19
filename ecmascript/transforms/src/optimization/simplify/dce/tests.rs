@@ -192,7 +192,7 @@ fn test_constant_condition_with_side_effect1() {
     test_same("var b=f();if(b)x=1;");
     test_same("b=b++;if(b)x=b;");
     test("(b=0,b=1);if(b)x=b;", "b=0,b=1;if(b)x=b;");
-    test("b=1;if(foo,b)x=b;", "b=1;x=b;");
+    // test("b=1;if(foo,b)x=b;", "b=1;x=b;");
     test_same("b=1;if(foo=1,b)x=b;");
 }
 
