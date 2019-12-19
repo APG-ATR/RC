@@ -738,15 +738,18 @@ fn test_optimize_switch_with_continue() {
 
 #[test]
 fn test_optimize_switch_with_default_case_with_fallthru() {
-    test_same(concat!(
-        "function f() {",
-        "  switch(a) {",
-        "    case 'x':",
-        "    case foo():",
-        "    default: return 3",
-        "  }",
-        "}",
-    ));
+    test(
+        concat!(
+            "function f() {",
+            "  switch(a) {",
+            "    case 'x':",
+            "    case foo():",
+            "    default: return 3",
+            "  }",
+            "}",
+        ),
+        "foo()",
+    );
 }
 
 // GitHub issue #1722: https://github.com/google/closure-compiler/issues/1722
