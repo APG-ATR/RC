@@ -318,6 +318,9 @@ pub trait ExprExt {
         if expr.is_ident_ref_to(js_word!("undefined")) {
             return (Pure, Known(false));
         }
+        if expr.is_ident_ref_to(js_word!("NaN")) {
+            return (Pure, Known(false));
+        }
 
         let val = match *expr {
             Expr::Paren(ref e) => return e.expr.as_bool(),
