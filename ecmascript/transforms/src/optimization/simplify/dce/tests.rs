@@ -1334,11 +1334,16 @@ fn test_await() {
 }
 
 #[test]
-fn test_empty_pattern_in_declaration_removed() {
+fn test_empty_pattern_in_declaration_removed_1() {
     test("var [] = [];", "");
     test("let [] = [];", "");
     test("const [] = [];", "");
     test("var {} = [];", "");
+}
+
+#[test]
+#[ignore]
+fn test_empty_pattern_in_declaration_removed_2() {
     test("var [] = foo();", "foo()");
 }
 
