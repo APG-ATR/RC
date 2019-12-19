@@ -119,16 +119,12 @@ where
                                         }
                                         *cons
                                     } else {
+                                        // Hoist vars from cons
+                                        if let Some(var) = cons.extract_var_ids_as_var() {
+                                            buf.push(T::from_stmt(Stmt::Decl(Decl::Var(var))))
+                                        }
                                         match alt {
-                                            Some(alt) => {
-                                                // Hoist vars from cons
-                                                if let Some(var) = cons.extract_var_ids_as_var() {
-                                                    buf.push(T::from_stmt(Stmt::Decl(Decl::Var(
-                                                        var,
-                                                    ))))
-                                                }
-                                                *alt
-                                            }
+                                            Some(alt) => *alt,
                                             None => continue,
                                         }
                                     }
