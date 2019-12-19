@@ -490,16 +490,25 @@ impl Fold<ObjectPat> for Remover<'_> {
             return p;
         }
 
+        fn is_computed(k: &PropName) -> bool {
+            match k {
+                PropName::Computed(..) => true,
+                _ => false,
+            }
+        }
+
         p.props.retain(|p| match p {
             ObjectPatProp::KeyValue(KeyValuePatProp {
+                key,
                 value: box Pat::Object(p),
                 ..
-            }) if p.props.is_empty() => false,
+            }) if !is_computed(&key) && p.props.is_empty() => false,
 
             ObjectPatProp::KeyValue(KeyValuePatProp {
+                key,
                 value: box Pat::Array(p),
                 ..
-            }) if p.elems.is_empty() => false,
+            }) if !is_computed(&key) && p.elems.is_empty() => false,
             _ => true,
         });
 
