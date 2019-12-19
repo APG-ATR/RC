@@ -111,10 +111,24 @@ where
                                     }
 
                                     if val {
+                                        // Hoist vars from alt
+                                        if let Some(var) =
+                                            alt.and_then(|alt| alt.extract_var_ids_as_var())
+                                        {
+                                            buf.push(T::from_stmt(Stmt::Decl(Decl::Var(var))))
+                                        }
                                         *cons
                                     } else {
                                         match alt {
-                                            Some(alt) => *alt,
+                                            Some(alt) => {
+                                                // Hoist vars from cons
+                                                if let Some(var) = cons.extract_var_ids_as_var() {
+                                                    buf.push(T::from_stmt(Stmt::Decl(Decl::Var(
+                                                        var,
+                                                    ))))
+                                                }
+                                                *alt
+                                            }
                                             None => continue,
                                         }
                                     }
