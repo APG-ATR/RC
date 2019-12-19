@@ -280,6 +280,12 @@ impl Visit<VarDecl> for Hoister {
     }
 }
 
+impl Visit<AssignExpr> for Hoister {
+    fn visit(&mut self, node: &AssignExpr) {
+        node.right.visit_children(self);
+    }
+}
+
 impl Visit<Pat> for Hoister {
     fn visit(&mut self, p: &Pat) {
         p.visit_children(self);
