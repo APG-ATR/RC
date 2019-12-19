@@ -417,7 +417,15 @@ impl Fold<Stmt> for Remover<'_> {
                             body: s.body,
                         })
                     } else {
-                        *s.body
+                        if let Some(test) = ignore_result(*s.test) {
+                            BlockStmt {
+                                span: s.span,
+                                stmts: vec![test.into_stmt(), *s.body],
+                            }
+                            .into()
+                        } else {
+                            *s.body
+                        }
                     }
                 } else {
                     Stmt::DoWhile(s)
