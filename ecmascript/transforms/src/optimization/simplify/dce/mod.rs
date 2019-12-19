@@ -597,12 +597,16 @@ impl Fold<ObjectPatProp> for Remover<'_> {
 
 impl Fold<SeqExpr> for Remover<'_> {
     fn fold(&mut self, e: SeqExpr) -> SeqExpr {
-        let e = e.fold_children(self);
-
-        SeqExpr {
-            exprs: e.exprs.move_flat_map(|e| ignore_result(*e).map(Box::new)),
-            ..e
+        let mut e: SeqExpr = e.fold_children(self);
+        if e.exprs.is_empty() {
+            return e;
         }
+
+        let last = e.exprs.pop().unwrap();
+        let mut exprs = e.exprs.move_flat_map(|e| ignore_result(*e).map(Box::new));
+        exprs.push(last);
+
+        SeqExpr { exprs, ..e }
     }
 }
 
