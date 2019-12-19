@@ -61,9 +61,23 @@ where
                             return buf;
                         }
 
-                        Stmt::Block(BlockStmt { stmts, .. }) => {
-                            buf.extend(stmts.fold_with(self).into_iter().map(T::from_stmt));
-                            continue;
+                        Stmt::Block(BlockStmt { span, stmts, .. }) => {
+                            if stmts.len() == 0 {
+                                continue;
+                            }
+
+                            let has_block_scoped_stuff = stmts.iter().any(is_block_scoped_stuff);
+
+                            if has_block_scoped_stuff {
+                                BlockStmt {
+                                    span,
+                                    stmts: stmts.fold_with(self),
+                                }
+                                .into()
+                            } else {
+                                buf.extend(stmts.into_iter().map(T::from_stmt));
+                                continue;
+                            }
                         }
 
                         // Optimize if statement.
@@ -186,6 +200,8 @@ impl Fold<Stmt> for Remover<'_> {
             Stmt::Block(BlockStmt { span, stmts }) => {
                 if stmts.is_empty() {
                     Stmt::Empty(EmptyStmt { span })
+                } else if stmts.len() == 1 && !is_block_scoped_stuff(&stmts[0]) {
+                    stmts.into_iter().next().unwrap()
                 } else {
                     Stmt::Block(BlockStmt { span, stmts })
                 }
@@ -876,5 +892,17 @@ fn ignore_result(e: Expr) -> Option<Expr> {
         }
 
         _ => Some(e),
+    }
+}
+
+fn is_block_scoped_stuff(s: &Stmt) -> bool {
+    match s {
+        Stmt::Decl(Decl::Var(VarDecl { kind, .. }))
+            if *kind == VarDeclKind::Const || *kind == VarDeclKind::Let =>
+        {
+            return true;
+        }
+        Stmt::Decl(Decl::Fn(..)) => true,
+        _ => false,
     }
 }
