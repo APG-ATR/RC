@@ -447,6 +447,15 @@ impl Fold<Pat> for Remover<'_> {
                 return *p.left;
             }
 
+            Pat::Assign(p)
+                if match *p.left {
+                    Pat::Object(ref o) => o.props.is_empty(),
+                    _ => false,
+                } && p.right.is_number() =>
+            {
+                return *p.left;
+            }
+
             _ => {}
         }
 
