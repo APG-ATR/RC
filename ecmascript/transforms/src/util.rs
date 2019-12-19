@@ -1232,6 +1232,7 @@ pub(crate) fn is_rest_arguments(e: &ExprOrSpread) -> bool {
     }
 }
 
+#[inline]
 pub(crate) fn undefined(span: Span) -> Box<Expr> {
     box Expr::Unary(UnaryExpr {
         span,
@@ -1241,6 +1242,7 @@ pub(crate) fn undefined(span: Span) -> Box<Expr> {
 }
 
 /// inject `stmt` after directives
+#[inline(never)]
 pub fn prepend<T: StmtLike>(stmts: &mut Vec<T>, stmt: T) {
     let idx = stmts
         .iter()
