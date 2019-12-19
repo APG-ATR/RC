@@ -250,7 +250,10 @@ fn test_fold_useless_do() {
 
     // Can't fold with break or continues.
     test("do { foo(); continue; } while(0)", "foo();");
-    test_same("do { try { foo() } catch (e) { break; } } while (0);");
+    test(
+        "do { try { foo() } catch (e) { break; } } while (0);",
+        "try { foo(); } catch (e) { break; }",
+    );
     test_same("do { foo(); break; } while(0)");
     test(
         "do { for (;;) {foo(); continue;} } while(0)",
