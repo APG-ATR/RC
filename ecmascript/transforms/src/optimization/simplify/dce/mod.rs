@@ -39,7 +39,6 @@ where
     Self: Fold<T>,
 {
     fn fold(&mut self, stmts: Vec<T>) -> Vec<T> {
-        println!("len: {:?}", stmts.len());
         let top_level = !self.not_top_level;
         self.not_top_level = true;
         let is_block_stmt = self.normal_block;
