@@ -90,10 +90,12 @@ where
                                     if val {
                                         *cons
                                     } else {
-                                        alt.map(|e| *e).unwrap_or(Stmt::Empty(EmptyStmt { span }))
+                                        match alt {
+                                            Some(alt) => *alt,
+                                            None => continue,
+                                        }
                                     }
                                 }
-                                // TODO: Impure
                                 _ => Stmt::If(IfStmt {
                                     test,
                                     cons,
