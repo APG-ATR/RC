@@ -708,6 +708,7 @@ fn ignore_result(e: Expr) -> Option<Expr> {
     match e {
         Expr::Lit(Lit::Num(..))
         | Expr::Lit(Lit::Bool(..))
+        | Expr::Lit(Lit::Null(..))
         | Expr::Lit(Lit::Regex(..))
         | Expr::Ident(..) => None,
 
