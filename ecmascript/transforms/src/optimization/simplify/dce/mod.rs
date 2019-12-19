@@ -253,21 +253,13 @@ impl Fold<Stmt> for Remover<'_> {
                 test,
                 cons,
                 alt,
-            }) => {
-                if alt.is_empty() {
-                    return Stmt::If(IfStmt {
-                        span,
-                        test,
-                        cons,
-                        alt: None,
-                    });
-                }
-                Stmt::If(IfStmt {
+            }) if alt.is_empty() => {
+                return Stmt::If(IfStmt {
                     span,
                     test,
                     cons,
-                    alt,
-                })
+                    alt: None,
+                });
             }
 
             Stmt::Switch(mut s) => {
