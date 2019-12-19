@@ -224,13 +224,23 @@ impl Fold<Stmt> for Remover<'_> {
             }) => {
                 // Only leave the finally block if try block is empty
                 if block.is_empty() {
-                    return finalizer
-                        .map(Stmt::Block)
-                        .unwrap_or(Stmt::Empty(EmptyStmt { span }));
+                    let var = handler.and_then(|h| Stmt::from(h.body).extract_var_ids_as_var());
+
+                    return if let Some(mut finalizer) = finalizer {
+                        if let Some(var) = var.map(Decl::from).map(Stmt::from) {
+                            prepend(&mut finalizer.stmts, var);
+                        }
+                        finalizer.into()
+                    } else {
+                        var.map(Decl::from)
+                            .map(Stmt::from)
+                            .unwrap_or_else(|| Stmt::Empty(EmptyStmt { span }))
+                    };
                 }
 
-                // If catch block and finally block is empty, remove try-catch is useless.
-                if handler.is_empty() && finalizer.is_empty() {
+                // If catch block is not specified and finally block is empty, fold it to simple
+                // block.
+                if handler.is_none() && finalizer.is_empty() {
                     return Stmt::Block(block);
                 }
 
