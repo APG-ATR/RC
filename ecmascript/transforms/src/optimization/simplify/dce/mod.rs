@@ -271,6 +271,26 @@ impl Fold<Stmt> for Remover<'_> {
             }
 
             Stmt::Switch(mut s) => {
+                let remove_break = |stmts: &mut Vec<Stmt>| {
+                    let mut done = false;
+                    stmts.retain(|v| {
+                        if done {
+                            return false;
+                        }
+                        match v {
+                            Stmt::Break(BreakStmt { label: None, .. }) => {
+                                done = true;
+                                false
+                            }
+                            Stmt::Return(..) | Stmt::Throw(..) => {
+                                done = true;
+                                true
+                            }
+                            _ => true,
+                        }
+                    })
+                };
+
                 if s.cases.is_empty() {
                     match ignore_result(*s.discriminant) {
                         Some(expr) => {
@@ -281,6 +301,17 @@ impl Fold<Stmt> for Remover<'_> {
                         }
                         None => return Stmt::Empty(EmptyStmt { span: s.span }),
                     }
+                }
+
+                if s.cases.len() == 1 && s.cases[0].test.is_none() {
+                    let mut stmts = s.cases.remove(0).cons;
+                    remove_break(&mut stmts);
+
+                    return Stmt::Block(BlockStmt {
+                        span: s.span,
+                        stmts,
+                    })
+                    .fold_with(self);
                 }
 
                 let selected = s.cases.iter().position(|case| {
@@ -306,26 +337,6 @@ impl Fold<Stmt> for Remover<'_> {
 
                     false
                 });
-
-                let remove_break = |stmts: &mut Vec<Stmt>| {
-                    let mut done = false;
-                    stmts.retain(|v| {
-                        if done {
-                            return false;
-                        }
-                        match v {
-                            Stmt::Break(BreakStmt { label: None, .. }) => {
-                                done = true;
-                                false
-                            }
-                            Stmt::Return(..) | Stmt::Throw(..) => {
-                                done = true;
-                                true
-                            }
-                            _ => true,
-                        }
-                    })
-                };
 
                 if let Some(i) = selected {
                     let mut stmts = s.cases.remove(i).cons;
