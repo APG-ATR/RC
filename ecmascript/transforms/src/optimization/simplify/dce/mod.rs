@@ -635,6 +635,31 @@ impl Fold<Expr> for Remover<'_> {
             }) if obj.props.is_empty() => {
                 return *right;
             }
+
+            Expr::Cond(e)
+                if !e.test.may_have_side_effects()
+                    && (e.cons.is_undefined()
+                        || match *e.cons {
+                            Expr::Unary(UnaryExpr {
+                                op: op!("void"),
+                                ref arg,
+                                ..
+                            }) if !arg.may_have_side_effects() => true,
+                            _ => false,
+                        })
+                    && (e.alt.is_undefined()
+                        || match *e.alt {
+                            Expr::Unary(UnaryExpr {
+                                op: op!("void"),
+                                ref arg,
+                                ..
+                            }) if !arg.may_have_side_effects() => true,
+                            _ => false,
+                        }) =>
+            {
+                return *e.cons
+            }
+
             _ => {}
         }
 
@@ -747,16 +772,17 @@ fn ignore_result(e: Expr) -> Option<Expr> {
                         ignore_result(*right)
                     }
                 } else {
-                    let right_span = right.span();
-                    let right = ignore_result(*right)
-                        .map(Box::new)
-                        .unwrap_or_else(|| undefined(right_span));
-                    Some(Expr::Bin(BinExpr {
-                        span,
-                        left,
-                        op,
-                        right,
-                    }))
+                    let right = ignore_result(*right);
+                    if let Some(right) = right {
+                        Some(Expr::Bin(BinExpr {
+                            span,
+                            left,
+                            op,
+                            right: box right,
+                        }))
+                    } else {
+                        ignore_result(*left)
+                    }
                 }
             }
         }
@@ -928,7 +954,7 @@ fn is_block_scoped_stuff(s: &Stmt) -> bool {
         {
             return true;
         }
-        Stmt::Decl(Decl::Fn(..)) => true,
+        Stmt::Decl(Decl::Fn(..)) | Stmt::Decl(Decl::Class(..)) => true,
         _ => false,
     }
 }
