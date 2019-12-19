@@ -238,7 +238,7 @@ fn test_fold_useless_do() {
     test("do { foo() } while(false);", "foo()");
     test("do { foo() } while(void 0);", "foo()");
     test("do { foo() } while(undefined);", "foo()");
-    test_same("do { foo() } while(true);");
+    test("do { foo() } while(true);", "for(;;) foo();");
     test("do { var a = 0; } while(false);", "var a=0");
 
     test("do { var a = 0; } while(!{a:foo()});", "var a=0;foo()");
@@ -985,7 +985,7 @@ fn test_no_remove_call5() {
 
 #[test]
 fn test_no_remove_call6() {
-    test_same("1 || a()");
+    test("1 || a()", "");
 }
 
 #[test]
