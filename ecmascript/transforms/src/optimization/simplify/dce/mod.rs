@@ -4,7 +4,7 @@ use crate::{
 };
 use ast::*;
 use fxhash::FxHashMap;
-use std::cmp::min;
+use std::{cmp::min, iter::once};
 use swc_common::{fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, Spanned, DUMMY_SP};
 
 #[cfg(test)]
@@ -775,7 +775,11 @@ fn ignore_result(e: Expr) -> Option<Expr> {
             if props.is_empty() {
                 None
             } else {
-                Some(Expr::Object(ObjectLit { span, props }))
+                ignore_result(preserve_effects(
+                    span,
+                    *undefined(DUMMY_SP),
+                    once(box Expr::Object(ObjectLit { span, props })),
+                ))
             }
         }
 
