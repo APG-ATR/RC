@@ -87,8 +87,8 @@ fn test_fold_block() {
     test("for(x=0;x<100;x++){x}", "for(x=0;x<100;x++);");
     test("for(x in y){x}", "for(x in y);");
     test("for (x of y) {x}", "for(x of y);");
-    test_same("for (let x = 1; x <10; x++ ) {}");
-    test_same("for (var x = 1; x <10; x++ ) {}");
+    test_same("for (let x = 1; x <10; x++ );");
+    test_same("for (var x = 1; x <10; x++ );");
 }
 
 #[test]
@@ -172,6 +172,11 @@ fn test_hook() {
     test_same("(w?x:void 0).y+=z");
 
     test("y = (x ? void 0 : void 0)", "y = void 0");
+}
+
+#[test]
+#[ignore]
+fn test_hook_extra() {
     test("y = (x ? f() : f())", "y = f()");
     test("(function(){}) ? function(){} : function(){}", "");
 }
