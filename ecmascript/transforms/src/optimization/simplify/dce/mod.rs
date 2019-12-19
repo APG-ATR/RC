@@ -495,6 +495,11 @@ impl Fold<ObjectPat> for Remover<'_> {
                 value: box Pat::Object(p),
                 ..
             }) if p.props.is_empty() => false,
+
+            ObjectPatProp::KeyValue(KeyValuePatProp {
+                value: box Pat::Array(p),
+                ..
+            }) if p.elems.is_empty() => false,
             _ => true,
         });
 
