@@ -527,7 +527,8 @@ impl Fold<ObjectPatProp> for Remover<'_> {
                 span,
                 key,
                 value: Some(expr),
-            }) if expr.is_undefined()
+            }) if expr.is_number()
+                || expr.is_undefined()
                 || match *expr {
                     Expr::Unary(UnaryExpr {
                         op: op!("void"),
