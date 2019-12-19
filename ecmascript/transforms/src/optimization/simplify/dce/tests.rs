@@ -1412,7 +1412,7 @@ fn test_undefined_default_parameter_removed() {
 }
 
 #[test]
-fn test_pure_void_default_parameter_removed() {
+fn test_pure_void_default_parameter_removed_1() {
     test(
         "function f(x = void 0) {  }", //
         "function f(x         ) {  }",
@@ -1421,6 +1421,11 @@ fn test_pure_void_default_parameter_removed() {
         "function f(x = void \"XD\") {  }", //
         "function f(x              ) {  }",
     );
+}
+
+#[test]
+#[ignore]
+fn test_pure_void_default_parameter_removed_2() {
     test(
         "function f(x = void f()) {  }", //
         "function f(x)            {  }",
