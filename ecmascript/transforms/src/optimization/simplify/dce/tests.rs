@@ -276,7 +276,11 @@ fn test_fold_useless_do() {
         "l1: { do { x = 1; break l1; } while (0); x = 2; }",
         "l1: { x = 1; break l1; x = 2;}",
     );
+}
 
+#[test]
+#[ignore]
+fn test_fold_useless_do_extra() {
     test("do { x = 1; } while (x = 0);", "x = 1; x = 0;");
     test(
         "let x = 1; (function() { do { let x = 2; } while (x = 10, false); })();",
