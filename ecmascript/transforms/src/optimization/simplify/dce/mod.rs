@@ -233,14 +233,31 @@ impl Fold<Stmt> for Remover<'_> {
                     return Stmt::Block(BlockStmt { span, stmts }).fold_with(self);
                 }
 
+                let alt = match alt {
+                    Some(box Stmt::Empty(..)) => None,
+                    _ => alt,
+                };
+                if alt.is_none() {
+                    match *cons {
+                        Stmt::Empty(..) => {
+                            if let Some(expr) = ignore_result(*test) {
+                                return Stmt::Expr(ExprStmt {
+                                    span,
+                                    expr: box expr,
+                                });
+                            } else {
+                                return Stmt::Empty(EmptyStmt { span });
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
                 return Stmt::If(IfStmt {
                     span,
                     test,
                     cons,
-                    alt: match alt {
-                        Some(box Stmt::Empty(..)) => None,
-                        _ => alt,
-                    },
+                    alt,
                 });
             }
 
