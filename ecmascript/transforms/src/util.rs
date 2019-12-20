@@ -1581,7 +1581,7 @@ where
                             unreachable!("assign property in object literal is not a valid syntax")
                         }
                     },
-                    PropOrSpread::Spread(SpreadElement { expr, .. }) => {
+                    PropOrSpread::Spread(SpreadElement { .. }) => {
                         has_spread = true;
                         true
                     }
