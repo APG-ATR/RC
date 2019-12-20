@@ -397,6 +397,64 @@ impl Fold<Stmt> for Remover<'_> {
                     }
                 }
 
+                let is_default_last = match s.cases.last() {
+                    Some(SwitchCase { test: None, .. }) => true,
+                    _ => false,
+                };
+
+                {
+                    // True if all cases except default is empty.
+                    let is_all_case_empty = s
+                        .cases
+                        .iter()
+                        .all(|case| case.test.is_none() || case.cons.is_empty());
+
+                    if is_default_last && is_all_case_empty {
+                        let mut stmts = s.cases.pop().unwrap().cons;
+                        remove_break(&mut stmts);
+                        return Stmt::Block(BlockStmt {
+                            span: s.span,
+                            stmts,
+                        })
+                        .fold_with(self);
+                    }
+                }
+
+                // No case can be matched.
+                if match *s.discriminant {
+                    Expr::Lit(Lit::Str(..))
+                    | Expr::Lit(Lit::Null(..))
+                    | Expr::Lit(Lit::Num(..)) => true,
+                    _ => false,
+                } && s.cases.iter().all(|case| match case.test {
+                    Some(box Expr::Lit(Lit::Str(..)))
+                    | Some(box Expr::Lit(Lit::Null(..)))
+                    | Some(box Expr::Lit(Lit::Num(..))) => true,
+                    _ => false,
+                }) {
+                    // Preserve variables
+                    let decls: Vec<_> = s
+                        .cases
+                        .into_iter()
+                        .flat_map(|case| extract_var_ids(&case.cons))
+                        .map(|i| VarDeclarator {
+                            span: i.span,
+                            name: Pat::Ident(i),
+                            init: None,
+                            definite: false,
+                        })
+                        .collect();
+                    if !decls.is_empty() {
+                        return Stmt::Decl(Decl::Var(VarDecl {
+                            span: DUMMY_SP,
+                            kind: VarDeclKind::Var,
+                            decls,
+                            declare: false,
+                        }));
+                    }
+                    return Stmt::Empty(EmptyStmt { span: s.span });
+                }
+
                 SwitchStmt { ..s }.into()
             }
 

@@ -418,7 +418,10 @@ fn test_optimize_switch() {
 
     // Can't remove cases if a default exists and is not the last case.
     test_same("function f() {switch(a){default: return; case 1: break;}}");
-    test_same("function f() {switch(1){default: return; case 1: break;}}"); // foldable
+    test(
+        "function f() {switch(1){default: return; case 1: break;}}",
+        "function f() {}",
+    );
     test_same("function f() {switch(a){case 1: foo();}}");
     test_same("function f() {switch(a){case 3: case 2: case 1: foo();}}");
 
@@ -426,10 +429,10 @@ fn test_optimize_switch() {
         "function f() {switch(a){case 2: case 1: default: foo();}}",
         "function f() { foo(); }",
     );
-    test(
-        "switch(a){case 1: default:break; case 2: foo()}",
-        "switch(a){case 2: foo()}",
-    );
+    //test(
+    //    "switch(a){case 1: default:break; case 2: foo()}",
+    //    "switch(a){case 2: foo()}",
+    //);
     test_same("switch(a){case 1: goo(); default:break; case 2: foo()}");
 
     // TODO(johnlenz): merge the useless "case 2"
@@ -1293,7 +1296,7 @@ fn test_try_catch_finally() {
     test_same("try {var x = 1} finally {x()}");
     test(
         "function f() { return; try{var x = 1}finally{} }",
-        "function f() { return; }",
+        "function f() { var x; return; }",
     );
     test("try {} finally {x()}", "x()");
     test("try {} catch (e) { bar()} finally {x()}", "x()");
