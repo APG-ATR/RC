@@ -212,6 +212,9 @@ where
     Vec<T>: FoldWith<Self>,
 {
     fn fold(&mut self, stmts: Vec<T>) -> Vec<T> {
+        let top_level = self.top_level;
+        self.top_level = false;
+
         // Inline variables
         let stmts = stmts.fold_children(self);
 
@@ -223,7 +226,10 @@ where
                     Stmt::Decl(Decl::Var(mut var)) => {
                         // This variable is block scoped, and if current block does not use the
                         // variable, we can safely remove it.
-                        if var.kind == VarDeclKind::Let || var.kind == VarDeclKind::Const {
+                        let is_block_scoped =
+                            var.kind == VarDeclKind::Let || var.kind == VarDeclKind::Const;
+
+                        if is_block_scoped || (var.kind == VarDeclKind::Var && !top_level) {
                             var.decls = var.decls.move_flat_map(|decl| {
                                 match decl.name {
                                     Pat::Ident(ref i) => {
@@ -245,6 +251,10 @@ where
                                     }
                                 }
                             });
+                        }
+
+                        if var.decls.is_empty() {
+                            return None;
                         }
 
                         Stmt::Decl(Decl::Var(var))
