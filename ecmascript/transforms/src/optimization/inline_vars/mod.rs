@@ -197,6 +197,7 @@ impl Fold<Expr> for Inline<'_> {
                     if let Some(ref e) = (*var).value {
                         return e.clone();
                     } else {
+                        println!("cnt++; {}: usage", i.sym);
                         var.cnt += 1;
                     }
                 }
@@ -247,12 +248,14 @@ impl Inline<'_> {
                     if let Some(scope) = self.scope.scope_for(i) {
                         if let Some(v) = scope.vars.borrow_mut().get_mut(&id(i)) {
                             v.cnt += 1;
+                            println!("cnt++; {}; store: assign", i.sym)
                         }
                     }
                 }
             }
         } else {
             if let Some(mut info) = self.scope.find(i) {
+                println!("cnt++; {}; store: {:?}", i.sym, kind);
                 info.cnt += 1;
                 (*info).value = None;
             }
