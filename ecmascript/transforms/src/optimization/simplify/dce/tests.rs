@@ -242,17 +242,23 @@ fn test_fold_useless_for() {
 }
 
 #[test]
-fn test_fold_useless_do() {
+fn test_fold_useless_do_1() {
     test("do { foo() } while(false);", "foo()");
     test("do { foo() } while(void 0);", "foo()");
     test("do { foo() } while(undefined);", "foo()");
     test("do { foo() } while(true);", "for(;;) foo();");
     test("do { var a = 0; } while(false);", "var a=0");
+}
 
-    test("do { var a = 0; } while(!{a:foo()});", "var a=0;foo()");
-
+#[test]
+#[ignore]
+fn test_fold_useless_do_2() {
     // Can't fold with break or continues.
     test("do { foo(); continue; } while(0)", "foo();");
+}
+
+#[test]
+fn test_fold_useless_do_3() {
     test(
         "do { try { foo() } catch (e) { break; } } while (0);",
         "try { foo(); } catch (e) { break; }",
