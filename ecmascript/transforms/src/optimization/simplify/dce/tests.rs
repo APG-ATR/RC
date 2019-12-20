@@ -401,7 +401,7 @@ fn test_remove_useless_ops2() {
 }
 
 #[test]
-fn test_optimize_switch() {
+fn test_optimize_switch_1() {
     test("switch(a){}", "");
     test("switch(foo()){}", "foo()");
     test("switch(a){default:}", "");
@@ -459,6 +459,11 @@ fn test_optimize_switch() {
         "switch ('noMatch') {\ncase 'foo':\n  foo();\n  break;\ncase 'bar':\n  bar();\n  break;\n}",
         "",
     );
+}
+
+#[test]
+#[ignore]
+fn test_optimize_switch_2() {
     test(
         concat!(
             "switch ('fallThru') {",
@@ -484,6 +489,11 @@ fn test_optimize_switch() {
             "}",
         ),
     );
+}
+
+#[test]
+#[ignore]
+fn test_optimize_switch_3() {
     test(
         concat!(
             "switch ('fallThru') {",
@@ -495,19 +505,10 @@ fn test_optimize_switch() {
         ),
         concat!("foo();", "bar();"),
     );
-    test(
-        concat!(
-            "switch ('hasDefaultCase') {",
-            "  case 'foo':",
-            "    foo();",
-            "    break;",
-            "  default:",
-            "    bar();",
-            "    break;",
-            "}",
-        ),
-        "bar();",
-    );
+}
+
+#[test]
+fn test_optimize_switch_4() {
     test(
         "switch ('repeated') {\ncase 'repeated':\n  foo();\n  break;\ncase 'repeated':\n  \
          bar();\n  break;\n}",
