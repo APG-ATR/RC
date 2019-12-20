@@ -5,7 +5,9 @@ use crate::{
 use ast::*;
 use fxhash::FxHashMap;
 use std::{cmp::min, iter::once};
-use swc_common::{fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, Spanned, DUMMY_SP};
+use swc_common::{
+    fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, Spanned, Visit, DUMMY_SP,
+};
 
 #[cfg(test)]
 mod tests;
@@ -1261,4 +1263,78 @@ fn prepare_loop_body_for_inlining(stmt: Stmt) -> Stmt {
     });
 
     BlockStmt { span, stmts }.into()
+}
+
+fn has_conditional_stopper(s: &[Stmt]) -> bool {
+    struct Visitor {
+        in_cond: bool,
+        found: bool,
+    }
+
+    impl Visit<Function> for Visitor {
+        fn visit(&mut self, _: &Function) {}
+    }
+
+    impl Visit<Class> for Visitor {
+        fn visit(&mut self, _: &Class) {}
+    }
+
+    impl Visit<IfStmt> for Visitor {
+        fn visit(&mut self, node: &IfStmt) {
+            let old = self.in_cond;
+            self.in_cond = true;
+            node.cons.visit_with(self);
+            self.in_cond = true;
+            node.alt.visit_with(self);
+            self.in_cond = old;
+        }
+    }
+
+    impl Visit<SwitchCase> for Visitor {
+        fn visit(&mut self, node: &SwitchCase) {
+            let old = self.in_cond;
+            self.in_cond = true;
+            node.cons.visit_with(self);
+            self.in_cond = old;
+        }
+    }
+
+    impl Visit<BreakStmt> for Visitor {
+        fn visit(&mut self, _: &BreakStmt) {
+            if self.in_cond {
+                self.found = true
+            }
+        }
+    }
+
+    impl Visit<ContinueStmt> for Visitor {
+        fn visit(&mut self, _: &ContinueStmt) {
+            if self.in_cond {
+                self.found = true
+            }
+        }
+    }
+
+    impl Visit<ReturnStmt> for Visitor {
+        fn visit(&mut self, _: &ReturnStmt) {
+            if self.in_cond {
+                self.found = true
+            }
+        }
+    }
+
+    impl Visit<ThrowStmt> for Visitor {
+        fn visit(&mut self, _: &ThrowStmt) {
+            if self.in_cond {
+                self.found = true
+            }
+        }
+    }
+
+    let mut v = Visitor {
+        in_cond: false,
+        found: false,
+    };
+    s.visit_with(&mut v);
+    v.found
 }
