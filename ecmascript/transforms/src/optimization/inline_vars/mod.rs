@@ -6,7 +6,10 @@ use crate::{
 use ast::*;
 use fxhash::FxHashMap;
 use serde::Deserialize;
-use std::cell::{Cell, Ref, RefCell};
+use std::{
+    cell::{Cell, Ref, RefCell},
+    collections::hash_map::Entry,
+};
 use swc_common::{fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, DUMMY_SP};
 
 #[cfg(test)]
@@ -82,6 +85,13 @@ impl Scope<'_> {
             &var_info.value
         });
         Some(r)
+    }
+
+    fn take_var(&mut self, i: &Ident) -> Option<VarInfo> {
+        match self.vars.get_mut().entry(id(i)) {
+            Entry::Occupied(o) => Some(o.remove()),
+            Entry::Vacant(..) => None,
+        }
     }
 
     fn remove(&self, i: &Ident) {
@@ -176,7 +186,7 @@ impl Fold<Expr> for Inline<'_> {
 impl Inline<'_> {
     fn should_store(&self, e: &Expr) -> bool {
         match e {
-            Expr::Lit(..) | Expr::Ident(..) => true,
+            Expr::Lit(..) | Expr::Ident(..) | Expr::This(..) => true,
             _ => false,
         }
     }
@@ -193,5 +203,56 @@ impl Inline<'_> {
         } else {
             self.scope.remove(i)
         }
+    }
+}
+
+impl<T: StmtLike> Fold<Vec<T>> for Inline<'_>
+where
+    T: FoldWith<Self>,
+    Vec<T>: FoldWith<Self>,
+{
+    fn fold(&mut self, stmts: Vec<T>) -> Vec<T> {
+        // Inline variables
+        let stmts = stmts.fold_children(self);
+
+        stmts.move_flat_map(|stmt| {
+            // Remove unused variables
+
+            Some(match stmt.try_into_stmt() {
+                Ok(stmt) => T::from_stmt(match stmt {
+                    Stmt::Decl(Decl::Var(mut var)) => {
+                        // This variable is block scoped, and if current block does not use the
+                        // variable, we can safely remove it.
+                        if var.kind == VarDeclKind::Let || var.kind == VarDeclKind::Const {
+                            var.decls = var.decls.move_flat_map(|decl| {
+                                match decl.name {
+                                    Pat::Ident(ref i) => {
+                                        let var = if let Some(var) = self.scope.take_var(i) {
+                                            var
+                                        } else {
+                                            return Some(decl);
+                                        };
+
+                                        if var.cnt.take() == 0 {
+                                            None
+                                        } else {
+                                            Some(decl)
+                                        }
+                                    }
+                                    _ => {
+                                        // Be conservative
+                                        Some(decl)
+                                    }
+                                }
+                            });
+                        }
+
+                        unimplemented!()
+                    }
+                    _ => stmt,
+                }),
+                Err(item) => item,
+            })
+        })
     }
 }
