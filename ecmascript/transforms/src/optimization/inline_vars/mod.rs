@@ -1,16 +1,16 @@
 use crate::{
     pass::Pass,
     scope::ScopeKind,
-    util::{id, undefined, DestructuringFinder, Id, StmtLike},
+    util::{id, undefined, Id, StmtLike},
 };
 use ast::*;
 use fxhash::FxHashMap;
 use serde::Deserialize;
 use std::{
-    cell::{Cell, Ref, RefCell, RefMut},
+    cell::{RefCell, RefMut},
     collections::hash_map::Entry,
 };
-use swc_common::{fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, DUMMY_SP};
+use swc_common::{util::move_map::MoveMap, Fold, FoldWith, DUMMY_SP};
 
 #[cfg(test)]
 mod tests;
