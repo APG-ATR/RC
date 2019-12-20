@@ -460,8 +460,6 @@ impl Fold<Stmt> for Remover<'_> {
                         false
                     })
                 };
-                dbg!(selected);
-                dbg!(non_constant_case_idx);
 
                 let mut var_ids = vec![];
                 if let Some(i) = selected {
