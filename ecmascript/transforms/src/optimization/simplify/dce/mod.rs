@@ -349,7 +349,9 @@ impl Fold<Stmt> for Remover<'_> {
 
             Stmt::Switch(mut s) => {
                 let remove_break = |stmts: Vec<Stmt>| {
-                    debug_assert!(!has_conditional_stopper(&*stmts));
+                    debug_assert!(
+                        !has_conditional_stopper(&*stmts) || has_unconditional_stopper(&*stmts)
+                    );
 
                     let mut done = false;
                     stmts.move_flat_map(|s| {
