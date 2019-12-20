@@ -36,6 +36,13 @@ macro_rules! to_fn {
     };
 }
 
+macro_rules! to_all {
+    ($ti:ident, $fi:ident, $src:expr, $expected:expr) => {
+        to!($ti, $src, $expected);
+        to_fn!($fi, $src, $expected);
+    };
+}
+
 macro_rules! identical {
     ($name:ident, $src:expr) => {
         to!($name, $src, $src);
@@ -1402,24 +1409,30 @@ fn test_generators() {
     );
 }
 
-#[test]
-fn test_for_of() {
-    test_same(" var i = 0; for(i of n) {}");
+identical_all!(for_of_1, for_of_1_fn, "var i = 0; for(i of n) {}");
 
-    test_same("for( var i of n) { var x = i; }");
-}
+identical_all!(for_of_2, for_of_2_fn, "for( var i of n) { var x = i; }");
 
-#[test]
-fn test_template_strings() {
-    test(" var name = 'Foo'; `Hello ${name}`", "`Hello ${'Foo'}`");
+to_all!(
+    tpl_lit_1,
+    tpl_lit_1_fn,
+    "var name = 'Foo'; `Hello ${name}`",
+    "`Hello ${'Foo'}`"
+);
 
-    test(
-        " var name = 'Foo'; var foo = name; `Hello ${foo}`",
-        " `Hello ${'Foo'}`",
-    );
+to_all!(
+    tpl_lit_2,
+    tpl_lit_2_fn,
+    "var name = 'Foo'; var foo = name; `Hello ${foo}`",
+    "`Hello ${'Foo'}`"
+);
 
-    test(" var age = 3; `Age: ${age}`", "`Age: ${3}`");
-}
+to_all!(
+    tpl_lit_3,
+    tpl_lit_3_fn,
+    "var age = 3; `Age: ${age}`",
+    "`Age: ${3}`"
+);
 
 #[test]
 fn test_tagged_template_literals() {
@@ -1477,18 +1490,14 @@ fn test_tagged_template_literals() {
     );
 }
 
-#[test]
-fn test_destructuring() {
-    test(
-        "var [a, b, c] = [1, 2, 3]
+to_all!(
+    destructuring,
+    destructuring_fn,
+    "var [a, b, c] = [1, 2, 3]
             var x = a;
             x; x;",
-        "var [a, b, c] = [1, 2, 3]
-            a; a;",
-    );
-
-    test_same("var x = 1; ({[0]: x} = {});");
-}
+    "var [a, b, c] = [1, 2, 3]; a; a;"
+);
 
 identical!(
     function_scope_var_1,
