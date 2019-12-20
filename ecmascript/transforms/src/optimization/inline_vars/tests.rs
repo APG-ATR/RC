@@ -15,15 +15,7 @@ fn test_cfg(c: Config, src: &str, expected: &str) {
 }
 
 fn test(src: &str, expected: &str) {
-    if src.starts_with("function") {
-        test_cfg(Default::default(), src, expected)
-    } else {
-        test_cfg(
-            Default::default(),
-            &format!("function wtf(){{ {} }}", src),
-            &format!("function wtf(){{ {} }}", expected),
-        )
-    }
+    test_cfg(Default::default(), src, expected)
 }
 
 /// Should not modify expression.
