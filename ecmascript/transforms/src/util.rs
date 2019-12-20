@@ -1551,30 +1551,69 @@ where
 
             Expr::Paren(e) => add_effects(v, e.expr),
 
-            Expr::Object(ObjectLit { props, .. }) => {
-                props.into_iter().for_each(|node| match node {
+            Expr::Object(ObjectLit {
+                span, mut props, ..
+            }) => {
+                //
+                let mut has_spread = false;
+                props.retain(|node| match node {
                     PropOrSpread::Prop(box node) => match node {
-                        Prop::Shorthand(..) => {}
+                        Prop::Shorthand(..) => false,
                         Prop::KeyValue(KeyValueProp { key, value }) => {
                             if let PropName::Computed(e) = key {
-                                add_effects(v, e.expr);
+                                if e.expr.may_have_side_effects() {
+                                    return true;
+                                }
                             }
 
-                            add_effects(v, value)
+                            value.may_have_side_effects()
                         }
                         Prop::Getter(GetterProp { key, .. })
                         | Prop::Setter(SetterProp { key, .. })
                         | Prop::Method(MethodProp { key, .. }) => {
                             if let PropName::Computed(e) = key {
-                                add_effects(v, e.expr)
+                                e.expr.may_have_side_effects()
+                            } else {
+                                false
                             }
                         }
                         Prop::Assign(..) => {
                             unreachable!("assign property in object literal is not a valid syntax")
                         }
                     },
-                    PropOrSpread::Spread(SpreadElement { expr, .. }) => add_effects(v, expr),
-                })
+                    PropOrSpread::Spread(SpreadElement { expr, .. }) => {
+                        has_spread = true;
+                        true
+                    }
+                });
+
+                if has_spread {
+                    v.push(box Expr::Object(ObjectLit { span, props }))
+                } else {
+                    props.into_iter().for_each(|prop| match prop {
+                        PropOrSpread::Prop(box node) => match node {
+                            Prop::Shorthand(..) => {}
+                            Prop::KeyValue(KeyValueProp { key, value }) => {
+                                if let PropName::Computed(e) = key {
+                                    add_effects(v, e.expr);
+                                }
+
+                                add_effects(v, value)
+                            }
+                            Prop::Getter(GetterProp { key, .. })
+                            | Prop::Setter(SetterProp { key, .. })
+                            | Prop::Method(MethodProp { key, .. }) => {
+                                if let PropName::Computed(e) = key {
+                                    add_effects(v, e.expr)
+                                }
+                            }
+                            Prop::Assign(..) => unreachable!(
+                                "assign property in object literal is not a valid syntax"
+                            ),
+                        },
+                        _ => unreachable!(),
+                    })
+                }
             }
 
             Expr::Array(ArrayLit { elems, .. }) => {
