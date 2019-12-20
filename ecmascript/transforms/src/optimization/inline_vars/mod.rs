@@ -247,8 +247,9 @@ where
                             });
                         }
 
-                        unimplemented!()
+                        Stmt::Decl(Decl::Var(var))
                     }
+
                     _ => stmt,
                 }),
                 Err(item) => item,
