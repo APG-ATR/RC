@@ -105,7 +105,15 @@ where
                                 }
                                 .into()
                             } else {
-                                buf.extend(stmts.into_iter().map(T::from_stmt));
+                                buf.extend(
+                                    stmts
+                                        .into_iter()
+                                        .filter(|s| match s {
+                                            Stmt::Empty(..) => false,
+                                            _ => true,
+                                        })
+                                        .map(T::from_stmt),
+                                );
                                 continue;
                             }
                         }
@@ -118,7 +126,7 @@ where
                             span,
                         }) => {
                             // check if
-                            let node = match test.as_bool() {
+                            match test.as_bool() {
                                 (purity, Known(val)) => {
                                     if !purity.is_pure() {
                                         let expr = ignore_result(*test);
@@ -156,8 +164,7 @@ where
                                     alt,
                                     span,
                                 }),
-                            };
-                            node
+                            }
                         }
 
                         Stmt::Decl(Decl::Var(var)) => {
@@ -197,14 +204,44 @@ impl Fold<Stmt> for Remover<'_> {
             Stmt::If(IfStmt {
                 span,
                 test,
-                cons: box Stmt::Empty(..),
-                alt: None,
+                cons,
+                alt,
             }) => {
-                let expr = ignore_result(*test).map(Box::new);
-                match expr {
-                    Some(expr) => Stmt::Expr(ExprStmt { span, expr }),
-                    None => Stmt::Empty(EmptyStmt { span }),
+                let mut stmts = vec![];
+                if let (p, Known(v)) = test.as_bool() {
+                    // Preserve effect of the test
+                    if !p.is_pure() {
+                        match ignore_result(*test).map(Box::new) {
+                            Some(expr) => stmts.push(Stmt::Expr(ExprStmt { span, expr })),
+                            None => {}
+                        }
+                    }
+
+                    if v {
+                        if let Some(alt) = alt {}
+                        stmts.push(*cons);
+                    } else {
+                        if let Some(alt) = alt {
+                            stmts.push(*alt)
+                        }
+                    }
+
+                    if stmts.is_empty() {
+                        return Stmt::Empty(EmptyStmt { span });
+                    }
+
+                    return Stmt::Block(BlockStmt { span, stmts }).fold_with(self);
                 }
+
+                return Stmt::If(IfStmt {
+                    span,
+                    test,
+                    cons,
+                    alt: match alt {
+                        Some(box Stmt::Empty(..)) => None,
+                        _ => alt,
+                    },
+                });
             }
 
             Stmt::Decl(Decl::Var(v)) if v.decls.is_empty() => {
@@ -281,24 +318,6 @@ impl Fold<Stmt> for Remover<'_> {
                     handler,
                     finalizer,
                 })
-            }
-
-            // Remove empty else block.
-            // As we fold children before parent, unused expression
-            // statements without side effects are converted to
-            // Stmt::Empty before here.
-            Stmt::If(IfStmt {
-                span,
-                test,
-                cons,
-                alt,
-            }) if alt.is_empty() => {
-                return Stmt::If(IfStmt {
-                    span,
-                    test,
-                    cons,
-                    alt: None,
-                });
             }
 
             Stmt::Switch(mut s) => {
