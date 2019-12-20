@@ -348,24 +348,45 @@ impl Fold<Stmt> for Remover<'_> {
             }
 
             Stmt::Switch(mut s) => {
-                let remove_break = |stmts: &mut Vec<Stmt>| {
+                let remove_break = |stmts: Vec<Stmt>| {
                     debug_assert!(!has_conditional_stopper(&*stmts));
 
                     let mut done = false;
-                    stmts.retain(|v| {
+                    stmts.move_flat_map(|s| {
                         if done {
-                            return false;
+                            match s {
+                                Stmt::Decl(Decl::Var(
+                                    var
+                                    @
+                                    VarDecl {
+                                        kind: VarDeclKind::Var,
+                                        ..
+                                    },
+                                )) => {
+                                    return Some(Stmt::Decl(Decl::Var(VarDecl {
+                                        span: DUMMY_SP,
+                                        kind: VarDeclKind::Var,
+                                        decls: var
+                                            .decls
+                                            .move_map(|decl| VarDeclarator { init: None, ..decl }),
+                                        declare: false,
+                                    })))
+                                }
+                                _ => {}
+                            }
+
+                            return None;
                         }
-                        match v {
+                        match s {
                             Stmt::Break(BreakStmt { label: None, .. }) => {
                                 done = true;
-                                false
+                                None
                             }
                             Stmt::Return(..) | Stmt::Throw(..) => {
                                 done = true;
-                                true
+                                Some(s)
                             }
-                            _ => true,
+                            _ => Some(s),
                         }
                     })
                 };
@@ -402,8 +423,7 @@ impl Fold<Stmt> for Remover<'_> {
                     && s.cases[0].test.is_none()
                     && !has_conditional_stopper(&s.cases[0].cons)
                 {
-                    let mut stmts = s.cases.remove(0).cons;
-                    remove_break(&mut stmts);
+                    let mut stmts = remove_break(s.cases.remove(0).cons);
                     if let Some(expr) = ignore_result(*s.discriminant) {
                         prepend(&mut stmts, expr.into_stmt());
                     }
@@ -465,11 +485,20 @@ impl Fold<Stmt> for Remover<'_> {
                 if let Some(i) = selected {
                     if !has_conditional_stopper(&s.cases[i].cons) {
                         let mut stmts = s.cases.remove(i).cons;
+                        let mut cases = s.cases.drain(i..);
 
-                        remove_break(&mut stmts);
+                        while let Some(case) = cases.next() {
+                            let should_stop = has_unconditional_stopper(&case.cons);
+                            stmts.extend(case.cons);
+                            //
+                            if should_stop {
+                                break;
+                            }
+                        }
 
-                        let decls = s
-                            .cases
+                        let mut stmts = remove_break(stmts);
+
+                        let decls = cases
                             .into_iter()
                             .flat_map(|case| case.cons)
                             .flat_map(|stmt| stmt.extract_var_ids())
@@ -505,8 +534,8 @@ impl Fold<Stmt> for Remover<'_> {
                             let idx = s.cases.iter().position(|v| v.test.is_none());
                             if let Some(i) = idx {
                                 if !has_conditional_stopper(&s.cases[i].cons) {
-                                    let mut stmts = s.cases.remove(i).cons;
-                                    remove_break(&mut stmts);
+                                    let stmts = s.cases.remove(i).cons;
+                                    let stmts = remove_break(stmts);
 
                                     return Stmt::Block(BlockStmt {
                                         span: s.span,
@@ -522,14 +551,29 @@ impl Fold<Stmt> for Remover<'_> {
 
                 if is_matching_literal {
                     let mut idx = 0usize;
+                    let mut breaked = false;
                     // Remove unmatchable cases.
                     s.cases = s.cases.move_flat_map(|case| {
                         if non_constant_case_idx.is_some() && idx >= non_constant_case_idx.unwrap()
                         {
+                            idx += 1;
                             return Some(case);
                         }
 
-                        if selected == Some(idx) {
+                        // Detect unconditional break;
+                        if selected.is_some() && selected <= Some(idx) {
+                            // Done.
+                            if breaked {
+                                idx += 1;
+                                return None;
+                            }
+
+                            if !breaked {
+                                // has unconditional break
+                                breaked |= has_unconditional_stopper(&case.cons);
+                            }
+
+                            idx += 1;
                             return Some(case);
                         }
 
@@ -566,8 +610,8 @@ impl Fold<Stmt> for Remover<'_> {
                         && is_all_case_empty
                         && !has_conditional_stopper(&s.cases.last().unwrap().cons)
                     {
-                        let mut stmts = s.cases.pop().unwrap().cons;
-                        remove_break(&mut stmts);
+                        let stmts = s.cases.pop().unwrap().cons;
+                        let stmts = remove_break(stmts);
                         return Stmt::Block(BlockStmt {
                             span: s.span,
                             stmts,
@@ -1353,7 +1397,15 @@ fn prepare_loop_body_for_inlining(stmt: Stmt) -> Stmt {
     BlockStmt { span, stmts }.into()
 }
 
+fn has_unconditional_stopper(s: &[Stmt]) -> bool {
+    check_for_stopper(s, false)
+}
+
 fn has_conditional_stopper(s: &[Stmt]) -> bool {
+    check_for_stopper(s, true)
+}
+
+fn check_for_stopper(s: &[Stmt], only_conditional: bool) -> bool {
     struct Visitor {
         in_cond: bool,
         found: bool,
@@ -1420,7 +1472,7 @@ fn has_conditional_stopper(s: &[Stmt]) -> bool {
     }
 
     let mut v = Visitor {
-        in_cond: false,
+        in_cond: !only_conditional,
         found: false,
     };
     s.visit_with(&mut v);
