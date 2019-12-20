@@ -362,7 +362,6 @@ impl Fold<Stmt> for Remover {
                     })
                 };
 
-                let has_default = s.cases.iter().any(|case| case.test.is_none());
                 let is_matching_literal = match *s.discriminant {
                     Expr::Lit(Lit::Str(..))
                     | Expr::Lit(Lit::Null(..))
