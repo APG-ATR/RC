@@ -545,6 +545,20 @@ fn test_optimize_switch_4() {
         "foo()",
     );
 
+    // TODO:
+    //test(
+    //    concat!(
+    //        "let x;", //
+    //        "switch (use(x)) {",
+    //        "  default: {let y;}",
+    //        "}",
+    //    ),
+    //    concat!(
+    //        "let x;", //
+    //        "use(x);", "{let y}",
+    //    ),
+    //);
+
     test(
         concat!(
             "let x;", //
@@ -554,7 +568,7 @@ fn test_optimize_switch_4() {
         ),
         concat!(
             "let x;", //
-            "use(x);", "{let y}",
+            "use(x); { let y; }",
         ),
     );
 
@@ -566,9 +580,8 @@ fn test_optimize_switch_4() {
             "}",
         ),
         concat!(
-            "let x;",  //
-            "use(x);", //
-            "{let y}",
+            "let x;", //
+            "{ use(x); let y; }",
         ),
     );
 }
