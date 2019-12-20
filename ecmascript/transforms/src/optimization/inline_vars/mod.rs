@@ -92,7 +92,11 @@ impl Scope<'_> {
 
     fn find(&self, i: &Ident) -> Option<RefMut<VarInfo>> {
         if self.vars.borrow().get(&id(i)).is_none() {
-            return self.parent.and_then(|p| p.find(i));
+            let r = self.parent.and_then(|p| p.find(i))?;
+            return match r.value {
+                Some(Expr::This(..)) => None,
+                _ => Some(r),
+            };
         }
 
         let r = RefMut::map(self.vars.borrow_mut(), |vars| {
