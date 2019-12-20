@@ -1673,6 +1673,7 @@ pub fn prop_name_eq(p: &PropName, key: &str) -> bool {
 
 pub type Id = (JsWord, SyntaxContext);
 
+#[inline(always)]
 pub fn id(i: &Ident) -> Id {
     (i.sym.clone(), i.span.ctxt())
 }
