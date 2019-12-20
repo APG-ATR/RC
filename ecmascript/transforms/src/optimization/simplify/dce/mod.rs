@@ -1351,16 +1351,16 @@ fn has_conditional_stopper(s: &[Stmt]) -> bool {
     }
 
     impl Visit<BreakStmt> for Visitor {
-        fn visit(&mut self, _: &BreakStmt) {
-            if self.in_cond {
+        fn visit(&mut self, s: &BreakStmt) {
+            if self.in_cond && s.label.is_none() {
                 self.found = true
             }
         }
     }
 
     impl Visit<ContinueStmt> for Visitor {
-        fn visit(&mut self, _: &ContinueStmt) {
-            if self.in_cond {
+        fn visit(&mut self, s: &ContinueStmt) {
+            if self.in_cond && s.label.is_none() {
                 self.found = true
             }
         }
