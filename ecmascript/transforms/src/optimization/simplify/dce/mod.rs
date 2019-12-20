@@ -644,6 +644,27 @@ impl Fold<ObjectPatProp> for Remover<'_> {
     }
 }
 
+impl Fold<SwitchStmt> for Remover<'_> {
+    fn fold(&mut self, s: SwitchStmt) -> SwitchStmt {
+        let s: SwitchStmt = s.fold_children(self);
+
+        if s.cases.iter().all(|case| {
+            if case.cons.is_empty() {
+                return true;
+            }
+
+            match case.cons[0] {
+                Stmt::Break(BreakStmt { label: None, .. }) => true,
+                _ => false,
+            }
+        }) {
+            return SwitchStmt { cases: vec![], ..s };
+        }
+
+        s
+    }
+}
+
 impl Fold<SeqExpr> for Remover<'_> {
     fn fold(&mut self, e: SeqExpr) -> SeqExpr {
         let mut e: SeqExpr = e.fold_children(self);
