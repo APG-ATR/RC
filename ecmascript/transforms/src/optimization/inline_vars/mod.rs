@@ -7,7 +7,7 @@ use ast::*;
 use fxhash::FxHashMap;
 use serde::Deserialize;
 use std::{
-    cell::{Cell, Ref, RefCell},
+    cell::{Cell, Ref, RefCell, RefMut},
     collections::hash_map::Entry,
 };
 use swc_common::{fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, DUMMY_SP};
@@ -41,8 +41,8 @@ struct Scope<'a> {
 #[derive(Debug)]
 struct VarInfo {
     /// Count of usage.
-    cnt: Cell<usize>,
-    value: Expr,
+    cnt: usize,
+    value: Option<Expr>,
 }
 
 #[derive(Debug, Default)]
@@ -70,19 +70,16 @@ impl Inline<'_> {
 }
 
 impl Scope<'_> {
-    fn find(&self, i: &Ident) -> Option<Ref<Expr>> {
+    fn find(&self, i: &Ident) -> Option<RefMut<VarInfo>> {
         if self.vars.borrow().get(&id(i)).is_none() {
-            return self.parent.and_then(|p| p.find(i)).and_then(|e| match *e {
-                Expr::This(..) => None,
-                _ => Some(e),
-            });
+            return self.parent.and_then(|p| p.find(i));
         }
 
-        let r = Ref::map(self.vars.borrow(), |vars| {
+        let r = RefMut::map(self.vars.borrow_mut(), |vars| {
             //
-            let var_info = vars.get(&id(i)).unwrap();
+            let var_info = vars.get_mut(&id(i)).unwrap();
 
-            &var_info.value
+            var_info
         });
         Some(r)
     }
@@ -94,18 +91,18 @@ impl Scope<'_> {
         }
     }
 
-    fn remove(&self, i: &Ident) {
-        fn rem(s: &Scope, i: Id) {
-            s.vars.borrow_mut().remove(&i);
-
-            match s.parent {
-                Some(ref p) => rem(p, i),
-                _ => {}
-            }
-        }
-
-        rem(self, id(i))
-    }
+    //    fn remove(&self, i: &Ident) {
+    //        fn rem(s: &Scope, i: Id) {
+    //            s.vars.borrow_mut().remove(&i);
+    //
+    //            match s.parent {
+    //                Some(ref p) => rem(p, i),
+    //                _ => {}
+    //            }
+    //        }
+    //
+    //        rem(self, id(i))
+    //    }
 }
 
 impl Fold<Function> for Inline<'_> {
@@ -172,8 +169,12 @@ impl Fold<Expr> for Inline<'_> {
 
         match e {
             Expr::Ident(ref i) => {
-                if let Some(e) = self.scope.find(i) {
-                    return e.clone();
+                if let Some(mut var) = self.scope.find(i) {
+                    if let Some(ref e) = (*var).value {
+                        return e.clone();
+                    } else {
+                        var.cnt += 1;
+                    }
                 }
             }
             _ => {}
@@ -197,11 +198,14 @@ impl Inline<'_> {
                 id(i),
                 VarInfo {
                     cnt: Default::default(),
-                    value: e.clone(),
+                    value: Some(e.clone()),
                 },
             );
         } else {
-            self.scope.remove(i)
+            if let Some(mut info) = self.scope.find(i) {
+                info.cnt += 1;
+                (*info).value = None;
+            }
         }
     }
 }
@@ -239,7 +243,7 @@ where
                                             return Some(decl);
                                         };
 
-                                        if var.cnt.take() == 0 {
+                                        if var.cnt == 0 {
                                             None
                                         } else {
                                             Some(decl)
