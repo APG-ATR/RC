@@ -348,6 +348,8 @@ impl Fold<Stmt> for Remover<'_> {
 
             Stmt::Switch(mut s) => {
                 let remove_break = |stmts: &mut Vec<Stmt>| {
+                    debug_assert!(!has_conditional_stopper(&*stmts));
+
                     let mut done = false;
                     stmts.retain(|v| {
                         if done {
@@ -367,6 +369,7 @@ impl Fold<Stmt> for Remover<'_> {
                     })
                 };
 
+                // Remove empty switch
                 if s.cases.is_empty() {
                     match ignore_result(*s.discriminant) {
                         Some(expr) => {
@@ -379,6 +382,7 @@ impl Fold<Stmt> for Remover<'_> {
                     }
                 }
 
+                // Handle a switch statement with only default.
                 if s.cases.len() == 1
                     && s.cases[0].test.is_none()
                     && !has_conditional_stopper(&s.cases[0].cons)
@@ -475,6 +479,20 @@ impl Fold<Stmt> for Remover<'_> {
                     }
                 }
 
+                let mut var_ids = vec![];
+                s.cases = s.cases.move_flat_map(|case| match case.test {
+                    Some(box Expr::Lit(Lit::Num(..)))
+                    | Some(box Expr::Lit(Lit::Str(..)))
+                    | Some(box Expr::Lit(Lit::Null(..))) => {
+                        case.cons
+                            .into_iter()
+                            .for_each(|stmt| var_ids.extend(stmt.extract_var_ids()));
+
+                        None
+                    }
+                    _ => Some(case),
+                });
+
                 let is_default_last = match s.cases.last() {
                     Some(SwitchCase { test: None, .. }) => true,
                     _ => false,
@@ -487,7 +505,10 @@ impl Fold<Stmt> for Remover<'_> {
                         .iter()
                         .all(|case| case.test.is_none() || case.cons.is_empty());
 
-                    if is_default_last && is_all_case_empty {
+                    if is_default_last
+                        && is_all_case_empty
+                        && !has_conditional_stopper(&s.cases.last().unwrap().cons)
+                    {
                         let mut stmts = s.cases.pop().unwrap().cons;
                         remove_break(&mut stmts);
                         return Stmt::Block(BlockStmt {
