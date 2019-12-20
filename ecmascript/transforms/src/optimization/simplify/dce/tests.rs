@@ -443,7 +443,7 @@ fn test_optimize_switch_1() {
     test(
         "switch ('repeated') {\ncase 'repeated':\n  foo();\n  break;\ncase 'repeated':\n  var \
          x=0;\n  break;\n}",
-        "var x; foo();",
+        "foo(); var x;",
     );
 
     // Can't remove cases if something useful is done.
