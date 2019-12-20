@@ -108,10 +108,10 @@ impl Scope<'_> {
         Some(r)
     }
 
-    fn take_var(&mut self, i: &Ident) -> Option<VarInfo> {
-        match self.vars.get_mut().entry(id(i)) {
+    fn take_var(&self, i: &Ident) -> Option<VarInfo> {
+        match self.vars.borrow_mut().entry(id(i)) {
             Entry::Occupied(o) => Some(o.remove()),
-            Entry::Vacant(..) => None,
+            Entry::Vacant(..) => self.parent.and_then(|p| p.take_var(i)),
         }
     }
 
@@ -158,11 +158,16 @@ impl Fold<AssignExpr> for Inline<'_> {
     fn fold(&mut self, e: AssignExpr) -> AssignExpr {
         let e = e.fold_children(self);
 
-        if e.op == op!("=") {
-            match e.left {
-                PatOrExpr::Pat(box Pat::Ident(ref i)) => self.store(i, &e.right, None),
-                _ => {}
+        match e.left {
+            PatOrExpr::Pat(box Pat::Ident(ref i)) => {
+                if e.op == op!("=") {
+                    self.store(i, &e.right, None)
+                } else {
+                    self.remove(i)
+                }
             }
+
+            _ => {}
         }
 
         e
@@ -195,6 +200,8 @@ impl Fold<Expr> for Inline<'_> {
             Expr::Ident(ref i) => {
                 if let Some(mut var) = self.scope.find(i) {
                     if let Some(ref e) = (*var).value {
+                        println!("inline: {}", i.sym);
+
                         return e.clone();
                     } else {
                         println!("cnt++; {}: usage", i.sym);
@@ -261,6 +268,14 @@ impl Inline<'_> {
             }
         }
     }
+
+    fn remove(&mut self, i: &Ident) {
+        if let Some(mut info) = self.scope.find(i) {
+            println!("inline_vars: {}: remove", i.sym);
+            info.cnt += 1;
+            (*info).value = None;
+        }
+    }
 }
 
 impl<T: StmtLike> Fold<Vec<T>> for Inline<'_>
@@ -281,36 +296,30 @@ where
             Some(match stmt.try_into_stmt() {
                 Ok(stmt) => T::from_stmt(match stmt {
                     Stmt::Decl(Decl::Var(mut var)) => {
-                        // This variable is block scoped, and if current block does not use the
-                        // variable, we can safely remove it.
-                        let is_block_scoped =
-                            var.kind == VarDeclKind::Let || var.kind == VarDeclKind::Const;
+                        var.decls = var.decls.move_flat_map(|decl| {
+                            match decl.name {
+                                Pat::Ident(ref i) => {
+                                    let var = if let Some(var) = self.scope.take_var(i) {
+                                        println!("inline_vars: {}: {}", i.sym, var.cnt);
+                                        var
+                                    } else {
+                                        println!("inline_vars: {}: no var", i.sym);
 
-                        if is_block_scoped
-                            || (var.kind == VarDeclKind::Var && self.scope.kind == ScopeKind::Fn)
-                        {
-                            var.decls = var.decls.move_flat_map(|decl| {
-                                match decl.name {
-                                    Pat::Ident(ref i) => {
-                                        let var = if let Some(var) = self.scope.take_var(i) {
-                                            var
-                                        } else {
-                                            return Some(decl);
-                                        };
+                                        return Some(decl);
+                                    };
 
-                                        if var.cnt == 0 {
-                                            None
-                                        } else {
-                                            Some(decl)
-                                        }
-                                    }
-                                    _ => {
-                                        // Be conservative
+                                    if var.cnt == 0 {
+                                        None
+                                    } else {
                                         Some(decl)
                                     }
                                 }
-                            });
-                        }
+                                _ => {
+                                    // Be conservative
+                                    Some(decl)
+                                }
+                            }
+                        });
 
                         if var.decls.is_empty() {
                             return None;
