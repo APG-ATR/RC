@@ -379,7 +379,10 @@ impl Fold<Stmt> for Remover<'_> {
                     }
                 }
 
-                if s.cases.len() == 1 && s.cases[0].test.is_none() {
+                if s.cases.len() == 1
+                    && s.cases[0].test.is_none()
+                    && !has_conditional_stopper(&s.cases[0].cons)
+                {
                     let mut stmts = s.cases.remove(0).cons;
                     remove_break(&mut stmts);
 
@@ -415,53 +418,57 @@ impl Fold<Stmt> for Remover<'_> {
                 });
 
                 if let Some(i) = selected {
-                    let mut stmts = s.cases.remove(i).cons;
+                    if !has_conditional_stopper(&s.cases[i].cons) {
+                        let mut stmts = s.cases.remove(i).cons;
 
-                    remove_break(&mut stmts);
+                        remove_break(&mut stmts);
 
-                    let decls = s
-                        .cases
-                        .into_iter()
-                        .flat_map(|case| case.cons)
-                        .flat_map(|stmt| stmt.extract_var_ids())
-                        .map(|i| VarDeclarator {
-                            span: DUMMY_SP,
-                            name: Pat::Ident(i),
-                            init: None,
-                            definite: false,
-                        })
-                        .collect::<Vec<_>>();
-
-                    if !decls.is_empty() {
-                        prepend(
-                            &mut stmts,
-                            Stmt::Decl(Decl::Var(VarDecl {
+                        let decls = s
+                            .cases
+                            .into_iter()
+                            .flat_map(|case| case.cons)
+                            .flat_map(|stmt| stmt.extract_var_ids())
+                            .map(|i| VarDeclarator {
                                 span: DUMMY_SP,
-                                kind: VarDeclKind::Var,
-                                decls,
-                                declare: false,
-                            })),
-                        );
-                    }
+                                name: Pat::Ident(i),
+                                init: None,
+                                definite: false,
+                            })
+                            .collect::<Vec<_>>();
 
-                    return Stmt::Block(BlockStmt {
-                        span: s.span,
-                        stmts,
-                    })
-                    .fold_with(self);
+                        if !decls.is_empty() {
+                            prepend(
+                                &mut stmts,
+                                Stmt::Decl(Decl::Var(VarDecl {
+                                    span: DUMMY_SP,
+                                    kind: VarDeclKind::Var,
+                                    decls,
+                                    declare: false,
+                                })),
+                            );
+                        }
+
+                        return Stmt::Block(BlockStmt {
+                            span: s.span,
+                            stmts,
+                        })
+                        .fold_with(self);
+                    }
                 } else {
                     match *s.discriminant {
                         Expr::Lit(..) => {
                             let idx = s.cases.iter().position(|v| v.test.is_none());
                             if let Some(i) = idx {
-                                let mut stmts = s.cases.remove(i).cons;
-                                remove_break(&mut stmts);
+                                if !has_conditional_stopper(&s.cases[i].cons) {
+                                    let mut stmts = s.cases.remove(i).cons;
+                                    remove_break(&mut stmts);
 
-                                return Stmt::Block(BlockStmt {
-                                    span: s.span,
-                                    stmts,
-                                })
-                                .fold_with(self);
+                                    return Stmt::Block(BlockStmt {
+                                        span: s.span,
+                                        stmts,
+                                    })
+                                    .fold_with(self);
+                                }
                             }
                         }
                         _ => {}
@@ -492,38 +499,43 @@ impl Fold<Stmt> for Remover<'_> {
                 }
 
                 // No case can be matched.
-                if match *s.discriminant {
-                    Expr::Lit(Lit::Str(..))
-                    | Expr::Lit(Lit::Null(..))
-                    | Expr::Lit(Lit::Num(..)) => true,
-                    _ => false,
-                } && s.cases.iter().all(|case| match case.test {
-                    Some(box Expr::Lit(Lit::Str(..)))
-                    | Some(box Expr::Lit(Lit::Null(..)))
-                    | Some(box Expr::Lit(Lit::Num(..))) => true,
-                    _ => false,
-                }) {
-                    // Preserve variables
-                    let decls: Vec<_> = s
-                        .cases
-                        .into_iter()
-                        .flat_map(|case| extract_var_ids(&case.cons))
-                        .map(|i| VarDeclarator {
-                            span: i.span,
-                            name: Pat::Ident(i),
-                            init: None,
-                            definite: false,
-                        })
-                        .collect();
-                    if !decls.is_empty() {
-                        return Stmt::Decl(Decl::Var(VarDecl {
-                            span: DUMMY_SP,
-                            kind: VarDeclKind::Var,
-                            decls,
-                            declare: false,
-                        }));
+                if s.cases
+                    .iter()
+                    .all(|case| !has_conditional_stopper(&case.cons))
+                {
+                    if match *s.discriminant {
+                        Expr::Lit(Lit::Str(..))
+                        | Expr::Lit(Lit::Null(..))
+                        | Expr::Lit(Lit::Num(..)) => true,
+                        _ => false,
+                    } && s.cases.iter().all(|case| match case.test {
+                        Some(box Expr::Lit(Lit::Str(..)))
+                        | Some(box Expr::Lit(Lit::Null(..)))
+                        | Some(box Expr::Lit(Lit::Num(..))) => true,
+                        _ => false,
+                    }) {
+                        // Preserve variables
+                        let decls: Vec<_> = s
+                            .cases
+                            .into_iter()
+                            .flat_map(|case| extract_var_ids(&case.cons))
+                            .map(|i| VarDeclarator {
+                                span: i.span,
+                                name: Pat::Ident(i),
+                                init: None,
+                                definite: false,
+                            })
+                            .collect();
+                        if !decls.is_empty() {
+                            return Stmt::Decl(Decl::Var(VarDecl {
+                                span: DUMMY_SP,
+                                kind: VarDeclKind::Var,
+                                decls,
+                                declare: false,
+                            }));
+                        }
+                        return Stmt::Empty(EmptyStmt { span: s.span });
                     }
-                    return Stmt::Empty(EmptyStmt { span: s.span });
                 }
 
                 SwitchStmt { ..s }.into()
