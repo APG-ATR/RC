@@ -4,6 +4,57 @@ use super::{inline_vars, Config};
 use crate::resolver;
 use swc_common::chain;
 
+macro_rules! to {
+    ($name:ident, $src:expr, $expected:expr) => {
+        test!(
+            Default::default(),
+            |_| chain!(resolver(), inline_vars(Default::default())),
+            $name,
+            $src,
+            $expected
+        );
+    };
+}
+
+macro_rules! to_fn {
+    ($name:ident, $src:expr, $expected:expr) => {
+        to!(
+            $name,
+            &format!(
+                "function wtf(){{
+                    {}
+             }}",
+                $src
+            ),
+            &format!(
+                "function wtf(){{
+                    {}
+             }}",
+                $expected
+            )
+        );
+    };
+}
+
+macro_rules! identical {
+    ($name:ident, $src:expr) => {
+        to!($name, $src, $src);
+    };
+}
+
+macro_rules! identical_fn {
+    ($name:ident, $src:expr) => {
+        to_fn!($name, $src, $src);
+    };
+}
+
+macro_rules! identical_all {
+    ($ti:ident, $fi:ident, $src:expr) => {
+        identical!($ti, $src);
+        identical_fn!($fi, $src);
+    };
+}
+
 fn test_cfg(c: Config, src: &str, expected: &str) {
     test_transform!(
         ::swc_ecma_parser::Syntax::default(),
@@ -23,10 +74,9 @@ fn test_same(s: &str) {
     test(s, s)
 }
 
-#[test]
-fn test_pass_doesnt_produce_invalid_code1() {
-    test_same(
-        "function f(x = void 0) {
+identical!(
+    does_not_produce_invalid_code_1,
+    "function f(x = void 0) {
   var z;
     {
      const y = {};
@@ -34,16 +84,13 @@ fn test_pass_doesnt_produce_invalid_code1() {
      z = y;
    }
    return z;
-}",
-    );
-}
+}"
+);
 
-#[test]
-fn test_pass_doesnt_produce_invalid_code2() {
-    test_same(concat!(
-        "function f(x = void 0) {{var z;const y = {};x && (y['x'] = x);z = y;}return z;}",
-    ));
-}
+identical!(
+    does_not_produce_invalid_code_2,
+    "function f(x = void 0) {{var z;const y = {};x && (y['x'] = x);z = y;}return z;}"
+);
 
 #[test]
 fn test_pass_doesnt_produce_invalid_code3() {
@@ -53,37 +100,31 @@ fn test_pass_doesnt_produce_invalid_code3() {
     );
 }
 
-// Test respect for scopes and blocks
+to!(
+    top_level_simple_var,
+    "var a = 1; var b = a;",
+    "var a = 1; var b = 1;"
+);
 
-#[test]
-fn test_inline_global() {
-    test("var x = 1; var z = x;", "var z = 1;");
-}
+to_fn!(
+    function_scope_simple_var,
+    "var a = 1;
+    var b = a;
+    use(b);",
+    "use(1);"
+);
 
-#[test]
-fn test_no_inline_annotation() {
-    test_same("/** @noinline */ var x = 1; var z = x;");
-}
+identical_all!(
+    top_level_increment,
+    function_scope_increment,
+    "var x = 1; x++;"
+);
 
-#[test]
-fn test_no_inline_exported_name() {
-    test_same("var _x = 1; var z = _x;");
-}
-
-#[test]
-fn test_no_inline_exported_name2() {
-    test_same("var f = function() {}; var _x = f;var y = function() { _x(); }; var _y = f;");
-}
-
-#[test]
-fn test_do_not_inline_increment() {
-    test_same("var x = 1; x++;");
-}
-
-#[test]
-fn test_do_not_inline_decrement() {
-    test_same("var x = 1; x--;");
-}
+identical_all!(
+    top_level_decrement,
+    function_scope_decrement,
+    "var x = 1; x--;"
+);
 
 #[test]
 fn test_do_not_inline_into_lhs_of_assign() {
@@ -95,21 +136,18 @@ fn test_inline_into_rhs_of_assign() {
     test("var x = 1; var y = x;", "var y = 1;");
 }
 
-#[test]
-fn test_inline_in_function1() {
-    test(
-        "function baz() { var x = 1; var z = x; }",
-        "function baz() { var z = 1; }",
-    );
-}
+to_fn!(
+    simple_inline_in_fn,
+    "var x = 1; var z = x; use(z)",
+    "use(1)"
+);
 
-#[test]
-fn test_inline_in_function2() {
-    test(
-        "function baz() { var a = new obj();result = a;}",
-        "function baz() { result = new obj()}",
-    );
-}
+to_fn!(
+    unresolved_inline_in_fn,
+    "var a = new obj();
+    result = a;",
+    "result = new obj()"
+);
 
 #[test]
 fn test_inline_in_function3() {
@@ -126,13 +164,13 @@ fn test_inline_in_function5() {
     test_same("function baz() { var a = (foo = new obj());foo.x();result = a;}");
 }
 
-#[test]
-fn test_inline_in_function6() {
-    test(
-        "function baz() { { var x = 1; var z = x; } }",
-        "function baz() { { var z = 1; } }",
-    );
-}
+to_fn!(block_in_fn_compiled_out, "{ var x = 1; var z = x; }", "");
+
+to_fn!(
+    block_in_fn,
+    "{ var x = 1; var z = x; use(z); }",
+    "{ use(1) }"
+);
 
 #[test]
 fn test_inline_in_function7() {
@@ -155,25 +193,29 @@ fn test_inline_into_arrow_function2() {
     );
 }
 
-#[test]
-fn test_do_not_exit_conditional1() {
-    test_same("if (true) { var x = 1; } var z = x;");
-}
+identical_all!(
+    cond_true_1,
+    cond_true_1_fn,
+    "if (true) { var x = 1; } var z = x;"
+);
 
-#[test]
-fn test_do_not_exit_conditional2() {
-    test_same("if (true) var x = 1; var z = x;");
-}
+identical_all!(
+    cond_true_2,
+    cond_true_2_fn,
+    "if (true) var x = 1; var z = x;"
+);
 
-#[test]
-fn test_do_not_exit_conditional3() {
-    test_same("var x; if (true) x=1; var z = x;");
-}
+identical_all!(
+    cond_true_3,
+    cond_true_3_fn,
+    "var x; if (true) x=1; var z = x;"
+);
 
-#[test]
-fn test_do_not_exit_loop() {
-    test_same("while (z) { var x = 3; } var y = x;");
-}
+identical_all!(
+    while_loop,
+    while_loop_fn,
+    "while (z) { var x = 3; } var y = x;"
+);
 
 #[test]
 fn test_do_not_exit_for_loop() {
@@ -1448,11 +1490,36 @@ fn test_destructuring() {
     test_same("var x = 1; ({[0]: x} = {});");
 }
 
-#[test]
-fn test_function_inlined_across_script() {
-    test(
-        "function f() {}
-use(f);",
-        "use(function f() {});",
-    );
+identical!(
+    function_scope_var_1,
+    "var x = 1;
+function foo(){
+    x = 2;
 }
+use(x);
+"
+);
+
+identical!(
+    function_scope_var_2,
+    "(function(){
+        var x = 1;
+        function foo(){
+            x = 2;
+        }
+        use(x);
+    }());"
+);
+
+identical!(
+    top_level_does_not_inline_fn_decl,
+    "function foo(){}
+    use(foo);"
+);
+
+to_fn!(
+    inline_fn_decl,
+    "function foo() {}
+    use(foo);",
+    "use(function foo() {})"
+);
