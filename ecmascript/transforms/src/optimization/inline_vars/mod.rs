@@ -19,7 +19,12 @@ mod tests;
 /// of the google closure compiler.
 pub fn inline_vars(_: Config) -> impl 'static + Pass {
     Inline {
-        scope: Default::default(),
+        scope: Scope {
+            parent: None,
+            // This is important.
+            kind: ScopeKind::Block,
+            vars: Default::default(),
+        },
         top_level: true,
     }
 }
@@ -30,7 +35,7 @@ pub struct Config {
     pub locals_only: bool,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct Scope<'a> {
     parent: Option<&'a Scope<'a>>,
     kind: ScopeKind,
@@ -45,7 +50,7 @@ struct VarInfo {
     value: Option<Expr>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct Inline<'a> {
     scope: Scope<'a>,
     top_level: bool,
@@ -233,7 +238,9 @@ where
                         let is_block_scoped =
                             var.kind == VarDeclKind::Let || var.kind == VarDeclKind::Const;
 
-                        if is_block_scoped || (var.kind == VarDeclKind::Var && !top_level) {
+                        if is_block_scoped
+                            || (var.kind == VarDeclKind::Var && self.scope.kind == ScopeKind::Fn)
+                        {
                             var.decls = var.decls.move_flat_map(|decl| {
                                 match decl.name {
                                     Pat::Ident(ref i) => {
