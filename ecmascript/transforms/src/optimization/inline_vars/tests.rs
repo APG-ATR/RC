@@ -1413,26 +1413,19 @@ identical_all!(for_of_1, for_of_1_fn, "var i = 0; for(i of n) {}");
 
 identical_all!(for_of_2, for_of_2_fn, "for( var i of n) { var x = i; }");
 
-to_all!(
+to_fn!(
     tpl_lit_1,
-    tpl_lit_1_fn,
     "var name = 'Foo'; `Hello ${name}`",
     "`Hello ${'Foo'}`"
 );
 
-to_all!(
+to_fn!(
     tpl_lit_2,
-    tpl_lit_2_fn,
     "var name = 'Foo'; var foo = name; `Hello ${foo}`",
     "`Hello ${'Foo'}`"
 );
 
-to_all!(
-    tpl_lit_3,
-    tpl_lit_3_fn,
-    "var age = 3; `Age: ${age}`",
-    "`Age: ${3}`"
-);
+to_fn!(tpl_lit_3, "var age = 3; `Age: ${age}`", "`Age: ${3}`");
 
 #[test]
 fn test_tagged_template_literals() {
