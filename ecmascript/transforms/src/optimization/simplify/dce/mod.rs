@@ -3,7 +3,6 @@ use crate::{
     util::{StmtLike, *},
 };
 use ast::*;
-use fxhash::FxHashMap;
 use std::{cmp::min, iter::once};
 use swc_atoms::js_word;
 use swc_common::{
@@ -19,32 +18,16 @@ pub fn dce() -> impl Pass + 'static {
 }
 
 #[derive(Debug, Default)]
-struct Remover<'a> {
-    scope: Scope<'a>,
-    not_top_level: bool,
+struct Remover {
     normal_block: bool,
 }
 
-#[derive(Debug, Default)]
-struct Scope<'a> {
-    parent: Option<&'a Scope<'a>>,
-    vars: FxHashMap<Id, VarInfo>,
-}
-
-#[derive(Debug, Default)]
-struct VarInfo {
-    /// Count of usage.
-    cnt: usize,
-}
-
-impl<T: StmtLike> Fold<Vec<T>> for Remover<'_>
+impl<T: StmtLike> Fold<Vec<T>> for Remover
 where
     Self: Fold<T>,
     T: VisitWith<Hoister>,
 {
     fn fold(&mut self, stmts: Vec<T>) -> Vec<T> {
-        let top_level = !self.not_top_level;
-        self.not_top_level = true;
         let is_block_stmt = self.normal_block;
         self.normal_block = false;
 
@@ -170,20 +153,6 @@ where
                             }
                         }
 
-                        Stmt::Decl(Decl::Var(var)) => {
-                            let mut idents = vec![];
-                            let mut v = DestructuringFinder { found: &mut idents };
-                            var.visit_with(&mut v);
-
-                            self.scope.vars.extend(
-                                idents
-                                    .into_iter()
-                                    .map(|(sym, span)| ((sym, span.ctxt()), VarInfo::default())),
-                            );
-
-                            Stmt::Decl(Decl::Var(var))
-                        }
-
                         _ => stmt,
                     };
 
@@ -199,7 +168,7 @@ where
     }
 }
 
-impl Fold<Stmt> for Remover<'_> {
+impl Fold<Stmt> for Remover {
     fn fold(&mut self, stmt: Stmt) -> Stmt {
         let stmt = stmt.fold_children(self);
 
@@ -775,7 +744,7 @@ impl Fold<Stmt> for Remover<'_> {
     }
 }
 
-impl Fold<Pat> for Remover<'_> {
+impl Fold<Pat> for Remover {
     fn fold(&mut self, p: Pat) -> Pat {
         let p = p.fold_children(self);
 
@@ -810,7 +779,7 @@ impl Fold<Pat> for Remover<'_> {
     }
 }
 
-impl Fold<ArrayPat> for Remover<'_> {
+impl Fold<ArrayPat> for Remover {
     fn fold(&mut self, p: ArrayPat) -> ArrayPat {
         let mut p: ArrayPat = p.fold_children(self);
 
@@ -836,7 +805,7 @@ impl Fold<ArrayPat> for Remover<'_> {
     }
 }
 
-impl Fold<ObjectPat> for Remover<'_> {
+impl Fold<ObjectPat> for Remover {
     fn fold(&mut self, p: ObjectPat) -> ObjectPat {
         let mut p = p.fold_children(self);
 
@@ -874,7 +843,7 @@ impl Fold<ObjectPat> for Remover<'_> {
     }
 }
 
-impl Fold<ObjectPatProp> for Remover<'_> {
+impl Fold<ObjectPatProp> for Remover {
     fn fold(&mut self, p: ObjectPatProp) -> ObjectPatProp {
         let p = p.fold_children(self);
 
@@ -907,7 +876,7 @@ impl Fold<ObjectPatProp> for Remover<'_> {
     }
 }
 
-impl Fold<SwitchStmt> for Remover<'_> {
+impl Fold<SwitchStmt> for Remover {
     fn fold(&mut self, s: SwitchStmt) -> SwitchStmt {
         let s: SwitchStmt = s.fold_children(self);
 
@@ -928,7 +897,7 @@ impl Fold<SwitchStmt> for Remover<'_> {
     }
 }
 
-impl Fold<SeqExpr> for Remover<'_> {
+impl Fold<SeqExpr> for Remover {
     fn fold(&mut self, e: SeqExpr) -> SeqExpr {
         let mut e: SeqExpr = e.fold_children(self);
         if e.exprs.is_empty() {
@@ -943,7 +912,7 @@ impl Fold<SeqExpr> for Remover<'_> {
     }
 }
 
-impl Fold<Expr> for Remover<'_> {
+impl Fold<Expr> for Remover {
     fn fold(&mut self, e: Expr) -> Expr {
         let e: Expr = e.fold_children(self);
 
@@ -1004,7 +973,7 @@ impl Fold<Expr> for Remover<'_> {
     }
 }
 
-impl Fold<ForStmt> for Remover<'_> {
+impl Fold<ForStmt> for Remover {
     fn fold(&mut self, s: ForStmt) -> ForStmt {
         let s = s.fold_children(self);
 
