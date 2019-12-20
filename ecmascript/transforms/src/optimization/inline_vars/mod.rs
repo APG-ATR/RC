@@ -75,6 +75,21 @@ impl Inline<'_> {
 }
 
 impl Scope<'_> {
+    /// Find a scope with kind == ScopeKind::Fn
+    fn find_fn_scope(&self) -> Option<&Self> {
+        match self.kind {
+            ScopeKind::Fn => Some(self),
+            _ => self.parent.and_then(|p| p.find_fn_scope()),
+        }
+    }
+
+    fn scope_for(&self, i: &Ident) -> Option<&Self> {
+        match self.vars.borrow().get(&id(i)) {
+            Some(..) => Some(self),
+            None => self.parent.and_then(|p| p.scope_for(i)),
+        }
+    }
+
     fn find(&self, i: &Ident) -> Option<RefMut<VarInfo>> {
         if self.vars.borrow().get(&id(i)).is_none() {
             return self.parent.and_then(|p| p.find(i));
@@ -141,7 +156,7 @@ impl Fold<AssignExpr> for Inline<'_> {
 
         if e.op == op!("=") {
             match e.left {
-                PatOrExpr::Pat(box Pat::Ident(ref i)) => self.store(i, &e.right),
+                PatOrExpr::Pat(box Pat::Ident(ref i)) => self.store(i, &e.right, None),
                 _ => {}
             }
         }
@@ -157,8 +172,8 @@ impl Fold<VarDecl> for Inline<'_> {
         for decl in &v.decls {
             match decl.name {
                 Pat::Ident(ref i) => match decl.init {
-                    Some(ref e) => self.store(i, e),
-                    None => self.store(i, &*undefined(DUMMY_SP)),
+                    Some(ref e) => self.store(i, e, Some(v.kind)),
+                    None => self.store(i, &*undefined(DUMMY_SP), Some(v.kind)),
                 },
                 _ => {}
             }
@@ -197,15 +212,41 @@ impl Inline<'_> {
         }
     }
 
-    fn store(&mut self, i: &Ident, e: &Expr) {
+    fn store(&mut self, i: &Ident, e: &Expr, kind: Option<VarDeclKind>) {
         if self.should_store(e) {
-            self.scope.vars.borrow_mut().insert(
-                id(i),
-                VarInfo {
-                    cnt: Default::default(),
-                    value: Some(e.clone()),
-                },
-            );
+            match kind {
+                // Not hoisted
+                Some(VarDeclKind::Let) | Some(VarDeclKind::Const) => {
+                    self.scope.vars.borrow_mut().insert(
+                        id(i),
+                        VarInfo {
+                            cnt: Default::default(),
+                            value: Some(e.clone()),
+                        },
+                    );
+                }
+
+                // Hoisted
+                Some(VarDeclKind::Var) => {
+                    if let Some(fn_scope) = self.scope.find_fn_scope() {
+                        fn_scope.vars.borrow_mut().insert(
+                            id(i),
+                            VarInfo {
+                                cnt: Default::default(),
+                                value: Some(e.clone()),
+                            },
+                        );
+                    }
+                }
+
+                None => {
+                    if let Some(scope) = self.scope.scope_for(i) {
+                        if let Some(v) = scope.vars.borrow_mut().get_mut(&id(i)) {
+                            v.cnt += 1;
+                        }
+                    }
+                }
+            }
         } else {
             if let Some(mut info) = self.scope.find(i) {
                 info.cnt += 1;
