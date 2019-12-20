@@ -867,7 +867,7 @@ fn test_optimize_switch_with_default_case() {
             "    break;",
             "}",
         ),
-        "l:{ if (a) { break l; } bar(); }",
+        "l:{ if (a) break l; bar(); }",
     );
 
     test(
