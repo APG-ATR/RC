@@ -20,8 +20,8 @@ fn test(src: &str, expected: &str) {
     } else {
         test_cfg(
             Default::default(),
-            &format!("function(){{ {} }}", src),
-            &format!("function(){{ {} }}", expected),
+            &format!("function wtf(){{ {} }}", src),
+            &format!("function wtf(){{ {} }}", expected),
         )
     }
 }
