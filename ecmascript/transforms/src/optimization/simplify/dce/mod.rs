@@ -397,6 +397,9 @@ impl Fold<Stmt> for Remover<'_> {
                 {
                     let mut stmts = s.cases.remove(0).cons;
                     remove_break(&mut stmts);
+                    if let Some(expr) = ignore_result(*s.discriminant) {
+                        prepend(&mut stmts, expr.into_stmt());
+                    }
 
                     return Stmt::Block(BlockStmt {
                         span: s.span,
