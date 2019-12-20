@@ -218,9 +218,16 @@ impl Fold<Stmt> for Remover<'_> {
                     }
 
                     if v {
-                        if let Some(alt) = alt {}
+                        // Preserve variables
+                        if let Some(var) = alt.and_then(|alt| alt.extract_var_ids_as_var()) {
+                            stmts.push(Stmt::Decl(Decl::Var(var)))
+                        }
                         stmts.push(*cons);
                     } else {
+                        if let Some(var) = cons.extract_var_ids_as_var() {
+                            stmts.push(Stmt::Decl(Decl::Var(var)))
+                        }
+
                         if let Some(alt) = alt {
                             stmts.push(*alt)
                         }
