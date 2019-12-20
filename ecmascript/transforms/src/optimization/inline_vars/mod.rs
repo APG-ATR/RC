@@ -1,13 +1,13 @@
 use crate::{
     pass::Pass,
     scope::ScopeKind,
-    util::{id, Id},
+    util::{id, undefined, DestructuringFinder, Id, StmtLike},
 };
 use ast::*;
-use hashbrown::HashMap;
+use fxhash::FxHashMap;
 use serde::Deserialize;
-use std::cell::RefCell;
-use swc_common::{Fold, FoldWith};
+use std::cell::{Cell, Ref, RefCell};
+use swc_common::{fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, DUMMY_SP};
 
 #[cfg(test)]
 mod tests;
@@ -17,6 +17,7 @@ mod tests;
 pub fn inline_vars(_: Config) -> impl 'static + Pass {
     Inline {
         scope: Default::default(),
+        top_level: true,
     }
 }
 
@@ -27,8 +28,24 @@ pub struct Config {
 }
 
 #[derive(Debug, Default)]
+struct Scope<'a> {
+    parent: Option<&'a Scope<'a>>,
+    kind: ScopeKind,
+    /// Stored only if value is statically known.
+    vars: RefCell<FxHashMap<Id, VarInfo>>,
+}
+
+#[derive(Debug)]
+struct VarInfo {
+    /// Count of usage.
+    cnt: Cell<usize>,
+    value: Expr,
+}
+
+#[derive(Debug, Default)]
 struct Inline<'a> {
     scope: Scope<'a>,
+    top_level: bool,
 }
 
 impl Inline<'_> {
@@ -40,42 +57,36 @@ impl Inline<'_> {
             scope: Scope {
                 parent: Some(&self.scope),
                 kind,
-                idents: Default::default(),
+                vars: Default::default(),
             },
+            top_level: false,
         };
 
         op(&mut c)
     }
 }
 
-#[derive(Debug, Default)]
-struct Scope<'a> {
-    parent: Option<&'a Scope<'a>>,
-    kind: ScopeKind,
-    /// Stored only if value is statically known.
-    idents: RefCell<HashMap<Id, Expr>>,
-}
-
 impl Scope<'_> {
-    fn find(&self, i: &Ident) -> Option<Expr> {
-        if let Some(e) = self
-            .idents
-            .borrow()
-            .iter()
-            .find(|e| (e.0).0 == i.sym && (e.0).1 == i.span.ctxt())
-        {
-            return Some(e.1.clone());
+    fn find(&self, i: &Ident) -> Option<Ref<Expr>> {
+        if self.vars.borrow().get(&id(i)).is_none() {
+            return self.parent.and_then(|p| p.find(i)).and_then(|e| match *e {
+                Expr::This(..) => None,
+                _ => Some(e),
+            });
         }
 
-        match self.parent {
-            Some(ref p) => p.find(i),
-            None => None,
-        }
+        let r = Ref::map(self.vars.borrow(), |vars| {
+            //
+            let var_info = vars.get(&id(i)).unwrap();
+
+            &var_info.value
+        });
+        Some(r)
     }
 
     fn remove(&self, i: &Ident) {
         fn rem(s: &Scope, i: Id) {
-            s.idents.borrow_mut().remove(&i);
+            s.vars.borrow_mut().remove(&i);
 
             match s.parent {
                 Some(ref p) => rem(p, i),
@@ -106,18 +117,19 @@ impl Fold<BlockStmt> for Inline<'_> {
     }
 }
 
+impl Fold<SwitchCase> for Inline<'_> {
+    fn fold(&mut self, s: SwitchCase) -> SwitchCase {
+        self.child(ScopeKind::Block, |c| s.fold_children(c))
+    }
+}
+
 impl Fold<AssignExpr> for Inline<'_> {
     fn fold(&mut self, e: AssignExpr) -> AssignExpr {
         let e = e.fold_children(self);
 
         if e.op == op!("=") {
             match e.left {
-                PatOrExpr::Pat(box Pat::Ident(ref i)) => match *e.right {
-                    Expr::Lit(..) | Expr::Ident(..) => {
-                        self.scope.idents.get_mut().insert(id(i), *e.right.clone());
-                    }
-                    _ => self.scope.remove(i),
-                },
+                PatOrExpr::Pat(box Pat::Ident(ref i)) => self.store(i, &e.right),
                 _ => {}
             }
         }
@@ -133,10 +145,8 @@ impl Fold<VarDecl> for Inline<'_> {
         for decl in &v.decls {
             match decl.name {
                 Pat::Ident(ref i) => match decl.init {
-                    Some(ref e @ box Expr::Lit(..)) | Some(ref e @ box Expr::Ident(..)) => {
-                        self.scope.idents.get_mut().insert(id(i), *e.clone());
-                    }
-                    _ => self.scope.remove(i),
+                    Some(ref e) => self.store(i, e),
+                    None => self.store(i, &*undefined(DUMMY_SP)),
                 },
                 _ => {}
             }
@@ -153,12 +163,35 @@ impl Fold<Expr> for Inline<'_> {
         match e {
             Expr::Ident(ref i) => {
                 if let Some(e) = self.scope.find(i) {
-                    return e;
+                    return e.clone();
                 }
             }
             _ => {}
         }
 
         e
+    }
+}
+
+impl Inline<'_> {
+    fn should_store(&self, e: &Expr) -> bool {
+        match e {
+            Expr::Lit(..) | Expr::Ident(..) => true,
+            _ => false,
+        }
+    }
+
+    fn store(&mut self, i: &Ident, e: &Expr) {
+        if self.should_store(e) {
+            self.scope.vars.borrow_mut().insert(
+                id(i),
+                VarInfo {
+                    cnt: Default::default(),
+                    value: e.clone(),
+                },
+            );
+        } else {
+            self.scope.remove(i)
+        }
     }
 }
