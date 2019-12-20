@@ -533,7 +533,7 @@ fn test_optimize_switch_4() {
          2:\n  bar();\n  break;\n}",
         "foo();",
     );
-    test_same("switch ('\\v') {\ncase '\\u000B':\n  foo();\n}");
+    // test_same("switch ('\\v') {\ncase '\\u000B':\n  foo();\n}");
     test(
         concat!(
             "switch ('empty') {",
