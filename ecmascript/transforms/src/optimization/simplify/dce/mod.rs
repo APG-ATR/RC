@@ -369,6 +369,14 @@ impl Fold<Stmt> for Remover<'_> {
                     })
                 };
 
+                let has_default = s.cases.iter().any(|case| case.test.is_none());
+                let is_matching_literal = match *s.discriminant {
+                    Expr::Lit(Lit::Str(..))
+                    | Expr::Lit(Lit::Null(..))
+                    | Expr::Lit(Lit::Num(..)) => true,
+                    _ => false,
+                };
+
                 // Remove empty switch
                 if s.cases.is_empty() {
                     match ignore_result(*s.discriminant) {
@@ -421,6 +429,7 @@ impl Fold<Stmt> for Remover<'_> {
                     false
                 });
 
+                let mut var_ids = vec![];
                 if let Some(i) = selected {
                     if !has_conditional_stopper(&s.cases[i].cons) {
                         let mut stmts = s.cases.remove(i).cons;
@@ -479,19 +488,30 @@ impl Fold<Stmt> for Remover<'_> {
                     }
                 }
 
-                let mut var_ids = vec![];
-                s.cases = s.cases.move_flat_map(|case| match case.test {
-                    Some(box Expr::Lit(Lit::Num(..)))
-                    | Some(box Expr::Lit(Lit::Str(..)))
-                    | Some(box Expr::Lit(Lit::Null(..))) => {
-                        case.cons
-                            .into_iter()
-                            .for_each(|stmt| var_ids.extend(stmt.extract_var_ids()));
+                if is_matching_literal {
+                    let mut idx = 0;
+                    // Remove unmatchable cases.
+                    s.cases = s.cases.move_flat_map(|case| {
+                        if selected == Some(idx) {
+                            return Some(case);
+                        }
 
-                        None
-                    }
-                    _ => Some(case),
-                });
+                        let res = match case.test {
+                            Some(box Expr::Lit(Lit::Num(..)))
+                            | Some(box Expr::Lit(Lit::Str(..)))
+                            | Some(box Expr::Lit(Lit::Null(..))) => {
+                                case.cons
+                                    .into_iter()
+                                    .for_each(|stmt| var_ids.extend(stmt.extract_var_ids()));
+
+                                None
+                            }
+                            _ => Some(case),
+                        };
+                        idx += 1;
+                        res
+                    });
+                }
 
                 let is_default_last = match s.cases.last() {
                     Some(SwitchCase { test: None, .. }) => true,
@@ -519,27 +539,25 @@ impl Fold<Stmt> for Remover<'_> {
                     }
                 }
 
-                // No case can be matched.
-                if s.cases
-                    .iter()
-                    .all(|case| !has_conditional_stopper(&case.cons))
-                {
-                    if match *s.discriminant {
-                        Expr::Lit(Lit::Str(..))
-                        | Expr::Lit(Lit::Null(..))
-                        | Expr::Lit(Lit::Num(..)) => true,
-                        _ => false,
-                    } && s.cases.iter().all(|case| match case.test {
+                if is_matching_literal
+                    && s.cases.iter().all(|case| match case.test {
                         Some(box Expr::Lit(Lit::Str(..)))
                         | Some(box Expr::Lit(Lit::Null(..)))
                         | Some(box Expr::Lit(Lit::Num(..))) => true,
                         _ => false,
-                    }) {
+                    })
+                {
+                    // No case can be matched.
+                    if s.cases
+                        .iter()
+                        .all(|case| !has_conditional_stopper(&case.cons))
+                    {
                         // Preserve variables
                         let decls: Vec<_> = s
                             .cases
                             .into_iter()
                             .flat_map(|case| extract_var_ids(&case.cons))
+                            .chain(var_ids)
                             .map(|i| VarDeclarator {
                                 span: i.span,
                                 name: Pat::Ident(i),

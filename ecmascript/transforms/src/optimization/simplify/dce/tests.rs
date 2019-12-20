@@ -852,7 +852,7 @@ fn test_optimize_switch_with_default_case() {
             "    bar();",
             "}",
         ),
-        "switch ('hasDefaultCase') { default: if (a) { break; } bar(); }",
+        "switch ('hasDefaultCase') { default: if (a) break; bar(); }",
     );
 
     test(
