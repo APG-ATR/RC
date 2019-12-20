@@ -5,6 +5,7 @@ use crate::{
 use ast::*;
 use fxhash::FxHashMap;
 use std::{cmp::min, iter::once};
+use swc_atoms::js_word;
 use swc_common::{
     fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, Spanned, Visit, DUMMY_SP,
 };
@@ -374,6 +375,12 @@ impl Fold<Stmt> for Remover<'_> {
                     Expr::Lit(Lit::Str(..))
                     | Expr::Lit(Lit::Null(..))
                     | Expr::Lit(Lit::Num(..)) => true,
+                    ref e
+                        if e.is_ident_ref_to(js_word!("NaN"))
+                            || e.is_ident_ref_to(js_word!("undefined")) =>
+                    {
+                        true
+                    }
                     _ => false,
                 };
 
@@ -408,29 +415,53 @@ impl Fold<Stmt> for Remover<'_> {
                     .fold_with(self);
                 }
 
-                let selected = s.cases.iter().position(|case| {
-                    if let Some(ref test) = case.test {
-                        return match (&**test, &*s.discriminant) {
-                            (
-                                &Expr::Lit(Lit::Str(Str {
-                                    value: ref test, ..
-                                })),
-                                &Expr::Lit(Lit::Str(Str { value: ref d, .. })),
-                            ) => *test == *d,
-                            (
-                                &Expr::Lit(Lit::Num(Number { value: test, .. })),
-                                &Expr::Lit(Lit::Num(Number { value: d, .. })),
-                            ) => test == d,
-                            (&Expr::Lit(Lit::Null(..)), &Expr::Lit(Lit::Null(..))) => true,
-                            (&Expr::Ident(ref test), &Expr::Ident(ref d)) => {
-                                test.sym == d.sym && test.span.ctxt() == d.span.ctxt()
-                            }
-                            _ => false,
-                        };
-                    }
+                let mut non_constant_case_idx = None;
+                let selected = {
+                    let mut i = 0;
+                    s.cases.iter().position(|case| {
+                        if non_constant_case_idx.is_some() {
+                            i += 1;
+                            return false;
+                        }
 
-                    false
-                });
+                        if let Some(ref test) = case.test {
+                            let v = match (&**test, &*s.discriminant) {
+                                (
+                                    &Expr::Lit(Lit::Str(Str {
+                                        value: ref test, ..
+                                    })),
+                                    &Expr::Lit(Lit::Str(Str { value: ref d, .. })),
+                                ) => *test == *d,
+                                (
+                                    &Expr::Lit(Lit::Num(Number { value: test, .. })),
+                                    &Expr::Lit(Lit::Num(Number { value: d, .. })),
+                                ) => (test - d).abs() < 1e-10,
+                                (&Expr::Lit(Lit::Null(..)), &Expr::Lit(Lit::Null(..))) => true,
+                                (&Expr::Ident(ref test), &Expr::Ident(ref d)) => {
+                                    test.sym == d.sym && test.span.ctxt() == d.span.ctxt()
+                                }
+
+                                _ => {
+                                    if !test.is_ident_ref_to(js_word!("NaN"))
+                                        && !test.is_ident_ref_to(js_word!("undefined"))
+                                    {
+                                        non_constant_case_idx = Some(i);
+                                    }
+
+                                    false
+                                }
+                            };
+
+                            i += 1;
+                            return v;
+                        }
+
+                        i += 1;
+                        false
+                    })
+                };
+                dbg!(selected);
+                dbg!(non_constant_case_idx);
 
                 let mut var_ids = vec![];
                 if let Some(i) = selected {
@@ -492,9 +523,14 @@ impl Fold<Stmt> for Remover<'_> {
                 }
 
                 if is_matching_literal {
-                    let mut idx = 0;
+                    let mut idx = 0usize;
                     // Remove unmatchable cases.
                     s.cases = s.cases.move_flat_map(|case| {
+                        if non_constant_case_idx.is_some() && idx >= non_constant_case_idx.unwrap()
+                        {
+                            return Some(case);
+                        }
+
                         if selected == Some(idx) {
                             return Some(case);
                         }
