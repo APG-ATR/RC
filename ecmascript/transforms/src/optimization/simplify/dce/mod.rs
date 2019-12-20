@@ -414,7 +414,33 @@ impl Fold<Stmt> for Remover<'_> {
 
                 if let Some(i) = selected {
                     let mut stmts = s.cases.remove(i).cons;
+
                     remove_break(&mut stmts);
+
+                    let decls = s
+                        .cases
+                        .into_iter()
+                        .flat_map(|case| case.cons)
+                        .flat_map(|stmt| stmt.extract_var_ids())
+                        .map(|i| VarDeclarator {
+                            span: DUMMY_SP,
+                            name: Pat::Ident(i),
+                            init: None,
+                            definite: false,
+                        })
+                        .collect::<Vec<_>>();
+
+                    if !decls.is_empty() {
+                        prepend(
+                            &mut stmts,
+                            Stmt::Decl(Decl::Var(VarDecl {
+                                span: DUMMY_SP,
+                                kind: VarDeclKind::Var,
+                                decls,
+                                declare: false,
+                            })),
+                        );
+                    }
 
                     return Stmt::Block(BlockStmt {
                         span: s.span,
