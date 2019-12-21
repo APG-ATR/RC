@@ -295,6 +295,9 @@ where
 
             Some(match stmt.try_into_stmt() {
                 Ok(stmt) => T::from_stmt(match stmt {
+                    Stmt::Block(BlockStmt { ref stmts, .. }) if stmts.is_empty() => return None,
+                    Stmt::Empty(..) => return None,
+
                     Stmt::Decl(Decl::Var(mut var)) => {
                         var.decls = var.decls.move_flat_map(|decl| {
                             match decl.name {
