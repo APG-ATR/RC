@@ -25,6 +25,7 @@ pub fn inline_vars(_: Config) -> impl 'static + Pass {
             kind: ScopeKind::Block,
             vars: Default::default(),
         },
+        phase: Phase::Analysis,
         top_level: true,
     }
 }
@@ -33,6 +34,13 @@ pub fn inline_vars(_: Config) -> impl 'static + Pass {
 pub struct Config {
     #[serde(default)]
     pub locals_only: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Phase {
+    Analysis,
+    Inlining,
+    // CleanUp.
 }
 
 #[derive(Debug)]
@@ -52,6 +60,7 @@ struct VarInfo {
 
 #[derive(Debug)]
 struct Inline<'a> {
+    phase: Phase,
     scope: Scope<'a>,
     top_level: bool,
 }
@@ -67,6 +76,7 @@ impl Inline<'_> {
                 kind,
                 vars: Default::default(),
             },
+            phase: self.phase,
             top_level: false,
         };
 
@@ -287,54 +297,68 @@ where
         let top_level = self.top_level;
         self.top_level = false;
 
-        // Inline variables
         let stmts = stmts.fold_children(self);
 
-        stmts.move_flat_map(|stmt| {
-            // Remove unused variables
+        match self.phase {
+            Phase::Analysis => {
+                if top_level {
+                    self.phase = Phase::Inlining;
+                    // Inline variables
+                    stmts.fold_with(self)
+                } else {
+                    stmts
+                }
+            }
+            Phase::Inlining => {
+                stmts.move_flat_map(|stmt| {
+                    // Remove unused variables
 
-            Some(match stmt.try_into_stmt() {
-                Ok(stmt) => T::from_stmt(match stmt {
-                    Stmt::Block(BlockStmt { ref stmts, .. }) if stmts.is_empty() => return None,
-                    Stmt::Empty(..) => return None,
-
-                    Stmt::Decl(Decl::Var(mut var)) => {
-                        var.decls = var.decls.move_flat_map(|decl| {
-                            match decl.name {
-                                Pat::Ident(ref i) => {
-                                    let var = if let Some(var) = self.scope.take_var(i) {
-                                        println!("inline_vars: {}: {}", i.sym, var.cnt);
-                                        var
-                                    } else {
-                                        println!("inline_vars: {}: no var", i.sym);
-
-                                        return Some(decl);
-                                    };
-
-                                    if var.cnt == 0 {
-                                        None
-                                    } else {
-                                        Some(decl)
-                                    }
-                                }
-                                _ => {
-                                    // Be conservative
-                                    Some(decl)
-                                }
+                    Some(match stmt.try_into_stmt() {
+                        Ok(stmt) => T::from_stmt(match stmt {
+                            Stmt::Block(BlockStmt { ref stmts, .. }) if stmts.is_empty() => {
+                                return None
                             }
-                        });
+                            Stmt::Empty(..) => return None,
 
-                        if var.decls.is_empty() {
-                            return None;
-                        }
+                            Stmt::Decl(Decl::Var(mut var)) => {
+                                var.decls = var.decls.move_flat_map(|decl| {
+                                    match decl.name {
+                                        Pat::Ident(ref i) => {
+                                            let var = if let Some(var) = self.scope.take_var(i) {
+                                                println!("inline_vars: {}: {}", i.sym, var.cnt);
+                                                var
+                                            } else {
+                                                println!("inline_vars: {}: no var", i.sym);
 
-                        Stmt::Decl(Decl::Var(var))
-                    }
+                                                return Some(decl);
+                                            };
 
-                    _ => stmt,
-                }),
-                Err(item) => item,
-            })
-        })
+                                            if var.cnt == 0 {
+                                                None
+                                            } else {
+                                                Some(decl)
+                                            }
+                                        }
+                                        _ => {
+                                            // Be conservative
+                                            Some(decl)
+                                        }
+                                    }
+                                });
+
+                                if var.decls.is_empty() {
+                                    return None;
+                                }
+
+                                Stmt::Decl(Decl::Var(var))
+                            }
+
+                            _ => stmt,
+                        }),
+                        Err(item) => item,
+                    })
+                })
+            }
+        }
     }
 }
