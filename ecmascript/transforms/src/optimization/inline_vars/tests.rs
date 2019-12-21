@@ -199,7 +199,7 @@ fn test_inline_into_arrow_function2() {
 identical_all!(
     cond_true_1,
     cond_true_1_fn,
-    "if (true) { var x = 1; } var z = x;"
+    "if (true) { var x = 1; } var z = x; use(x); use(z);"
 );
 
 identical_all!(
