@@ -1319,13 +1319,23 @@ fn test_issue354() {
     );
 }
 
-// Test respect for scopes and blocks
-#[test]
-fn test_issue1177() {
-    test_same("function x_64(){var x_7;for(;;);var x_68=x_7=x_7;}");
-    test_same("function x_64(){var x_7;for(;;);var x_68=x_7=x_7++;}");
-    test_same("function x_64(){var x_7;for(;;);var x_68=x_7=x_7*2;}");
-}
+identical_all!(
+    closure_compiler_1177_1,
+    closure_compiler_1177_1_fn,
+    "function x_64(){var x_7;for(;;);var x_68=x_7=x_7;}"
+);
+
+identical_all!(
+    closure_compiler_1177_2,
+    closure_compiler_1177_2_fn,
+    "function x_64(){var x_7;for(;;);var x_68=x_7=x_7++;}"
+);
+
+identical_all!(
+    closure_compiler_1177_3,
+    closure_compiler_1177_3_fn,
+    "function x_64(){var x_7;for(;;);var x_68=x_7=x_7*2;}"
+);
 
 // GitHub issue #1234: https://github.com/google/closure-compiler/issues/1234
 identical_all!(
