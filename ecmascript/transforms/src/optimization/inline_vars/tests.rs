@@ -1328,20 +1328,19 @@ fn test_issue1177() {
 }
 
 // GitHub issue #1234: https://github.com/google/closure-compiler/issues/1234
-#[test]
-fn test_switch_github_issue1234() {
-    test_same(concat!(
-        "var x;
-        switch ('a') {
-          case 'a':
-                break;
-          default: 
-                x = 1;
-                break;
-        }
-        use(x);",
-    ));
-}
+identical_all!(
+    closure_compiler_1234,
+    closure_compiler_1234_fn,
+    "var x;
+    switch ('a') {
+      case 'a':
+            break;
+      default: 
+            x = 1;
+            break;
+    }
+    use(x);"
+);
 
 to!(
     let_1,

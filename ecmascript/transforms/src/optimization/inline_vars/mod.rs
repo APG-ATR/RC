@@ -227,15 +227,27 @@ impl Fold<Expr> for Inline<'_> {
 }
 
 impl Inline<'_> {
-    fn should_store(&self, e: &Expr) -> bool {
-        match e {
-            Expr::Lit(..) | Expr::Ident(..) | Expr::This(..) => true,
-            _ => false,
+    fn should_store(&self, i: &Ident, e: &Expr) -> bool {
+        if self.phase == Phase::Analysis {
+            return true;
         }
+
+        match e {
+            Expr::Lit(..) | Expr::Ident(..) | Expr::This(..) => return true,
+            _ => {}
+        }
+
+        if self.phase == Phase::Inlining {
+            if let Some(ref v) = self.scope.find(i) {
+                return v.cnt == 1;
+            }
+        }
+
+        false
     }
 
     fn store(&mut self, i: &Ident, e: &Expr, kind: Option<VarDeclKind>) {
-        if self.should_store(e) {
+        if self.should_store(i, e) {
             match kind {
                 // Not hoisted
                 Some(VarDeclKind::Let) | Some(VarDeclKind::Const) => {
@@ -243,7 +255,11 @@ impl Inline<'_> {
                         id(i),
                         VarInfo {
                             cnt: Default::default(),
-                            value: Some(e.clone()),
+                            value: if self.phase == Phase::Inlining {
+                                Some(e.clone())
+                            } else {
+                                None
+                            },
                         },
                     );
                 }
@@ -255,7 +271,11 @@ impl Inline<'_> {
                             id(i),
                             VarInfo {
                                 cnt: Default::default(),
-                                value: Some(e.clone()),
+                                value: if self.phase == Phase::Inlining {
+                                    Some(e.clone())
+                                } else {
+                                    None
+                                },
                             },
                         );
                     }
@@ -301,6 +321,7 @@ where
 
         match self.phase {
             Phase::Analysis => {
+                println!("Vars: {:?}", self.scope.vars);
                 if top_level {
                     self.phase = Phase::Inlining;
                     // Inline variables
