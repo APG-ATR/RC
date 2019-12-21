@@ -62,7 +62,8 @@ struct Scope<'a> {
 #[derive(Debug)]
 struct VarInfo {
     /// Count of usage.
-    cnt: usize,
+    usage_cnt: usize,
+    no_inline: bool,
     value: Option<Expr>,
 }
 
@@ -223,7 +224,7 @@ impl Fold<Expr> for Inline<'_> {
                         return e.clone();
                     } else {
                         println!("cnt++; {}: usage", i.sym);
-                        var.cnt += 1;
+                        var.usage_cnt += 1;
                     }
                 }
             }
@@ -261,8 +262,8 @@ impl Inline<'_> {
             reason
         } else {
             if let Some(mut info) = self.scope.find(i) {
-                println!("cnt++; {}; store: {:?}", i.sym, kind);
-                info.cnt += 1;
+                println!("inline_vars: {}: no inline: {:?}", i.sym, kind);
+                info.no_inline = true;
                 (*info).value = None;
             }
             return;
@@ -284,12 +285,9 @@ impl Inline<'_> {
                 self.scope.vars.borrow_mut().insert(
                     id(i),
                     VarInfo {
-                        cnt: Default::default(),
-                        value: if self.phase == Phase::Inlining {
-                            Some(e.clone())
-                        } else {
-                            None
-                        },
+                        usage_cnt: Default::default(),
+                        no_inline: false,
+                        value,
                     },
                 );
             }
@@ -300,12 +298,9 @@ impl Inline<'_> {
                     fn_scope.vars.borrow_mut().insert(
                         id(i),
                         VarInfo {
-                            cnt: Default::default(),
-                            value: if self.phase == Phase::Inlining {
-                                Some(e.clone())
-                            } else {
-                                None
-                            },
+                            usage_cnt: Default::default(),
+                            no_inline: false,
+                            value,
                         },
                     );
                 }
@@ -314,7 +309,7 @@ impl Inline<'_> {
             None => {
                 if let Some(scope) = self.scope.scope_for(i) {
                     if let Some(v) = scope.vars.borrow_mut().get_mut(&id(i)) {
-                        v.cnt += 1;
+                        v.usage_cnt += 1;
                         println!("cnt++; {}; store: assign", i.sym)
                     }
                 }
@@ -325,7 +320,7 @@ impl Inline<'_> {
     fn remove(&mut self, i: &Ident) {
         if let Some(mut info) = self.scope.find(i) {
             println!("inline_vars: {}: remove", i.sym);
-            info.cnt += 1;
+            info.no_inline = true;
             (*info).value = None;
         }
     }
@@ -368,16 +363,24 @@ where
                                 var.decls = var.decls.move_flat_map(|decl| {
                                     match decl.name {
                                         Pat::Ident(ref i) => {
-                                            let var = if let Some(var) = self.scope.take_var(i) {
-                                                println!("inline_vars: {}: {}", i.sym, var.cnt);
+                                            let var = if let Some(
+                                                var
+                                                @
+                                                VarInfo {
+                                                    no_inline: false, ..
+                                                },
+                                            ) = self.scope.take_var(i)
+                                            {
+                                                println!(
+                                                    "inline_vars: {}: {}",
+                                                    i.sym, var.usage_cnt
+                                                );
                                                 var
                                             } else {
-                                                println!("inline_vars: {}: no var", i.sym);
-
                                                 return Some(decl);
                                             };
 
-                                            if var.cnt == 0 {
+                                            if var.usage_cnt == 0 {
                                                 None
                                             } else {
                                                 Some(decl)
