@@ -9,8 +9,9 @@ use serde::Deserialize;
 use std::{
     cell::{RefCell, RefMut},
     collections::hash_map::Entry,
+    mem::replace,
 };
-use swc_common::{util::move_map::MoveMap, Fold, FoldWith, DUMMY_SP};
+use swc_common::{util::move_map::MoveMap, Fold, FoldWith, Spanned, DUMMY_SP};
 
 #[cfg(test)]
 mod tests;
@@ -41,6 +42,13 @@ enum Phase {
     Analysis,
     Inlining,
     // CleanUp.
+}
+
+/// Reason that we should inline a variable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Reason {
+    SingleUse,
+    Cheap,
 }
 
 #[derive(Debug)]
@@ -166,12 +174,12 @@ impl Fold<SwitchCase> for Inline<'_> {
 
 impl Fold<AssignExpr> for Inline<'_> {
     fn fold(&mut self, e: AssignExpr) -> AssignExpr {
-        let e = e.fold_children(self);
+        let mut e = e.fold_children(self);
 
         match e.left {
             PatOrExpr::Pat(box Pat::Ident(ref i)) => {
                 if e.op == op!("=") {
-                    self.store(i, &e.right, None)
+                    self.store(i, &mut e.right, None)
                 } else {
                     self.remove(i)
                 }
@@ -186,13 +194,13 @@ impl Fold<AssignExpr> for Inline<'_> {
 
 impl Fold<VarDecl> for Inline<'_> {
     fn fold(&mut self, v: VarDecl) -> VarDecl {
-        let v = v.fold_children(self);
+        let mut v = v.fold_children(self);
 
-        for decl in &v.decls {
+        for decl in &mut v.decls {
             match decl.name {
                 Pat::Ident(ref i) => match decl.init {
-                    Some(ref e) => self.store(i, e, Some(v.kind)),
-                    None => self.store(i, &*undefined(DUMMY_SP), Some(v.kind)),
+                    Some(ref mut e) => self.store(i, e, Some(v.kind)),
+                    None => self.store(i, &mut *undefined(DUMMY_SP), Some(v.kind)),
                 },
                 _ => {}
             }
@@ -227,31 +235,69 @@ impl Fold<Expr> for Inline<'_> {
 }
 
 impl Inline<'_> {
-    fn should_store(&self, i: &Ident, e: &Expr) -> bool {
+    fn should_store(&self, i: &Ident, e: &Expr) -> Option<Reason> {
         if self.phase == Phase::Analysis {
-            return true;
+            return Some(Reason::Cheap);
         }
 
         match e {
-            Expr::Lit(..) | Expr::Ident(..) | Expr::This(..) => return true,
+            Expr::Lit(..) | Expr::Ident(..) | Expr::This(..) => return Some(Reason::Cheap),
             _ => {}
         }
 
         if self.phase == Phase::Inlining {
             if let Some(ref v) = self.scope.find(i) {
-                return v.cnt == 1;
+                return Some(Reason::SingleUse);
             }
         }
 
-        false
+        None
     }
 
-    fn store(&mut self, i: &Ident, e: &Expr, kind: Option<VarDeclKind>) {
-        if self.should_store(i, e) {
-            match kind {
-                // Not hoisted
-                Some(VarDeclKind::Let) | Some(VarDeclKind::Const) => {
-                    self.scope.vars.borrow_mut().insert(
+    fn store(&mut self, i: &Ident, e: &mut Expr, kind: Option<VarDeclKind>) {
+        let span = e.span();
+
+        let reason = if let Some(reason) = self.should_store(i, e) {
+            reason
+        } else {
+            if let Some(mut info) = self.scope.find(i) {
+                println!("cnt++; {}; store: {:?}", i.sym, kind);
+                info.cnt += 1;
+                (*info).value = None;
+            }
+            return;
+        };
+
+        let value = if self.phase == Phase::Inlining {
+            Some(if reason == Reason::SingleUse {
+                replace(e, Expr::Invalid(Invalid { span }))
+            } else {
+                e.clone()
+            })
+        } else {
+            None
+        };
+
+        match kind {
+            // Not hoisted
+            Some(VarDeclKind::Let) | Some(VarDeclKind::Const) => {
+                self.scope.vars.borrow_mut().insert(
+                    id(i),
+                    VarInfo {
+                        cnt: Default::default(),
+                        value: if self.phase == Phase::Inlining {
+                            Some(e.clone())
+                        } else {
+                            None
+                        },
+                    },
+                );
+            }
+
+            // Hoisted
+            Some(VarDeclKind::Var) => {
+                if let Some(fn_scope) = self.scope.find_fn_scope() {
+                    fn_scope.vars.borrow_mut().insert(
                         id(i),
                         VarInfo {
                             cnt: Default::default(),
@@ -263,38 +309,15 @@ impl Inline<'_> {
                         },
                     );
                 }
-
-                // Hoisted
-                Some(VarDeclKind::Var) => {
-                    if let Some(fn_scope) = self.scope.find_fn_scope() {
-                        fn_scope.vars.borrow_mut().insert(
-                            id(i),
-                            VarInfo {
-                                cnt: Default::default(),
-                                value: if self.phase == Phase::Inlining {
-                                    Some(e.clone())
-                                } else {
-                                    None
-                                },
-                            },
-                        );
-                    }
-                }
-
-                None => {
-                    if let Some(scope) = self.scope.scope_for(i) {
-                        if let Some(v) = scope.vars.borrow_mut().get_mut(&id(i)) {
-                            v.cnt += 1;
-                            println!("cnt++; {}; store: assign", i.sym)
-                        }
-                    }
-                }
             }
-        } else {
-            if let Some(mut info) = self.scope.find(i) {
-                println!("cnt++; {}; store: {:?}", i.sym, kind);
-                info.cnt += 1;
-                (*info).value = None;
+
+            None => {
+                if let Some(scope) = self.scope.scope_for(i) {
+                    if let Some(v) = scope.vars.borrow_mut().get_mut(&id(i)) {
+                        v.cnt += 1;
+                        println!("cnt++; {}; store: assign", i.sym)
+                    }
+                }
             }
         }
     }
