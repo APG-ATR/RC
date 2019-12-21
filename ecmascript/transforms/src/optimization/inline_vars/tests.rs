@@ -133,15 +133,11 @@ identical_all!(
     "var x = 1; x--;"
 );
 
-#[test]
-fn test_do_not_inline_into_lhs_of_assign() {
-    test_same("var x = 1; x += 3;");
-}
-
-#[test]
-fn test_inline_into_rhs_of_assign() {
-    test("var x = 1; var y = x;", "var y = 1;");
-}
+identical_all!(
+    top_level_assign_op,
+    function_scope_assign_op,
+    "var x = 1; x += 3;"
+);
 
 to_fn!(
     simple_inline_in_fn,
@@ -1347,67 +1343,90 @@ fn test_switch_github_issue1234() {
     ));
 }
 
-#[test]
-fn test_let_const() {
-    test(
-        concat!(
-            "function f(x) {",
-            "  if (true) {",
-            "    let y = x; y; y;",
-            "  }",
-            "}",
-        ),
-        concat!("function f(x) {", "  if (true) {", "    x; x;", "  }", "}"),
-    );
+to!(
+    let_1,
+    "function f(x) {
+        if (true) {
+            let y = x;
+            y;
+            y;
+        }
+    }",
+    "function f(x) {
+      if (true) {
+        x;
+        x;
+      }
+    }"
+);
 
-    test(
-        concat!(
-            "function f(x) {",
-            "  if (true) {",
-            "    const y = x; y; y;",
-            "    }",
-            "  }",
-        ),
-        concat!("function f(x) {", "  if (true) {", "    x; x;", "  }", "}"),
-    );
+to!(
+    const_1,
+    "function f(x) {
+        if (true) {
+            const y = x;
+            y;
+            y;
+        }
+    }",
+    "function f(x) {
+      if (true) {
+        x;
+        x;
+      }
+    }"
+);
 
-    test(
-        concat!(
-            "function f(x) {",
-            "  let y;",
-            "  {",
-            "    let y = x; y;",
-            "  }",
-            "}",
-        ),
-        concat!("function f(x) {", "  let y;", "  {", "    x;", "  }", "}"),
-    );
+to!(
+    let_2,
+    "let y;
+    {
+        let y = x;
+        y;
+    }
+    y;
+",
+    "let y;
+    {
+        x;
+    }
+    void 0;"
+);
 
-    test(
-        concat!(
-            "function f(x) {",
-            "  let y = x; y; const g = 2; ",
-            "  {",
-            "    const g = 3; let y = g; y;",
-            "  }",
-            "}",
-        ),
-        concat!("function f(x) {", "  x; const g = 2;", "  {3;}", "}"),
-    );
-}
+to!(
+    let_const,
+    "let y = x; y; const g = 2;
+    {
+        const g = 3;
+        let y = g;
+        y;
+    }
+    y;
+    g;
+",
+    "x;
+    const g = 2;
+    {
+        3;
+    }
+    x;
+    2;
+    "
+);
 
-#[test]
-fn test_generators() {
-    test(
-        concat!("function* f() {", "  let x = 1;", "  yield x;", "}"),
-        concat!("function* f() {", "  yield 1;", "}"),
-    );
+to_all!(
+    generator_let_yield,
+    function_scope_generator_let_yield,
+    "function* f() {  let x = 1; yield x; }",
+    "function* f() {  yield 1; }"
+);
 
-    test(
-        concat!("function* f(x) {", "  let y = x++", "  yield y;", "}"),
-        concat!("function* f(x) {", "  yield x++;", "}"),
-    );
-}
+to_all!(
+    generator_let_increment,
+    function_scope_generator_let_increment,
+    "function* f(x) {  let y = x++;  yield y; }",
+    "function* f(x) { yield x++; }"
+);
 
 identical_all!(for_of_1, for_of_1_fn, "var i = 0; for(i of n) {}");
 
