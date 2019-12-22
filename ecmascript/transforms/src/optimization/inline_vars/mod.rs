@@ -595,45 +595,38 @@ where
                                     _ => Some(decl),
                                 });
 
-                                let should_fold = var.kind == VarDeclKind::Let
-                                    || var.kind == VarDeclKind::Const
-                                    || (var.kind == VarDeclKind::Var
-                                        && self.scope.kind == ScopeKind::Fn);
+                                var.decls = var.decls.move_flat_map(|decl| {
+                                    match decl.name {
+                                        Pat::Ident(ref i) => {
+                                            let var = if let Some(
+                                                var
+                                                @
+                                                VarInfo {
+                                                    no_inline: false, ..
+                                                },
+                                            ) = self.scope.take_var(i)
+                                            {
+                                                println!(
+                                                    "inline_vars: {}: {}",
+                                                    i.sym, var.usage_cnt
+                                                );
+                                                var
+                                            } else {
+                                                return Some(decl);
+                                            };
 
-                                if should_fold {
-                                    var.decls = var.decls.move_flat_map(|decl| {
-                                        match decl.name {
-                                            Pat::Ident(ref i) => {
-                                                let var = if let Some(
-                                                    var
-                                                    @
-                                                    VarInfo {
-                                                        no_inline: false, ..
-                                                    },
-                                                ) = self.scope.take_var(i)
-                                                {
-                                                    println!(
-                                                        "inline_vars: {}: {}",
-                                                        i.sym, var.usage_cnt
-                                                    );
-                                                    var
-                                                } else {
-                                                    return Some(decl);
-                                                };
-
-                                                if var.usage_cnt == 0 {
-                                                    None
-                                                } else {
-                                                    Some(decl)
-                                                }
-                                            }
-                                            _ => {
-                                                // Be conservative
+                                            if var.usage_cnt == 0 {
+                                                None
+                                            } else {
                                                 Some(decl)
                                             }
                                         }
-                                    });
-                                }
+                                        _ => {
+                                            // Be conservative
+                                            Some(decl)
+                                        }
+                                    }
+                                });
 
                                 if var.decls.is_empty() {
                                     return None;
