@@ -28,6 +28,7 @@ pub fn inline_vars(_: Config) -> impl 'static + Pass {
             // This is important.
             kind: ScopeKind::Block,
             vars: Default::default(),
+            children: Default::default(),
         },
         phase: Phase::Analysis,
         top_level: true,
@@ -60,6 +61,7 @@ struct Scope<'a> {
     kind: ScopeKind,
     /// Stored only if value is statically known.
     vars: RefCell<FxHashMap<Id, VarInfo>>,
+    children: RefCell<Vec<Scope<'static>>>,
 }
 
 #[derive(Debug)]
@@ -82,17 +84,48 @@ impl Inline<'_> {
     where
         F: for<'any> FnOnce(&mut Inline<'any>) -> T,
     {
-        let mut c = Inline {
-            scope: Scope {
-                parent: Some(&self.scope),
-                kind,
-                vars: Default::default(),
-            },
-            phase: self.phase,
-            top_level: false,
-        };
+        match self.phase {
+            Phase::Analysis => {
+                let (res, vars, children) = {
+                    let mut c = Inline {
+                        scope: Scope {
+                            parent: Some(&self.scope),
+                            kind,
+                            vars: Default::default(),
+                            children: Default::default(),
+                        },
+                        phase: self.phase,
+                        top_level: false,
+                    };
 
-        op(&mut c)
+                    let res = op(&mut c);
+
+                    (res, c.scope.vars, c.scope.children)
+                };
+
+                self.scope.children.borrow_mut().push(Scope {
+                    parent: None,
+                    kind,
+                    vars,
+                    children,
+                });
+
+                res
+            }
+
+            Phase::Inlining => {
+                let mut scope = self.scope.children.get_mut().remove(0);
+                scope.parent = Some(&self.scope);
+
+                let mut c = Inline {
+                    scope,
+                    phase: self.phase,
+                    top_level: false,
+                };
+
+                op(&mut c)
+            }
+        }
     }
 }
 
