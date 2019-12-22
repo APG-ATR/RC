@@ -246,6 +246,20 @@ impl Scope<'_> {
     //    }
 }
 
+impl Fold<UpdateExpr> for Inline<'_> {
+    fn fold(&mut self, e: UpdateExpr) -> UpdateExpr {
+        match *e.arg {
+            Expr::Ident(ref i) => self.prevent_inline(i),
+
+            _ => {}
+        }
+
+        let e = e.fold_children(self);
+
+        e
+    }
+}
+
 impl Fold<Function> for Inline<'_> {
     fn fold(&mut self, f: Function) -> Function {
         check!(self);
@@ -302,7 +316,7 @@ impl Fold<AssignExpr> for Inline<'_> {
                 if e.op == op!("=") {
                     self.store(i, &mut e.right, None)
                 } else {
-                    self.remove(i)
+                    self.prevent_inline(i)
                 }
             }
 
@@ -545,7 +559,7 @@ impl Inline<'_> {
         }
     }
 
-    fn remove(&mut self, i: &Ident) {
+    fn prevent_inline(&mut self, i: &Ident) {
         if let Some(mut info) = self.scope.find(i) {
             println!("inline_vars: {}: remove", i.sym);
             info.no_inline = true;
