@@ -528,7 +528,9 @@ impl Inline<'_> {
                     },
                 );
 
-                unimplemented!("Handling duplicate: {:?}", prev);
+                if prev.is_some() {
+                    unimplemented!("Handling duplicate: {:?}", prev);
+                }
             }
 
             // Hoisted
