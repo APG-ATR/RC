@@ -4,6 +4,7 @@ use swc_common::{Span, SyntaxContext};
 
 pub trait IdentLike: Sized {
     fn from_ident(i: &Ident) -> Self;
+    fn to_id(&self) -> Id;
     fn into_id(self) -> Id;
 }
 
@@ -11,6 +12,11 @@ impl IdentLike for (JsWord, Span) {
     #[inline]
     fn from_ident(i: &Ident) -> Self {
         (i.sym.clone(), i.span)
+    }
+
+    #[inline]
+    fn to_id(&self) -> Id {
+        (self.0.clone(), self.1.ctxt())
     }
 
     #[inline]
@@ -26,6 +32,11 @@ impl IdentLike for (JsWord, SyntaxContext) {
     }
 
     #[inline]
+    fn to_id(&self) -> Id {
+        (self.0.clone(), self.1)
+    }
+
+    #[inline]
     fn into_id(self) -> Id {
         self
     }
@@ -35,6 +46,11 @@ impl IdentLike for Ident {
     #[inline]
     fn from_ident(i: &Ident) -> Self {
         Ident::new(i.sym.clone(), i.span)
+    }
+
+    #[inline]
+    fn to_id(&self) -> Id {
+        (self.sym.clone(), self.span.ctxt())
     }
 
     #[inline]

@@ -21,7 +21,7 @@ use std::{
 };
 use swc_atoms::{js_word, JsWord};
 use swc_common::{
-    errors::Handler, Fold, FoldWith, Mark, Span, Spanned, SyntaxContext, Visit, VisitWith, DUMMY_SP,
+    errors::Handler, Fold, FoldWith, Mark, Span, Spanned, Visit, VisitWith, DUMMY_SP,
 };
 use unicode_xid::UnicodeXID;
 
