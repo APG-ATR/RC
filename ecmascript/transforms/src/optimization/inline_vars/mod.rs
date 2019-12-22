@@ -566,9 +566,9 @@ where
 
         match self.phase {
             Phase::Analysis => {
-                println!("Scope({}): {:?}", self.scope.id, self.scope.vars);
+                // println!("Scope({}): {:?}", self.scope.id, self.scope.vars);
                 if top_level {
-                    println!("----- ----- ----- ----- -----");
+                    // println!("----- ----- ----- ----- -----");
                     self.phase = Phase::Inlining;
                     // Inline variables
                     stmts.fold_with(self)
