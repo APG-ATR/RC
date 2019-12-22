@@ -603,7 +603,6 @@ where
                                     match decl.init {
                                         // Remove inlined variables (single usage).
                                         Some(box Expr::Invalid(..)) => {
-                                            println!("FOO");
                                             return None;
                                         }
                                         _ => {}
