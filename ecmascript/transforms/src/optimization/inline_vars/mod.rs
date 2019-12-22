@@ -177,13 +177,6 @@ impl Scope<'_> {
         }
     }
 
-    fn root(&self) -> &Self {
-        match self.parent {
-            None => self,
-            Some(p) => p.root(),
-        }
-    }
-
     fn scope_for<I>(&self, i: &I) -> Option<&Self>
     where
         I: IdentLike,
@@ -559,14 +552,6 @@ impl Inline<'_> {
             Some(VarDeclKind::Var) => {
                 if let Some(fn_scope) = self.scope.find_fn_scope() {
                     fn_scope.vars.borrow_mut().entry(i).or_default().value = value;
-                } else {
-                    self.scope
-                        .root()
-                        .vars
-                        .borrow_mut()
-                        .entry(i)
-                        .or_default()
-                        .value = value;
                 }
             }
 
