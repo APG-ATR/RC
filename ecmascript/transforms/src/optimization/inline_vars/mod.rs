@@ -331,11 +331,6 @@ impl Fold<VarDecl> for Inline<'_> {
     fn fold(&mut self, v: VarDecl) -> VarDecl {
         check!(self);
 
-        println!(
-            "VarDecl: Scope({}): {:?}",
-            self.scope.scope_id, self.scope.vars
-        );
-
         let mut v = v.fold_children(self);
 
         for decl in &mut v.decls {
