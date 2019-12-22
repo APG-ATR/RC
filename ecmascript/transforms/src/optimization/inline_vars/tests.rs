@@ -1328,24 +1328,25 @@ fn test_issue354() {
     );
 }
 
-// TODO: Remove var x_7;
-to_all!(
+// TODO: Remove var x_7, var_x68;
+identical_all!(
     closure_compiler_1177_1,
     closure_compiler_1177_1_fn,
-    "function x_64(){var x_7;for(;;);var x_68=x_7=x_7;}",
-    "function x_64(){var x_7;for(;;);}"
+    "function x_64(){var x_7;for(;;);var x_68=x_7=x_7;}"
 );
 
+// TODO: Remove var x_7, var_x68;
 identical_all!(
     closure_compiler_1177_2,
     closure_compiler_1177_2_fn,
     "function x_64(){var x_7;for(;;);var x_68=x_7=x_7++;}"
 );
 
-to!(
+// TODO: Remove var x_7, var_x68;
+identical_all!(
     closure_compiler_1177_3,
-    "function x_64(){var x_7;for(;;);var x_68=x_7=x_7*2;}",
-    "function x_64(){var x_7;for(;;);}"
+    closure_compiler_1177_3_fn,
+    "function x_64(){var x_7;for(;;);var x_68=x_7=x_7*2;}"
 );
 
 // GitHub issue #1234: https://github.com/google/closure-compiler/issues/1234
