@@ -519,24 +519,21 @@ impl Inline<'_> {
         match kind {
             // Not hoisted
             Some(VarDeclKind::Let) | Some(VarDeclKind::Const) => {
-                let prev = self.scope.vars.borrow_mut().insert(
-                    i,
-                    VarInfo {
+                self.scope
+                    .vars
+                    .borrow_mut()
+                    .entry(i)
+                    .or_insert_with(|| VarInfo {
                         usage_cnt: Default::default(),
                         no_inline: false,
-                        value,
-                    },
-                );
-
-                if prev.is_some() {
-                    unimplemented!("Handling duplicate: {:?}", prev);
-                }
+                        value: None,
+                    })
+                    .value = value;
             }
 
             // Hoisted
             Some(VarDeclKind::Var) => {
                 if let Some(fn_scope) = self.scope.find_fn_scope() {
-                    println!("Scope({}): a function scope", fn_scope.scope_id);
                     fn_scope
                         .vars
                         .borrow_mut()
