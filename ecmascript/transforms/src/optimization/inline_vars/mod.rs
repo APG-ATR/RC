@@ -1,10 +1,7 @@
 use crate::{
     pass::Pass,
     scope::ScopeKind,
-    util::{
-        id, ident::IdentLike, preserve_effects, undefined, DestructuringFinder, ExprExt, Id,
-        StmtLike,
-    },
+    util::{id, ident::IdentLike, undefined, DestructuringFinder, ExprExt, Id, StmtLike},
 };
 use ast::*;
 use fxhash::FxHashMap;
@@ -25,11 +22,11 @@ mod tests;
 
 macro_rules! check {
     ($i:expr) => {{
-        if $i.scope.scope_id != 0 {
+        if $i.scope.id != 0 {
             assert!(
                 $i.scope.parent.is_some(),
                 "Scope({}) does not have parent",
-                $i.scope.scope_id
+                $i.scope.id
             );
         }
     }};
@@ -51,7 +48,7 @@ impl Gen {
 pub fn inline_vars(_: Config) -> impl 'static + Pass {
     Inline {
         scope: Scope {
-            scope_id: 0,
+            id: 0,
             parent: None,
             // This is important.
             kind: ScopeKind::Block,
@@ -60,7 +57,7 @@ pub fn inline_vars(_: Config) -> impl 'static + Pass {
         },
         phase: Phase::Analysis,
         top_level: true,
-        scope_id_gen: Default::default(),
+        id_gen: Default::default(),
     }
 }
 
@@ -86,7 +83,7 @@ enum Reason {
 
 #[derive(Debug)]
 struct Scope<'a> {
-    scope_id: usize,
+    id: usize,
     parent: Option<&'a Scope<'a>>,
     kind: ScopeKind,
     /// Stored only if value is statically known.
@@ -94,10 +91,11 @@ struct Scope<'a> {
     children: RefCell<Vec<Scope<'static>>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct VarInfo {
     /// Count of usage.
-    usage_cnt: isize,
+    usage: i16,
+    assign: i16,
     no_inline: bool,
     value: Option<Expr>,
 }
@@ -107,7 +105,7 @@ struct Inline<'a> {
     phase: Phase,
     scope: Scope<'a>,
     top_level: bool,
-    scope_id_gen: Gen,
+    id_gen: Gen,
 }
 
 impl Inline<'_> {
@@ -119,12 +117,12 @@ impl Inline<'_> {
 
         match self.phase {
             Phase::Analysis => {
-                let scope_id = self.scope_id_gen.get();
+                let id = self.id_gen.get();
 
                 let (res, vars, children) = {
                     let mut c = Inline {
                         scope: Scope {
-                            scope_id,
+                            id,
                             parent: Some(&self.scope),
                             kind,
                             vars: Default::default(),
@@ -132,7 +130,7 @@ impl Inline<'_> {
                         },
                         phase: self.phase,
                         top_level: false,
-                        scope_id_gen: self.scope_id_gen.clone(),
+                        id_gen: self.id_gen.clone(),
                     };
 
                     let res = op(&mut c);
@@ -141,7 +139,7 @@ impl Inline<'_> {
                 };
 
                 self.scope.children.borrow_mut().push(Scope {
-                    scope_id,
+                    id,
                     parent: None,
                     kind,
                     vars,
@@ -161,7 +159,7 @@ impl Inline<'_> {
                     scope,
                     phase: self.phase,
                     top_level: false,
-                    scope_id_gen: self.scope_id_gen.clone(),
+                    id_gen: self.id_gen.clone(),
                 };
 
                 op(&mut c)
@@ -410,7 +408,7 @@ impl Fold<Expr> for Inline<'_> {
                     Phase::Analysis => {
                         if let Some(mut var) = self.scope.find(i) {
                             println!("cnt++; {}: usage", i.sym);
-                            var.usage_cnt += 1;
+                            var.usage += 1;
                         }
                     }
 
@@ -422,11 +420,11 @@ impl Fold<Expr> for Inline<'_> {
 
                             println!(
                                 "Scope({}): inlining: {}: found var: {:?}",
-                                self.scope.scope_id, i.sym, var
+                                self.scope.id, i.sym, var
                             );
                             if var.value.is_some() {
                                 // Variable is inlined
-                                var.usage_cnt -= 1;
+                                var.usage -= 1;
                             }
                             if let Some(ref e) = &var.value {
                                 return e.clone();
@@ -454,13 +452,13 @@ impl Inline<'_> {
             if let Some(ref v) = self.scope.find(i) {
                 println!(
                     "      Scope({}): found var: {}: {:?}",
-                    self.scope.scope_id, i.0, v
+                    self.scope.id, i.0, v
                 );
                 if v.no_inline {
                     return None;
                 }
 
-                if v.usage_cnt <= 1 {
+                if v.usage <= 1 {
                     return Some(Reason::SingleUse);
                 }
             }
@@ -483,7 +481,7 @@ impl Inline<'_> {
         let i = i.to_id();
         println!(
             "Scope({}): {:?}: {}: store {:?}",
-            self.scope.scope_id, self.phase, i.0, kind
+            self.scope.id, self.phase, i.0, kind
         );
         let span = e.span();
 
@@ -519,46 +517,35 @@ impl Inline<'_> {
         match kind {
             // Not hoisted
             Some(VarDeclKind::Let) | Some(VarDeclKind::Const) => {
-                self.scope
-                    .vars
-                    .borrow_mut()
-                    .entry(i)
-                    .or_insert_with(|| VarInfo {
-                        usage_cnt: Default::default(),
-                        no_inline: false,
-                        value: None,
-                    })
-                    .value = value;
+                self.scope.vars.borrow_mut().entry(i).or_default().value = value;
             }
 
             // Hoisted
             Some(VarDeclKind::Var) => {
                 if let Some(fn_scope) = self.scope.find_fn_scope() {
-                    fn_scope
-                        .vars
-                        .borrow_mut()
-                        .entry(i)
-                        .or_insert_with(|| VarInfo {
-                            usage_cnt: Default::default(),
-                            no_inline: false,
-                            value: None,
-                        })
-                        .value = value;
+                    fn_scope.vars.borrow_mut().entry(i).or_default().value = value;
                 }
             }
 
             None => {
                 if let Some(scope) = self.scope.scope_for(&i) {
-                    if let Some(v) = scope.vars.borrow_mut().get_mut(&i) {
-                        v.usage_cnt += 1;
-                        println!("cnt++; {}; store: assign", i.0)
+                    if scope.id != self.scope.id {
+                        self.prevent_inline(&i)
+                    } else {
+                        if let Some(v) = scope.vars.borrow_mut().get_mut(&i) {
+                            v.assign += 1;
+                            println!("cnt++; {}; store: assign", i.0)
+                        }
                     }
                 }
             }
         }
     }
 
-    fn prevent_inline(&mut self, i: &Ident) {
+    fn prevent_inline<I>(&mut self, i: &I)
+    where
+        I: IdentLike,
+    {
         if let Some(mut info) = self.scope.find(i) {
             info.no_inline = true;
             (*info).value = None;
@@ -579,7 +566,7 @@ where
 
         match self.phase {
             Phase::Analysis => {
-                println!("Scope({}): {:?}", self.scope.scope_id, self.scope.vars);
+                println!("Scope({}): {:?}", self.scope.id, self.scope.vars);
                 if top_level {
                     println!("----- ----- ----- ----- -----");
                     self.phase = Phase::Inlining;
@@ -617,7 +604,10 @@ where
                                     let var = match decl.name {
                                         Pat::Ident(ref i) => {
                                             if let Some(var) = self.scope.take_var(i) {
-                                                if var.no_inline || var.usage_cnt != 0 {
+                                                if var.no_inline
+                                                    || var.usage != 0
+                                                    || var.assign != 0
+                                                {
                                                     return Some(decl);
                                                 }
 
@@ -629,7 +619,7 @@ where
                                         // Be conservative
                                         _ => return Some(decl),
                                     };
-                                    assert_eq!(var.usage_cnt, 0);
+                                    assert_eq!(var.usage, 0);
                                     assert!(!var.no_inline);
 
                                     // At here, variable is not used.
