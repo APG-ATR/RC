@@ -9,6 +9,7 @@ pub use self::{
     },
     Purity::{MayBeImpure, Pure},
 };
+use crate::util::ident::IdentLike;
 use ast::*;
 use scoped_tls::scoped_thread_local;
 use std::{
@@ -1425,23 +1426,23 @@ impl IdentExt for Ident {
 }
 
 /// Finds all idents of variable
-pub(crate) struct DestructuringFinder<'a> {
-    pub found: &'a mut Vec<(JsWord, Span)>,
+pub(crate) struct DestructuringFinder<'a, I: IdentLike> {
+    pub found: &'a mut Vec<I>,
 }
 
-impl<'a> Visit<Expr> for DestructuringFinder<'a> {
+impl<'a, I: IdentLike> Visit<Expr> for DestructuringFinder<'a, I> {
     /// No-op (we don't care about expressions)
     fn visit(&mut self, _: &Expr) {}
 }
 
-impl<'a> Visit<PropName> for DestructuringFinder<'a> {
+impl<'a, I: IdentLike> Visit<PropName> for DestructuringFinder<'a, I> {
     /// No-op (we don't care about expressions)
     fn visit(&mut self, _: &PropName) {}
 }
 
-impl<'a> Visit<Ident> for DestructuringFinder<'a> {
+impl<'a, I: IdentLike> Visit<Ident> for DestructuringFinder<'a, I> {
     fn visit(&mut self, i: &Ident) {
-        self.found.push((i.sym.clone(), i.span));
+        self.found.push(I::from_ident(i));
     }
 }
 
