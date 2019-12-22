@@ -333,18 +333,29 @@ impl Fold<VarDecl> for Inline<'_> {
         check!(self);
 
         let mut v = v.fold_children(self);
+        let kind = v.kind;
 
-        for decl in &mut v.decls {
+        v.decls = v.decls.move_flat_map(|mut decl| {
+            //
             match decl.name {
                 Pat::Ident(ref i) => match decl.init {
                     Some(ref mut e) => {
-                        self.store(i, e, Some(v.kind));
+                        self.store(i, e, Some(kind));
                     }
-                    None => self.store(i, &mut *undefined(DUMMY_SP), Some(v.kind)),
+                    None => self.store(i, &mut *undefined(DUMMY_SP), Some(kind)),
                 },
                 _ => {}
             }
-        }
+
+            if self.phase == Phase::Inlining {
+                match decl.init {
+                    Some(box Expr::Invalid(..)) => return None,
+                    _ => {}
+                }
+            }
+
+            Some(decl)
+        });
 
         v
     }
@@ -436,8 +447,16 @@ impl Fold<Expr> for Inline<'_> {
                             None
                         };
                         if let Some(e) = e {
+                            match e {
+                                Expr::Invalid(..) => unreachable!(),
+                                _ => {}
+                            }
+
                             // Inline again if required.
-                            return e.fold_with(self);
+                            return match e.fold_with(self) {
+                                Expr::Invalid(..) => unreachable!(),
+                                e => e,
+                            };
                         }
                     }
                 }
@@ -510,7 +529,8 @@ impl Inline<'_> {
         let value = if self.phase == Phase::Inlining {
             Some(if reason == Reason::SingleUse {
                 println!("  Taking");
-                replace(e, Expr::Invalid(Invalid { span }))
+                //                replace(e, Expr::Invalid(Invalid { span }))
+                e.clone()
             } else {
                 e.clone()
             })
@@ -543,7 +563,7 @@ impl Inline<'_> {
                     } else {
                         if let Some(v) = scope.vars.borrow_mut().get_mut(&i) {
                             v.assign += 1;
-                            println!("cnt++; {}; store: assign", i.0)
+                            println!("cnt++; {}; store: assign: {:?}", i.0, v.value)
                         }
                     }
                 }
@@ -577,7 +597,7 @@ where
             Phase::Analysis => {
                 // println!("Scope({}): {:?}", self.scope.id, self.scope.vars);
                 if top_level {
-                    // println!("----- ----- ----- ----- -----");
+                    println!("----- ----- ----- ----- -----");
                     self.phase = Phase::Inlining;
                     // Inline variables
                     stmts.fold_with(self)
@@ -612,10 +632,7 @@ where
                                     let var = match decl.name {
                                         Pat::Ident(ref i) => {
                                             if let Some(var) = self.scope.take_var(i) {
-                                                if var.no_inline
-                                                    || var.usage != 0
-                                                    || var.assign != 0
-                                                {
+                                                if var.no_inline {
                                                     return Some(decl);
                                                 }
 
@@ -627,8 +644,11 @@ where
                                         // Be conservative
                                         _ => return Some(decl),
                                     };
-                                    assert_eq!(var.usage, 0);
-                                    assert!(!var.no_inline);
+
+                                    // We already inlined it, as it's a single usage
+                                    if var.assign == 0 && var.usage <= 1 {
+                                        return None;
+                                    }
 
                                     // At here, variable is not used.
                                     if decl.init.is_none()
