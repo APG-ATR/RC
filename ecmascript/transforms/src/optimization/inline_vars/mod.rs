@@ -1,7 +1,7 @@
 use crate::{
     pass::Pass,
     scope::ScopeKind,
-    util::{id, ident::IdentLike, undefined, DestructuringFinder, Id, StmtLike},
+    util::{id, ident::IdentLike, undefined, DestructuringFinder, ExprExt, Id, StmtLike},
 };
 use ast::*;
 use fxhash::FxHashMap;
@@ -619,10 +619,6 @@ where
                                                 },
                                             ) = self.scope.take_var(i)
                                             {
-                                                println!(
-                                                    "inline_vars: {}: {}",
-                                                    i.sym, var.usage_cnt
-                                                );
                                                 var
                                             } else {
                                                 return Some(decl);
