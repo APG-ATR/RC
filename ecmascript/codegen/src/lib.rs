@@ -485,8 +485,15 @@ impl<'a> Emitter<'a> {
             Expr::TsConstAssertion(ref n) => emit!(n),
             Expr::TsTypeCast(ref n) => emit!(n),
             Expr::TsOptChain(ref n) => emit!(n),
-            Expr::Invalid(..) => unimplemented!("emit Expr::Invalid"),
+            Expr::Invalid(ref n) => emit!(n),
         }
+    }
+
+    #[emitter]
+    pub fn emit_invalid(&mut self, n: &Invalid) -> Result {
+        self.emit_leading_comments_of_pos(n.span.lo())?;
+
+        self.wr.write_str_lit(n.span, "<invalid>")?;
     }
 
     #[emitter]
