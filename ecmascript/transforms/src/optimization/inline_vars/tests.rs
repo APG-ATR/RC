@@ -651,13 +651,11 @@ fn test_inline_constant_alias_with_non_constant() {
     );
 }
 
-#[test]
-fn test_cascading_in_lines() {
-    test(
-        "var XXX = 4; function f() { var YYY = XXX; bar(YYY); baz(YYY); }",
-        "function f() { bar(4); baz(4); }",
-    );
-}
+to_fn!(
+    test_cascading_in_lines,
+    "var XXX = 4; function f() { var YYY = XXX; bar(YYY); baz(YYY); }",
+    "function f() { bar(4); baz(4); }"
+);
 
 #[test]
 fn test_no_inline_getprop_into_call() {
