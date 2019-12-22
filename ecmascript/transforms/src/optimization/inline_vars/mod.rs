@@ -1,7 +1,7 @@
 use crate::{
     pass::Pass,
     scope::ScopeKind,
-    util::{id, undefined, Id, StmtLike},
+    util::{id, ident::IdentLike, undefined, DestructuringFinder, Id, StmtLike},
 };
 use ast::*;
 use fxhash::FxHashMap;
@@ -11,7 +11,10 @@ use std::{
     collections::hash_map::Entry,
     mem::replace,
 };
-use swc_common::{util::move_map::MoveMap, Fold, FoldWith, Spanned, DUMMY_SP};
+use swc_atoms::JsWord;
+use swc_common::{
+    fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, Spanned, SyntaxContext, DUMMY_SP,
+};
 
 #[cfg(test)]
 mod tests;
@@ -102,15 +105,25 @@ impl Scope<'_> {
         }
     }
 
-    fn scope_for(&self, i: &Ident) -> Option<&Self> {
-        match self.vars.borrow().get(&id(i)) {
+    fn scope_for<I>(&self, i: &I) -> Option<&Self>
+    where
+        I: IdentLike,
+    {
+        match self.vars.borrow().get(&i.to_id()) {
             Some(..) => Some(self),
             None => self.parent.and_then(|p| p.scope_for(i)),
         }
     }
 
-    fn find(&self, i: &Ident) -> Option<RefMut<VarInfo>> {
-        if self.vars.borrow().get(&id(i)).is_none() {
+    fn find<I>(&self, i: &I) -> Option<RefMut<VarInfo>>
+    where
+        I: IdentLike,
+    {
+        println!("          scope.find:");
+
+        if self.vars.borrow().get(&i.to_id()).is_none() {
+            println!("              none");
+
             let r = self.parent.and_then(|p| p.find(i))?;
             return match r.value {
                 Some(Expr::This(..)) => None,
@@ -118,9 +131,11 @@ impl Scope<'_> {
             };
         }
 
+        println!("              some");
+
         let r = RefMut::map(self.vars.borrow_mut(), |vars| {
             //
-            let var_info = vars.get_mut(&id(i)).unwrap();
+            let var_info = vars.get_mut(&i.to_id()).unwrap();
 
             var_info
         });
@@ -211,6 +226,48 @@ impl Fold<VarDecl> for Inline<'_> {
     }
 }
 
+impl Fold<ForOfStmt> for Inline<'_> {
+    fn fold(&mut self, s: ForOfStmt) -> ForOfStmt {
+        let s = s.fold_children(self);
+
+        if self.phase == Phase::Analysis {
+            let mut found: Vec<(JsWord, SyntaxContext)> = vec![];
+            let mut v = DestructuringFinder { found: &mut found };
+            s.left.visit_with(&mut v);
+
+            for id in found {
+                let var = self.scope.find(&id);
+                if let Some(mut var) = var {
+                    var.no_inline = true;
+                }
+            }
+        }
+
+        s
+    }
+}
+
+impl Fold<ForInStmt> for Inline<'_> {
+    fn fold(&mut self, s: ForInStmt) -> ForInStmt {
+        let s = s.fold_children(self);
+
+        if self.phase == Phase::Analysis {
+            let mut found: Vec<(JsWord, SyntaxContext)> = vec![];
+            let mut v = DestructuringFinder { found: &mut found };
+            s.left.visit_with(&mut v);
+
+            for id in found {
+                let var = self.scope.find(&id);
+                if let Some(mut var) = var {
+                    var.no_inline = true;
+                }
+            }
+        }
+
+        s
+    }
+}
+
 impl Fold<Expr> for Inline<'_> {
     fn fold(&mut self, e: Expr) -> Expr {
         let e = e.fold_children(self);
@@ -237,8 +294,25 @@ impl Fold<Expr> for Inline<'_> {
 
 impl Inline<'_> {
     fn should_store(&self, i: &Ident, e: &Expr) -> Option<Reason> {
+        println!(" should store:");
+
         if self.phase == Phase::Analysis {
             return Some(Reason::Cheap);
+        }
+
+        if self.phase == Phase::Inlining {
+            if let Some(ref v) = self.scope.find(i) {
+                println!("      found var");
+                if v.no_inline {
+                    return None;
+                }
+
+                if v.usage_cnt == 1 {
+                    return Some(Reason::SingleUse);
+                }
+            }
+
+            println!("          not handled");
         }
 
         match e {
@@ -246,31 +320,29 @@ impl Inline<'_> {
             _ => {}
         }
 
-        if self.phase == Phase::Inlining {
-            if let Some(ref v) = self.scope.find(i) {
-                return Some(Reason::SingleUse);
-            }
-        }
-
         None
     }
 
     fn store(&mut self, i: &Ident, e: &mut Expr, kind: Option<VarDeclKind>) {
+        println!("{:?}: {}: store", self.phase, i.sym);
         let span = e.span();
 
         let reason = if let Some(reason) = self.should_store(i, e) {
+            println!("  reason: {:?}", reason);
             reason
         } else {
+            println!("  no_inline");
             if let Some(mut info) = self.scope.find(i) {
-                println!("inline_vars: {}: no inline: {:?}", i.sym, kind);
                 info.no_inline = true;
                 (*info).value = None;
             }
+
             return;
         };
 
         let value = if self.phase == Phase::Inlining {
             Some(if reason == Reason::SingleUse {
+                println!("Taking an expression: {}", i.sym);
                 replace(e, Expr::Invalid(Invalid { span }))
             } else {
                 e.clone()
@@ -341,6 +413,7 @@ where
             Phase::Analysis => {
                 println!("Vars: {:?}", self.scope.vars);
                 if top_level {
+                    println!("----- ----- ----- ----- -----");
                     self.phase = Phase::Inlining;
                     // Inline variables
                     stmts.fold_with(self)
