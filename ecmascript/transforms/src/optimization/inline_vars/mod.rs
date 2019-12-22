@@ -20,11 +20,23 @@ mod hoister;
 #[cfg(test)]
 mod tests;
 
+/// Scope id generator.
+#[derive(Debug, Clone, Default)]
+struct Gen(usize);
+impl Gen {
+    #[inline]
+    fn get(&mut self) -> usize {
+        self.0 += 1;
+        self.0
+    }
+}
+
 /// Ported from [`InlineVariables`](https://github.com/google/closure-compiler/blob/master/src/com/google/javascript/jscomp/InlineVariables.java)
 /// of the google closure compiler.
 pub fn inline_vars(_: Config) -> impl 'static + Pass {
     Inline {
         scope: Scope {
+            scope_id: 0,
             parent: None,
             // This is important.
             kind: ScopeKind::Block,
@@ -33,7 +45,7 @@ pub fn inline_vars(_: Config) -> impl 'static + Pass {
         },
         phase: Phase::Analysis,
         top_level: true,
-        in_control_flow: false,
+        scope_id_gen: Default::default(),
     }
 }
 
@@ -59,6 +71,7 @@ enum Reason {
 
 #[derive(Debug)]
 struct Scope<'a> {
+    scope_id: usize,
     parent: Option<&'a Scope<'a>>,
     kind: ScopeKind,
     /// Stored only if value is statically known.
@@ -79,7 +92,7 @@ struct Inline<'a> {
     phase: Phase,
     scope: Scope<'a>,
     top_level: bool,
-    in_control_flow: bool,
+    scope_id_gen: Gen,
 }
 
 impl Inline<'_> {
@@ -89,9 +102,12 @@ impl Inline<'_> {
     {
         match self.phase {
             Phase::Analysis => {
+                let scope_id = self.scope_id_gen.get();
+
                 let (res, vars, children) = {
                     let mut c = Inline {
                         scope: Scope {
+                            scope_id,
                             parent: Some(&self.scope),
                             kind,
                             vars: Default::default(),
@@ -99,7 +115,7 @@ impl Inline<'_> {
                         },
                         phase: self.phase,
                         top_level: false,
-                        in_control_flow: self.in_control_flow,
+                        scope_id_gen: self.scope_id_gen.clone(),
                     };
 
                     let res = op(&mut c);
@@ -108,6 +124,7 @@ impl Inline<'_> {
                 };
 
                 self.scope.children.borrow_mut().push(Scope {
+                    scope_id,
                     parent: None,
                     kind,
                     vars,
@@ -125,7 +142,7 @@ impl Inline<'_> {
                     scope,
                     phase: self.phase,
                     top_level: false,
-                    in_control_flow: self.in_control_flow,
+                    scope_id_gen: self.scope_id_gen.clone(),
                 };
 
                 op(&mut c)
@@ -203,8 +220,6 @@ impl Scope<'_> {
 
 impl Fold<Function> for Inline<'_> {
     fn fold(&mut self, f: Function) -> Function {
-        let old = self.in_control_flow;
-        self.in_control_flow = true;
         let res = self.child(ScopeKind::Fn, |folder| {
             // Hoist vars
             if folder.phase == Phase::Analysis {
@@ -225,34 +240,6 @@ impl Fold<Function> for Inline<'_> {
                 ..f
             }
         });
-
-        self.in_control_flow = old;
-
-        res
-    }
-}
-
-impl Fold<IfStmt> for Inline<'_> {
-    fn fold(&mut self, s: IfStmt) -> IfStmt {
-        let old = self.in_control_flow;
-        self.in_control_flow = true;
-
-        let res = s.fold_children(self);
-
-        self.in_control_flow = old;
-
-        res
-    }
-}
-
-impl Fold<SwitchStmt> for Inline<'_> {
-    fn fold(&mut self, s: SwitchStmt) -> SwitchStmt {
-        let old = self.in_control_flow;
-        self.in_control_flow = true;
-
-        let res = s.fold_children(self);
-
-        self.in_control_flow = old;
 
         res
     }
@@ -518,38 +505,45 @@ where
                             Stmt::Empty(..) => return None,
 
                             Stmt::Decl(Decl::Var(mut var)) => {
-                                var.decls = var.decls.move_flat_map(|decl| {
-                                    match decl.name {
-                                        Pat::Ident(ref i) => {
-                                            let var = if let Some(
-                                                var
-                                                @
-                                                VarInfo {
-                                                    no_inline: false, ..
-                                                },
-                                            ) = self.scope.take_var(i)
-                                            {
-                                                println!(
-                                                    "inline_vars: {}: {}",
-                                                    i.sym, var.usage_cnt
-                                                );
-                                                var
-                                            } else {
-                                                return Some(decl);
-                                            };
+                                let should_fold = var.kind == VarDeclKind::Let
+                                    || var.kind == VarDeclKind::Const
+                                    || (var.kind == VarDeclKind::Var
+                                        && self.scope.kind == ScopeKind::Fn);
 
-                                            if var.usage_cnt == 0 {
-                                                None
-                                            } else {
+                                if should_fold {
+                                    var.decls = var.decls.move_flat_map(|decl| {
+                                        match decl.name {
+                                            Pat::Ident(ref i) => {
+                                                let var = if let Some(
+                                                    var
+                                                    @
+                                                    VarInfo {
+                                                        no_inline: false, ..
+                                                    },
+                                                ) = self.scope.take_var(i)
+                                                {
+                                                    println!(
+                                                        "inline_vars: {}: {}",
+                                                        i.sym, var.usage_cnt
+                                                    );
+                                                    var
+                                                } else {
+                                                    return Some(decl);
+                                                };
+
+                                                if var.usage_cnt == 0 {
+                                                    None
+                                                } else {
+                                                    Some(decl)
+                                                }
+                                            }
+                                            _ => {
+                                                // Be conservative
                                                 Some(decl)
                                             }
                                         }
-                                        _ => {
-                                            // Be conservative
-                                            Some(decl)
-                                        }
-                                    }
-                                });
+                                    });
+                                }
 
                                 if var.decls.is_empty() {
                                     return None;
