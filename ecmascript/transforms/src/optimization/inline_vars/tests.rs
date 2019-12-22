@@ -216,10 +216,12 @@ to_fn!(
     "var x; if (true) x=1; use(x)"
 );
 
-identical_all!(
-    while_loop,
+identical!(while_loop, "while (z) { var x = 3; } var y = x;");
+
+to_fn!(
     while_loop_fn,
-    "while (z) { var x = 3; } var y = x;"
+    "while (z) { var x = 3; } var y = x;",
+    "while (z) {}"
 );
 
 #[test]
