@@ -17,7 +17,7 @@ struct Hoister<'a> {
 
 /// Don't recurse into function
 impl Visit<Function> for Hoister<'_> {
-    fn visit(&mut self, node: &Function) {}
+    fn visit(&mut self, _: &Function) {}
 }
 
 impl Visit<Pat> for Hoister<'_> {
