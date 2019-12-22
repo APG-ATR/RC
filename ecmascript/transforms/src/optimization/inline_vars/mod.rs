@@ -20,6 +20,18 @@ mod hoister;
 #[cfg(test)]
 mod tests;
 
+macro_rules! check {
+    ($i:expr) => {{
+        if $i.scope.scope_id != 0 {
+            assert!(
+                $i.scope.parent.is_some(),
+                "Scope({}) does not have parent",
+                $i.scope.scope_id
+            );
+        }
+    }};
+}
+
 /// Scope id generator.
 #[derive(Debug, Clone, Default)]
 struct Gen(usize);
@@ -82,7 +94,7 @@ struct Scope<'a> {
 #[derive(Debug)]
 struct VarInfo {
     /// Count of usage.
-    usage_cnt: usize,
+    usage_cnt: isize,
     no_inline: bool,
     value: Option<Expr>,
 }
@@ -100,6 +112,8 @@ impl Inline<'_> {
     where
         F: for<'any> FnOnce(&mut Inline<'any>) -> T,
     {
+        check!(self);
+
         match self.phase {
             Phase::Analysis => {
                 let scope_id = self.scope_id_gen.get();
@@ -137,6 +151,8 @@ impl Inline<'_> {
             Phase::Inlining => {
                 let mut scope = self.scope.children.get_mut().remove(0);
                 scope.parent = Some(&self.scope);
+
+                assert_eq!(kind, scope.kind);
 
                 let mut c = Inline {
                     scope,
@@ -232,6 +248,8 @@ impl Scope<'_> {
 
 impl Fold<Function> for Inline<'_> {
     fn fold(&mut self, f: Function) -> Function {
+        check!(self);
+
         let res = self.child(ScopeKind::Fn, |folder| {
             // Hoist vars
             if folder.phase == Phase::Analysis {
@@ -259,18 +277,24 @@ impl Fold<Function> for Inline<'_> {
 
 impl Fold<BlockStmt> for Inline<'_> {
     fn fold(&mut self, s: BlockStmt) -> BlockStmt {
+        check!(self);
+
         self.child(ScopeKind::Block, |c| s.fold_children(c))
     }
 }
 
 impl Fold<SwitchCase> for Inline<'_> {
     fn fold(&mut self, s: SwitchCase) -> SwitchCase {
+        check!(self);
+
         self.child(ScopeKind::Block, |c| s.fold_children(c))
     }
 }
 
 impl Fold<AssignExpr> for Inline<'_> {
     fn fold(&mut self, e: AssignExpr) -> AssignExpr {
+        check!(self);
+
         let mut e = e.fold_children(self);
 
         match e.left {
@@ -291,6 +315,13 @@ impl Fold<AssignExpr> for Inline<'_> {
 
 impl Fold<VarDecl> for Inline<'_> {
     fn fold(&mut self, v: VarDecl) -> VarDecl {
+        check!(self);
+
+        println!(
+            "VarDecl: Scope({}): {:?}",
+            self.scope.scope_id, self.scope.vars
+        );
+
         let mut v = v.fold_children(self);
 
         for decl in &mut v.decls {
@@ -309,6 +340,8 @@ impl Fold<VarDecl> for Inline<'_> {
 
 impl Fold<ForOfStmt> for Inline<'_> {
     fn fold(&mut self, s: ForOfStmt) -> ForOfStmt {
+        check!(self);
+
         let s = s.fold_children(self);
 
         if self.phase == Phase::Analysis {
@@ -330,6 +363,8 @@ impl Fold<ForOfStmt> for Inline<'_> {
 
 impl Fold<ForInStmt> for Inline<'_> {
     fn fold(&mut self, s: ForInStmt) -> ForInStmt {
+        check!(self);
+
         let s = s.fold_children(self);
 
         if self.phase == Phase::Analysis {
@@ -351,18 +386,35 @@ impl Fold<ForInStmt> for Inline<'_> {
 
 impl Fold<Expr> for Inline<'_> {
     fn fold(&mut self, e: Expr) -> Expr {
+        check!(self);
+
         let e = e.fold_children(self);
 
         match e {
             Expr::Ident(ref i) => {
-                if let Some(mut var) = self.scope.find(i) {
-                    if let Some(ref e) = (*var).value {
-                        println!("inline: {}", i.sym);
+                match self.phase {
+                    Phase::Analysis => {
+                        if let Some(mut var) = self.scope.find(i) {
+                            println!("cnt++; {}: usage", i.sym);
+                            var.usage_cnt += 1;
+                        }
+                    }
 
-                        return e.clone();
-                    } else {
-                        println!("cnt++; {}: usage", i.sym);
-                        var.usage_cnt += 1;
+                    Phase::Inlining => {
+                        println!("Fold<Expr>: {:?}", self.scope);
+                        if let Some(mut var) = self.scope.find(i) {
+                            println!(
+                                "Scope({}): inlining: {}: found var: {:?}",
+                                self.scope.scope_id, i.sym, var
+                            );
+                            if var.value.is_some() {
+                                // Variable is inlined
+                                var.usage_cnt -= 1;
+                            }
+                            if let Some(ref e) = &var.value {
+                                return e.clone();
+                            }
+                        }
                     }
                 }
             }
@@ -383,7 +435,7 @@ impl Inline<'_> {
 
         if self.phase == Phase::Inlining {
             if let Some(ref v) = self.scope.find(i) {
-                println!("      found var: {:?}", v);
+                println!("      {}: found var: {:?}", i.0, v);
                 if v.no_inline {
                     return None;
                 }
@@ -409,7 +461,10 @@ impl Inline<'_> {
         I: IdentLike,
     {
         let i = i.to_id();
-        println!("{:?}: {}: store", self.phase, i.0);
+        println!(
+            "Scope({}): {:?}: {}: store {:?}",
+            self.scope.scope_id, self.phase, i.0, kind
+        );
         let span = e.span();
 
         let reason = if let Some(reason) = self.should_store(&i, e) {
@@ -457,6 +512,7 @@ impl Inline<'_> {
             // Hoisted
             Some(VarDeclKind::Var) => {
                 if let Some(fn_scope) = self.scope.find_fn_scope() {
+                    println!("Scope({}): a function scope", fn_scope.scope_id);
                     fn_scope.vars.borrow_mut().insert(
                         i,
                         VarInfo {
@@ -501,7 +557,7 @@ where
 
         match self.phase {
             Phase::Analysis => {
-                println!("Vars: {:?}", self.scope.vars);
+                println!("Scope({}): {:?}", self.scope.scope_id, self.scope.vars);
                 if top_level {
                     println!("----- ----- ----- ----- -----");
                     self.phase = Phase::Inlining;
@@ -536,11 +592,6 @@ where
 
                                 if should_fold {
                                     var.decls = var.decls.move_flat_map(|decl| {
-                                        match decl.init {
-                                            Some(box Expr::Invalid(..)) => return None,
-                                            _ => {}
-                                        }
-
                                         match decl.name {
                                             Pat::Ident(ref i) => {
                                                 let var = if let Some(
