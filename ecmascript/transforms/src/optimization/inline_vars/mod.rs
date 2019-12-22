@@ -413,7 +413,7 @@ impl Fold<Expr> for Inline<'_> {
                     }
 
                     Phase::Inlining => {
-                        if let Some(mut var) = self.scope.find(i) {
+                        let e = if let Some(mut var) = self.scope.find(i) {
                             if var.no_inline {
                                 return e;
                             }
@@ -426,9 +426,18 @@ impl Fold<Expr> for Inline<'_> {
                                 // Variable is inlined
                                 var.usage -= 1;
                             }
-                            if let Some(ref e) = &var.value {
-                                return e.clone();
+
+                            if let Some(ref e) = var.value {
+                                Some(e.clone())
+                            } else {
+                                None
                             }
+                        } else {
+                            None
+                        };
+                        if let Some(e) = e {
+                            // Inline again if required.
+                            return e.fold_with(self);
                         }
                     }
                 }
