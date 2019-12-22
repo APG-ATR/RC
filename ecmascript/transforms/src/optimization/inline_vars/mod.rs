@@ -558,7 +558,6 @@ impl Inline<'_> {
 
     fn prevent_inline(&mut self, i: &Ident) {
         if let Some(mut info) = self.scope.find(i) {
-            println!("inline_vars: {}: remove", i.sym);
             info.no_inline = true;
             (*info).value = None;
         }
