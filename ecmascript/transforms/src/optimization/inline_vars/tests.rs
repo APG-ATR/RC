@@ -343,15 +343,20 @@ fn test_immutable_with_single_reference_after_initialzation() {
     );
 }
 
+to_fn!(
+    single_reference_after_initialzation_1,
+    "var a; a = foo();a;",
+    "foo();"
+);
+
 #[test]
-fn test_single_reference_after_initialzation() {
-    test("var a; a = foo();a;", "foo();");
+fn single_reference_after_initialzation() {
     test_same("var a; if (a = foo()) { alert(3); } a;");
     test_same("var a; switch (a = foo()) {} a;");
     test_same("var a; function f(){ return a = foo(); } a;");
     test_same("function f(){ var a; return a = foo(); a;}");
     test_same("var a; with (a = foo()) { alert(3); } a;");
-    test_same("var a; b = (a = foo()); a;");
+    test("var a; b = (a = foo()); a;", "var a; b = a = foo(); a;");
     test_same("var a; while(a = foo()) { alert(3); } a;");
     test_same("var a; for(;a = foo();) { alert(3); } a;");
     test_same("var a; do {} while(a = foo()) { alert(3); } a;");

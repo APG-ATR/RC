@@ -486,7 +486,7 @@ impl Inline<'_> {
                     return None;
                 }
 
-                if v.usage <= 1 {
+                if v.assign == 0 && v.usage == 1 {
                     return Some(Reason::SingleUse);
                 }
             }
@@ -644,8 +644,7 @@ where
                                         _ => return Some(decl),
                                     };
 
-                                    // We already inlined it, as it's a single usage
-                                    if var.assign == 0 && var.usage <= 1 {
+                                    if var.assign == 0 && var.usage == 0 {
                                         return None;
                                     }
 
