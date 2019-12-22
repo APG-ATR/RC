@@ -25,6 +25,7 @@ use unicode_xid::UnicodeXID;
 
 pub(crate) mod constructor;
 mod factory;
+pub mod ident;
 pub(crate) mod options;
 mod value;
 pub(crate) mod var;
