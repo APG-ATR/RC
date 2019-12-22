@@ -599,47 +599,59 @@ where
                             }
                             Stmt::Empty(..) => return None,
 
-                            Stmt::Decl(Decl::Var(mut var)) => {
-                                var.decls = var.decls.move_flat_map(|decl| {
+                            Stmt::Decl(Decl::Var(mut v)) => {
+                                let kind = v.kind;
+
+                                v.decls = v.decls.move_flat_map(|decl| {
                                     match decl.init {
                                         // Remove inlined variables (single usage).
-                                        Some(box Expr::Invalid(..)) => return None,
+                                        Some(box Expr::Invalid(..)) => {
+                                            println!("FOO");
+                                            return None;
+                                        }
                                         _ => {}
                                     }
 
-                                    match decl.name {
+                                    // If variable is used, we can't remove it.
+                                    let var = match decl.name {
                                         Pat::Ident(ref i) => {
-                                            let var = if let Some(
-                                                var
-                                                @
-                                                VarInfo {
-                                                    no_inline: false, ..
-                                                },
-                                            ) = self.scope.take_var(i)
-                                            {
+                                            if let Some(var) = self.scope.take_var(i) {
+                                                if var.no_inline || var.usage_cnt != 0 {
+                                                    return Some(decl);
+                                                }
+
                                                 var
                                             } else {
                                                 return Some(decl);
-                                            };
-
-                                            if var.usage_cnt == 0 {
-                                                None
-                                            } else {
-                                                Some(decl)
                                             }
                                         }
-                                        _ => {
-                                            // Be conservative
-                                            Some(decl)
+                                        // Be conservative
+                                        _ => return Some(decl),
+                                    };
+                                    assert_eq!(var.usage_cnt, 0);
+                                    assert!(!var.no_inline);
+
+                                    // At here, variable is not used.
+                                    if decl.init.is_none()
+                                        || !decl.init.as_ref().unwrap().may_have_side_effects()
+                                    {
+                                        if match kind {
+                                            VarDeclKind::Const | VarDeclKind::Let => true,
+                                            VarDeclKind::Var if !top_level => true,
+                                            _ => false,
+                                        } {
+                                            return None;
                                         }
                                     }
+
+                                    None
                                 });
 
-                                if var.decls.is_empty() {
+                                if v.decls.is_empty() {
                                     return None;
                                 }
 
-                                Stmt::Decl(Decl::Var(var))
+                                Stmt::Decl(Decl::Var(v))
                             }
 
                             _ => stmt,
