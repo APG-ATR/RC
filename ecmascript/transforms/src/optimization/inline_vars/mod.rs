@@ -16,6 +16,7 @@ use swc_common::{
     fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, Spanned, SyntaxContext, DUMMY_SP,
 };
 
+mod hoister;
 #[cfg(test)]
 mod tests;
 
@@ -198,13 +199,29 @@ impl Scope<'_> {
 
 impl Fold<Function> for Inline<'_> {
     fn fold(&mut self, f: Function) -> Function {
-        self.child(ScopeKind::Fn, |folder| Function {
-            params: f.params.fold_with(folder),
-            body: match f.body {
-                Some(bs) => Some(bs.fold_children(folder)),
-                None => None,
-            },
-            ..f
+        self.child(ScopeKind::Fn, |folder| {
+            // Hoist vars
+            if folder.phase == Phase::Analysis {
+                let vars = hoister::find_vars(&f);
+
+                for i in vars {
+                    folder.store(
+                        &i,
+                        &mut Expr::Invalid(Invalid { span: DUMMY_SP }),
+                        Some(VarDeclKind::Var),
+                    );
+                }
+            }
+
+            // Handle function
+            Function {
+                params: f.params.fold_with(folder),
+                body: match f.body {
+                    Some(bs) => Some(bs.fold_children(folder)),
+                    None => None,
+                },
+                ..f
+            }
         })
     }
 }
@@ -326,7 +343,7 @@ impl Fold<Expr> for Inline<'_> {
 }
 
 impl Inline<'_> {
-    fn should_store(&self, i: &Ident, e: &Expr) -> Option<Reason> {
+    fn should_store(&self, i: &Id, e: &Expr) -> Option<Reason> {
         println!(" should store:");
 
         if self.phase == Phase::Analysis {
@@ -356,16 +373,20 @@ impl Inline<'_> {
         None
     }
 
-    fn store(&mut self, i: &Ident, e: &mut Expr, kind: Option<VarDeclKind>) {
-        println!("{:?}: {}: store", self.phase, i.sym);
+    fn store<I>(&mut self, i: &I, e: &mut Expr, kind: Option<VarDeclKind>)
+    where
+        I: IdentLike,
+    {
+        let i = i.to_id();
+        println!("{:?}: {}: store", self.phase, i.0);
         let span = e.span();
 
-        let reason = if let Some(reason) = self.should_store(i, e) {
+        let reason = if let Some(reason) = self.should_store(&i, e) {
             println!("  reason: {:?}", reason);
             reason
         } else {
             println!("  no_inline");
-            if let Some(mut info) = self.scope.find(i) {
+            if let Some(mut info) = self.scope.find(&i) {
                 info.no_inline = true;
                 (*info).value = None;
             }
@@ -375,7 +396,6 @@ impl Inline<'_> {
 
         let value = if self.phase == Phase::Inlining {
             Some(if reason == Reason::SingleUse {
-                println!("Taking an expression: {}", i.sym);
                 replace(e, Expr::Invalid(Invalid { span }))
             } else {
                 e.clone()
@@ -388,7 +408,7 @@ impl Inline<'_> {
             // Not hoisted
             Some(VarDeclKind::Let) | Some(VarDeclKind::Const) => {
                 self.scope.vars.borrow_mut().insert(
-                    id(i),
+                    i,
                     VarInfo {
                         usage_cnt: Default::default(),
                         no_inline: false,
@@ -401,7 +421,7 @@ impl Inline<'_> {
             Some(VarDeclKind::Var) => {
                 if let Some(fn_scope) = self.scope.find_fn_scope() {
                     fn_scope.vars.borrow_mut().insert(
-                        id(i),
+                        i,
                         VarInfo {
                             usage_cnt: Default::default(),
                             no_inline: false,
@@ -412,10 +432,10 @@ impl Inline<'_> {
             }
 
             None => {
-                if let Some(scope) = self.scope.scope_for(i) {
-                    if let Some(v) = scope.vars.borrow_mut().get_mut(&id(i)) {
+                if let Some(scope) = self.scope.scope_for(&i) {
+                    if let Some(v) = scope.vars.borrow_mut().get_mut(&i) {
                         v.usage_cnt += 1;
-                        println!("cnt++; {}; store: assign", i.sym)
+                        println!("cnt++; {}; store: assign", i.0)
                     }
                 }
             }
