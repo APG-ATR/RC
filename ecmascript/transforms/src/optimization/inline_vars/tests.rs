@@ -196,10 +196,15 @@ fn test_inline_into_arrow_function2() {
     );
 }
 
-identical_all!(
+identical!(
     cond_true_1,
-    cond_true_1_fn,
     "if (true) { var x = 1; } var z = x; use(x); use(x);"
+);
+
+to_fn!(
+    cond_true_1_fn,
+    "if (true) { var x = 1; } var z = x; use(x); use(x);",
+    "if (true) { var x = 1; } use(x); use(x);"
 );
 
 identical_all!(
