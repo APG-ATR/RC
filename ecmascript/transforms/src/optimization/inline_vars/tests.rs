@@ -1333,10 +1333,10 @@ identical_all!(
     "function x_64(){var x_7;for(;;);var x_68=x_7=x_7++;}"
 );
 
-identical_all!(
+to!(
     closure_compiler_1177_3,
-    closure_compiler_1177_3_fn,
-    "function x_64(){var x_7;for(;;);var x_68=x_7=x_7*2;}"
+    "function x_64(){var x_7;for(;;);var x_68=x_7=x_7*2;}",
+    "function x_64(){var x_7;for(;;);}"
 );
 
 // GitHub issue #1234: https://github.com/google/closure-compiler/issues/1234
