@@ -1464,61 +1464,60 @@ to_fn!(
 
 to_fn!(tpl_lit_3, "var age = 3; `Age: ${age}`", "`Age: ${3}`");
 
-#[test]
-fn test_tagged_template_literals() {
-    test(
-        concat!(
-            "var name = 'Foo';",
-            "function myTag(strings, nameExp, numExp) {",
-            "  var modStr;",
-            "  if (numExp > 2) {",
-            "    modStr = nameExp + 'Bar'",
-            "  } else { ",
-            "    modStr = nameExp + 'BarBar'",
-            "  }",
-            "}",
-            "var output = myTag`My name is ${name} ${3}`;",
-        ),
-        concat!(
-            "var output = function myTag(strings, nameExp, numExp) {",
-            "  var modStr;",
-            "  if (numExp > 2) {",
-            "    modStr = nameExp + 'Bar'",
-            "  } else { ",
-            "    modStr = nameExp + 'BarBar'",
-            "  }",
-            "}`My name is ${'Foo'} ${3}`;",
-        ),
-    );
+to_fn!(
+    tagged_tpl_lit_1,
+    concat!(
+        "var name = 'Foo';",
+        "function myTag(strings, nameExp, numExp) {",
+        "  var modStr;",
+        "  if (numExp > 2) {",
+        "    modStr = nameExp + 'Bar'",
+        "  } else { ",
+        "    modStr = nameExp + 'BarBar'",
+        "  }",
+        "}",
+        "var output = myTag`My name is ${name} ${3}`;",
+    ),
+    concat!(
+        "var output = function myTag(strings, nameExp, numExp) {",
+        "  var modStr;",
+        "  if (numExp > 2) {",
+        "    modStr = nameExp + 'Bar'",
+        "  } else { ",
+        "    modStr = nameExp + 'BarBar'",
+        "  }",
+        "}`My name is ${'Foo'} ${3}`;",
+    )
+);
 
-    test(
-        concat!(
-            "var name = 'Foo';",
-            "function myTag(strings, nameExp, numExp) {",
-            "  var modStr;",
-            "  if (numExp > 2) {",
-            "    modStr = nameExp + 'Bar'",
-            "  } else { ",
-            "    modStr = nameExp + 'BarBar'",
-            "  }",
-            "}",
-            "var output = myTag`My name is ${name} ${3}`;",
-            "output = myTag`My name is ${name} ${2}`;",
-        ),
-        concat!(
-            "function myTag(strings, nameExp, numExp) {",
-            "  var modStr;",
-            "  if (numExp > 2) {",
-            "    modStr = nameExp + 'Bar'",
-            "  } else { ",
-            "    modStr = nameExp + 'BarBar'",
-            "  }",
-            "}",
-            "var output = myTag`My name is ${'Foo'} ${3}`;",
-            "output = myTag`My name is ${'Foo'} ${2}`;",
-        ),
-    );
-}
+to_fn!(
+    tagged_tpl_lit_2,
+    concat!(
+        "var name = 'Foo';",
+        "function myTag(strings, nameExp, numExp) {",
+        "  var modStr;",
+        "  if (numExp > 2) {",
+        "    modStr = nameExp + 'Bar'",
+        "  } else { ",
+        "    modStr = nameExp + 'BarBar'",
+        "  }",
+        "}",
+        "var output = myTag`My name is ${name} ${3}`;",
+        "output = myTag`My name is ${name} ${2}`;",
+    ),
+    concat!(
+        "function myTag(strings, nameExp, numExp) {",
+        "  var modStr;",
+        "  if (numExp > 2) {",
+        "    modStr = nameExp + 'Bar'",
+        "  } else { ",
+        "    modStr = nameExp + 'BarBar'",
+        "  }",
+        "}",
+        "var output = myTag`My name is ${'Foo'} ${3}`;",
+        "output = myTag`My name is ${'Foo'} ${2}`;",
+    )
+);
 
 to_all!(
     destructuring,
