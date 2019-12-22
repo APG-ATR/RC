@@ -181,6 +181,7 @@ impl Scope<'_> {
 
             let r = self.parent.and_then(|p| p.find(i))?;
             return match r.value {
+                Some(Expr::Invalid(..)) => unreachable!(),
                 Some(Expr::This(..)) => None,
                 _ => Some(r),
             };
@@ -194,14 +195,25 @@ impl Scope<'_> {
 
             var_info
         });
+        match r.value {
+            Some(Expr::Invalid(..)) => unreachable!(),
+            _ => {}
+        }
         Some(r)
     }
 
     fn take_var(&self, i: &Ident) -> Option<VarInfo> {
-        match self.vars.borrow_mut().entry(id(i)) {
+        let var = match self.vars.borrow_mut().entry(id(i)) {
             Entry::Occupied(o) => Some(o.remove()),
             Entry::Vacant(..) => self.parent.and_then(|p| p.take_var(i)),
+        }?;
+
+        match var.value {
+            Some(Expr::Invalid(..)) => unreachable!(),
+            _ => {}
         }
+
+        Some(var)
     }
 
     //    fn remove(&self, i: &Ident) {
@@ -363,7 +375,7 @@ impl Fold<Expr> for Inline<'_> {
 
 impl Inline<'_> {
     fn should_store(&self, i: &Id, e: &Expr) -> Option<Reason> {
-        println!(" should store:");
+        println!("  should store:");
 
         if self.phase == Phase::Analysis {
             return Some(Reason::Cheap);
@@ -371,12 +383,12 @@ impl Inline<'_> {
 
         if self.phase == Phase::Inlining {
             if let Some(ref v) = self.scope.find(i) {
-                println!("      found var");
+                println!("      found var: {:?}", v);
                 if v.no_inline {
                     return None;
                 }
 
-                if v.usage_cnt == 1 {
+                if v.usage_cnt <= 1 {
                     return Some(Reason::SingleUse);
                 }
             }
@@ -415,6 +427,7 @@ impl Inline<'_> {
 
         let value = if self.phase == Phase::Inlining {
             Some(if reason == Reason::SingleUse {
+                println!("  Taking");
                 replace(e, Expr::Invalid(Invalid { span }))
             } else {
                 e.clone()
@@ -422,6 +435,11 @@ impl Inline<'_> {
         } else {
             None
         };
+
+        match value {
+            Some(Expr::Invalid(..)) => unreachable!(),
+            _ => {}
+        }
 
         match kind {
             // Not hoisted
@@ -505,6 +523,12 @@ where
                             Stmt::Empty(..) => return None,
 
                             Stmt::Decl(Decl::Var(mut var)) => {
+                                // Remove inlined variables (single usage).
+                                var.decls = var.decls.move_flat_map(|decl| match decl.init {
+                                    Some(box Expr::Invalid(..)) => None,
+                                    _ => Some(decl),
+                                });
+
                                 let should_fold = var.kind == VarDeclKind::Let
                                     || var.kind == VarDeclKind::Const
                                     || (var.kind == VarDeclKind::Var
@@ -512,6 +536,11 @@ where
 
                                 if should_fold {
                                     var.decls = var.decls.move_flat_map(|decl| {
+                                        match decl.init {
+                                            Some(box Expr::Invalid(..)) => return None,
+                                            _ => {}
+                                        }
+
                                         match decl.name {
                                             Pat::Ident(ref i) => {
                                                 let var = if let Some(
