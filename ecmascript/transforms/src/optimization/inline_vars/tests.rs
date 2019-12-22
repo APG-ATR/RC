@@ -273,9 +273,10 @@ fn test_inside_if_conditional() {
     );
 }
 
+to_fn!(only_read_at_initialization_1, "var a; a = foo();", "foo();");
+
 #[test]
 fn test_only_read_at_initialization() {
-    test("var a; a = foo();", "foo();");
     test(
         "var a; if (a = foo()) { alert(3); }",
         "if (foo()) { alert(3); }",
