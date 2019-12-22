@@ -1,7 +1,10 @@
 use crate::{
     pass::Pass,
     scope::ScopeKind,
-    util::{id, ident::IdentLike, undefined, DestructuringFinder, ExprExt, Id, StmtLike},
+    util::{
+        id, ident::IdentLike, preserve_effects, undefined, DestructuringFinder, ExprExt, Id,
+        StmtLike,
+    },
 };
 use ast::*;
 use fxhash::FxHashMap;
@@ -597,13 +600,13 @@ where
                             Stmt::Empty(..) => return None,
 
                             Stmt::Decl(Decl::Var(mut var)) => {
-                                // Remove inlined variables (single usage).
-                                var.decls = var.decls.move_flat_map(|decl| match decl.init {
-                                    Some(box Expr::Invalid(..)) => None,
-                                    _ => Some(decl),
-                                });
-
                                 var.decls = var.decls.move_flat_map(|decl| {
+                                    match decl.init {
+                                        // Remove inlined variables (single usage).
+                                        Some(box Expr::Invalid(..)) => return None,
+                                        _ => {}
+                                    }
+
                                     match decl.name {
                                         Pat::Ident(ref i) => {
                                             let var = if let Some(
