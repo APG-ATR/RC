@@ -1404,8 +1404,7 @@ to!(
     }
     y;
 ",
-    "let y;
-    {
+    "{
         x;
     }
     void 0;"
@@ -1413,7 +1412,9 @@ to!(
 
 to!(
     let_const,
-    "let y = x; y; const g = 2;
+    "let y = x;
+    y;
+    const g = 2;
     {
         const g = 3;
         let y = g;
@@ -1423,7 +1424,6 @@ to!(
     g;
 ",
     "x;
-    const g = 2;
     {
         3;
     }
