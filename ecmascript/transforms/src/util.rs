@@ -1,5 +1,6 @@
 pub use self::{
     factory::ExprFactory,
+    ident::{id, Id},
     value::{
         Type::{
             self, Bool as BoolType, Null as NullType, Num as NumberType, Obj as ObjectType,
@@ -1671,11 +1672,4 @@ pub fn prop_name_eq(p: &PropName, key: &str) -> bool {
             _ => false,
         },
     }
-}
-
-pub type Id = (JsWord, SyntaxContext);
-
-#[inline(always)]
-pub fn id(i: &Ident) -> Id {
-    (i.sym.clone(), i.span.ctxt())
 }
