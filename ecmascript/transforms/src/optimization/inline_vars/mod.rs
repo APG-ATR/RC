@@ -511,7 +511,6 @@ impl Inline<'_> {
             "Scope({}): {:?}: {}: store {:?}",
             self.scope.id, self.phase, i.0, kind
         );
-        let span = e.span();
 
         let reason = if let Some(reason) = self.should_store(&i, e) {
             println!("  reason: {:?}", reason);
