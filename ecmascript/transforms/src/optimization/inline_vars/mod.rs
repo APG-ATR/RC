@@ -401,8 +401,11 @@ impl Fold<Expr> for Inline<'_> {
                     }
 
                     Phase::Inlining => {
-                        println!("Fold<Expr>: {:?}", self.scope);
                         if let Some(mut var) = self.scope.find(i) {
+                            if var.no_inline {
+                                return e;
+                            }
+
                             println!(
                                 "Scope({}): inlining: {}: found var: {:?}",
                                 self.scope.scope_id, i.sym, var
@@ -435,7 +438,10 @@ impl Inline<'_> {
 
         if self.phase == Phase::Inlining {
             if let Some(ref v) = self.scope.find(i) {
-                println!("      {}: found var: {:?}", i.0, v);
+                println!(
+                    "      Scope({}): found var: {}: {:?}",
+                    self.scope.scope_id, i.0, v
+                );
                 if v.no_inline {
                     return None;
                 }
@@ -499,7 +505,7 @@ impl Inline<'_> {
         match kind {
             // Not hoisted
             Some(VarDeclKind::Let) | Some(VarDeclKind::Const) => {
-                self.scope.vars.borrow_mut().insert(
+                let prev = self.scope.vars.borrow_mut().insert(
                     i,
                     VarInfo {
                         usage_cnt: Default::default(),
@@ -507,20 +513,24 @@ impl Inline<'_> {
                         value,
                     },
                 );
+
+                unimplemented!("Handling duplicate: {:?}", prev);
             }
 
             // Hoisted
             Some(VarDeclKind::Var) => {
                 if let Some(fn_scope) = self.scope.find_fn_scope() {
                     println!("Scope({}): a function scope", fn_scope.scope_id);
-                    fn_scope.vars.borrow_mut().insert(
-                        i,
-                        VarInfo {
+                    fn_scope
+                        .vars
+                        .borrow_mut()
+                        .entry(i)
+                        .or_insert_with(|| VarInfo {
                             usage_cnt: Default::default(),
                             no_inline: false,
-                            value,
-                        },
-                    );
+                            value: None,
+                        })
+                        .value = value;
                 }
             }
 
