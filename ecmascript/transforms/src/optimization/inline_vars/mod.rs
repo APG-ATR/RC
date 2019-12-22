@@ -318,9 +318,6 @@ impl Fold<AssignExpr> for Inline<'_> {
             PatOrExpr::Pat(box Pat::Ident(ref i)) => {
                 if e.op == op!("=") {
                     self.store(i, &mut e.right, None);
-                    if e.right.may_have_side_effects() {
-                        self.prevent_inline(i);
-                    }
                 } else {
                     self.prevent_inline(i)
                 }
@@ -344,9 +341,6 @@ impl Fold<VarDecl> for Inline<'_> {
                 Pat::Ident(ref i) => match decl.init {
                     Some(ref mut e) => {
                         self.store(i, e, Some(v.kind));
-                        if (*e).may_have_side_effects() {
-                            self.prevent_inline(i)
-                        }
                     }
                     None => self.store(i, &mut *undefined(DUMMY_SP), Some(v.kind)),
                 },
