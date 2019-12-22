@@ -33,6 +33,7 @@ pub fn inline_vars(_: Config) -> impl 'static + Pass {
         },
         phase: Phase::Analysis,
         top_level: true,
+        in_control_flow: false,
     }
 }
 
@@ -78,6 +79,7 @@ struct Inline<'a> {
     phase: Phase,
     scope: Scope<'a>,
     top_level: bool,
+    in_control_flow: bool,
 }
 
 impl Inline<'_> {
@@ -97,6 +99,7 @@ impl Inline<'_> {
                         },
                         phase: self.phase,
                         top_level: false,
+                        in_control_flow: self.in_control_flow,
                     };
 
                     let res = op(&mut c);
@@ -122,6 +125,7 @@ impl Inline<'_> {
                     scope,
                     phase: self.phase,
                     top_level: false,
+                    in_control_flow: self.in_control_flow,
                 };
 
                 op(&mut c)
@@ -153,10 +157,10 @@ impl Scope<'_> {
     where
         I: IdentLike,
     {
-        println!("          scope.find:");
+        //println!("          scope.find:");
 
         if self.vars.borrow().get(&i.to_id()).is_none() {
-            println!("              none");
+            //println!("              none");
 
             let r = self.parent.and_then(|p| p.find(i))?;
             return match r.value {
@@ -165,7 +169,7 @@ impl Scope<'_> {
             };
         }
 
-        println!("              some");
+        //println!("              some");
 
         let r = RefMut::map(self.vars.borrow_mut(), |vars| {
             //
@@ -199,17 +203,15 @@ impl Scope<'_> {
 
 impl Fold<Function> for Inline<'_> {
     fn fold(&mut self, f: Function) -> Function {
-        self.child(ScopeKind::Fn, |folder| {
+        let old = self.in_control_flow;
+        self.in_control_flow = true;
+        let res = self.child(ScopeKind::Fn, |folder| {
             // Hoist vars
             if folder.phase == Phase::Analysis {
                 let vars = hoister::find_vars(&f);
 
                 for i in vars {
-                    folder.store(
-                        &i,
-                        &mut Expr::Invalid(Invalid { span: DUMMY_SP }),
-                        Some(VarDeclKind::Var),
-                    );
+                    folder.store(&i, &mut *undefined(DUMMY_SP), Some(VarDeclKind::Var));
                 }
             }
 
@@ -222,7 +224,37 @@ impl Fold<Function> for Inline<'_> {
                 },
                 ..f
             }
-        })
+        });
+
+        self.in_control_flow = old;
+
+        res
+    }
+}
+
+impl Fold<IfStmt> for Inline<'_> {
+    fn fold(&mut self, s: IfStmt) -> IfStmt {
+        let old = self.in_control_flow;
+        self.in_control_flow = true;
+
+        let res = s.fold_children(self);
+
+        self.in_control_flow = old;
+
+        res
+    }
+}
+
+impl Fold<SwitchStmt> for Inline<'_> {
+    fn fold(&mut self, s: SwitchStmt) -> SwitchStmt {
+        let old = self.in_control_flow;
+        self.in_control_flow = true;
+
+        let res = s.fold_children(self);
+
+        self.in_control_flow = old;
+
+        res
     }
 }
 
