@@ -1,3 +1,4 @@
+use self::var::VarInfo;
 use crate::{
     pass::Pass,
     scope::ScopeKind,
@@ -9,16 +10,16 @@ use serde::Deserialize;
 use std::{
     cell::{RefCell, RefMut},
     collections::hash_map::Entry,
-    mem::replace,
 };
 use swc_atoms::JsWord;
 use swc_common::{
-    fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, Spanned, SyntaxContext, DUMMY_SP,
+    fold::VisitWith, util::move_map::MoveMap, Fold, FoldWith, SyntaxContext, DUMMY_SP,
 };
 
 mod hoister;
 #[cfg(test)]
 mod tests;
+mod var;
 
 macro_rules! check {
     ($i:expr) => {{
@@ -89,15 +90,6 @@ struct Scope<'a> {
     /// Stored only if value is statically known.
     vars: RefCell<FxHashMap<Id, VarInfo>>,
     children: RefCell<Vec<Scope<'static>>>,
-}
-
-#[derive(Debug, Default)]
-struct VarInfo {
-    /// Count of usage.
-    usage: i16,
-    assign: i16,
-    no_inline: bool,
-    value: Option<Expr>,
 }
 
 #[derive(Debug)]
@@ -205,9 +197,8 @@ impl Scope<'_> {
             //println!("              none");
 
             let r = self.parent.and_then(|p| p.find(i))?;
-            return match r.value {
-                Some(Expr::Invalid(..)) => unreachable!(),
-                Some(Expr::This(..)) => None,
+            return match r.value() {
+                Some(&Expr::This(..)) => None,
                 _ => Some(r),
             };
         }
@@ -220,10 +211,7 @@ impl Scope<'_> {
 
             var_info
         });
-        match r.value {
-            Some(Expr::Invalid(..)) => unreachable!(),
-            _ => {}
-        }
+
         Some(r)
     }
 
@@ -232,11 +220,6 @@ impl Scope<'_> {
             Entry::Occupied(o) => Some(o.remove()),
             Entry::Vacant(..) => self.parent.and_then(|p| p.take_var(i)),
         }?;
-
-        match var.value {
-            Some(Expr::Invalid(..)) => unreachable!(),
-            _ => {}
-        }
 
         Some(var)
     }
@@ -383,7 +366,7 @@ impl Fold<ForOfStmt> for Inline<'_> {
             for id in found {
                 let var = self.scope.find(&id);
                 if let Some(mut var) = var {
-                    var.no_inline = true;
+                    var.prevent_inline()
                 }
             }
         }
@@ -406,7 +389,7 @@ impl Fold<ForInStmt> for Inline<'_> {
             for id in found {
                 let var = self.scope.find(&id);
                 if let Some(mut var) = var {
-                    var.no_inline = true;
+                    var.prevent_inline()
                 }
             }
         }
@@ -433,7 +416,7 @@ impl Fold<Expr> for Inline<'_> {
 
                     Phase::Inlining => {
                         let e = if let Some(mut var) = self.scope.find(i) {
-                            if var.no_inline {
+                            if var.no_inline() {
                                 return e;
                             }
 
@@ -441,12 +424,12 @@ impl Fold<Expr> for Inline<'_> {
                                 "Scope({}): inlining: {}: found var: {:?}",
                                 self.scope.id, i.sym, var
                             );
-                            if var.value.is_some() {
+                            if var.value().is_some() {
                                 // Variable is inlined
                                 var.usage -= 1;
                             }
 
-                            if let Some(ref e) = var.value {
+                            if let Some(e) = var.value() {
                                 Some(e.clone())
                             } else {
                                 None
@@ -490,7 +473,7 @@ impl Inline<'_> {
                     "      Scope({}): found var: {}: {:?}",
                     self.scope.id, i.0, v
                 );
-                if v.no_inline {
+                if v.no_inline() {
                     return None;
                 }
 
@@ -526,8 +509,7 @@ impl Inline<'_> {
         } else {
             println!("  no_inline");
             if let Some(mut info) = self.scope.find(&i) {
-                info.no_inline = true;
-                (*info).value = None;
+                info.prevent_inline()
             }
 
             return;
@@ -553,21 +535,30 @@ impl Inline<'_> {
         match kind {
             // Not hoisted
             Some(VarDeclKind::Let) | Some(VarDeclKind::Const) => {
-                self.scope.vars.borrow_mut().entry(i).or_default().value = value;
+                self.scope
+                    .vars
+                    .borrow_mut()
+                    .entry(i)
+                    .or_default()
+                    .set_value(value);
             }
 
             // Hoisted
             Some(VarDeclKind::Var) => {
                 if let Some(fn_scope) = self.scope.find_fn_scope() {
-                    fn_scope.vars.borrow_mut().entry(i).or_default().value = value;
+                    fn_scope
+                        .vars
+                        .borrow_mut()
+                        .entry(i)
+                        .or_default()
+                        .set_value(value);
                 } else {
                     let mut v = self.scope.root().vars.borrow_mut();
                     let v = v.entry(i).or_default();
                     if self.scope.is_root() {
-                        v.value = value;
+                        v.set_value(value);
                     } else {
-                        v.value = None;
-                        v.no_inline = true;
+                        v.prevent_inline();
                     }
                 }
             }
@@ -579,7 +570,7 @@ impl Inline<'_> {
                     } else {
                         if let Some(v) = scope.vars.borrow_mut().get_mut(&i) {
                             v.assign += 1;
-                            println!("cnt++; {}; store: assign: {:?}", i.0, v.value)
+                            println!("cnt++; {}; store: assign", i.0)
                         }
                     }
                 }
@@ -591,9 +582,8 @@ impl Inline<'_> {
     where
         I: IdentLike,
     {
-        if let Some(mut info) = self.scope.find(i) {
-            info.no_inline = true;
-            (*info).value = None;
+        if let Some(mut v) = self.scope.find(i) {
+            v.prevent_inline()
         }
     }
 }
@@ -661,7 +651,7 @@ where
                                             };
 
                                             if let Some(var) = scope.take_var(i) {
-                                                if var.no_inline {
+                                                if var.no_inline() {
                                                     return Some(decl);
                                                 }
 
