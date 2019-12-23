@@ -529,7 +529,13 @@ impl Fold<ForOfStmt> for Inline<'_> {
     fn fold(&mut self, s: ForOfStmt) -> ForOfStmt {
         check!(self);
 
-        let s = s.fold_children(self);
+        let s = ForOfStmt {
+            span: s.span,
+            await_token: s.await_token,
+            left: s.left,
+            right: s.right.fold_with(self),
+            body: s.body.fold_with(self),
+        };
 
         if self.phase == Phase::Analysis {
             let mut found: Vec<(JsWord, SyntaxContext)> = vec![];
@@ -552,7 +558,12 @@ impl Fold<ForInStmt> for Inline<'_> {
     fn fold(&mut self, s: ForInStmt) -> ForInStmt {
         check!(self);
 
-        let s = s.fold_children(self);
+        let s = ForInStmt {
+            span: s.span,
+            left: s.left,
+            right: s.right.fold_with(self),
+            body: s.body.fold_with(self),
+        };
 
         if self.phase == Phase::Analysis {
             let mut found: Vec<(JsWord, SyntaxContext)> = vec![];
