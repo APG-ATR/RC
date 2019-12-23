@@ -307,29 +307,29 @@ fn test_inline_into_arrow_function2() {
 }
 
 identical!(
-    cond_true_1,
+    t_cond_true_1,
     "if (true) { var x = 1; } var z = x; use(x); use(x);"
 );
 
 to_fn!(
-    cond_true_1_fn,
+    t_cond_true_1_fn,
     "if (true) { var x = 1; } var z = x; use(x); use(x);",
     "if (true) { var x = 1; } use(x); use(x);"
 );
 
-identical!(cond_true_2, "if (true) var x = 1; var z = x;");
+identical!(t_cond_true_2, "if (true) var x = 1; var z = x;");
 
 // TODO: Remove x
 to_fn!(
-    cond_true_2_fn,
+    t_cond_true_2_fn,
     "if (true) var x = 1; var z = x;",
     "if (true) var x = 1;"
 );
 
-identical!(cond_true_3, "var x; if (true) x=1; var z = x;");
+identical!(t_cond_true_3, "var x; if (true) x=1; var z = x;");
 
 to_fn!(
-    cond_true_3_fn,
+    t_cond_true_3_fn,
     "var x; if (true) x=1; var z = x; use(z)",
     "var x; if (true) x=1; use(x)"
 );
@@ -1471,8 +1471,8 @@ identical_all!(
 
 // GitHub issue #1234: https://github.com/google/closure-compiler/issues/1234
 identical_all!(
-    closure_compiler_1234,
-    closure_compiler_1234_fn,
+    t_closure_compiler_1234,
+    t_closure_compiler_1234_fn,
     "var x;
     switch ('a') {
       case 'a':
@@ -1485,7 +1485,7 @@ identical_all!(
 );
 
 to!(
-    let_1,
+    t_let_1,
     "function f(x) {
         if (true) {
             let y = x;
@@ -1502,7 +1502,7 @@ to!(
 );
 
 to!(
-    const_1,
+    t_const_1,
     "function f(x) {
         if (true) {
             const y = x;
@@ -1519,7 +1519,7 @@ to!(
 );
 
 to!(
-    let_2,
+    t_let_2,
     "let y;
     {
         let y = x;
