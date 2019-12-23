@@ -490,6 +490,27 @@ impl Inline<'_> {
                     v.usage -= 1;
                 }
             }
+
+            Expr::Assign(e) => {
+                self.drop_assign(e.left);
+                self.drop_usage(*e.right);
+            }
+
+            _ => {}
+        }
+    }
+
+    fn drop_assign(&mut self, p: PatOrExpr) {
+        match p {
+            PatOrExpr::Pat(box p) => match p {
+                Pat::Ident(i) => {
+                    if let Some(mut v) = self.scope.find(&i) {
+                        v.assign -= 1;
+                    }
+                }
+                _ => {}
+            },
+
             _ => {}
         }
     }
