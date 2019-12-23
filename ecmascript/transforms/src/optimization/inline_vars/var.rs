@@ -11,6 +11,10 @@ pub(super) struct VarInfo {
     /// The number of assignment except variable initialization.
     pub assign: u16,
     no_inline: bool,
+    ///
+    ///   - Analysis phase: None
+    ///   - Storage phase: None -> Some()
+    ///   - Inlining phase: None iff inlined.
     value: Option<Expr>,
 }
 
@@ -45,13 +49,13 @@ impl VarInfo {
         self.value.take()
     }
 
-    pub fn set_value(&mut self, e: Option<Expr>) {
+    pub fn set_value(&mut self, e: Expr) {
         match e {
-            Some(Expr::Invalid(..)) => unreachable!(),
+            Expr::Invalid(..) => unreachable!(),
             _ => {}
         }
 
-        self.value = e
+        self.value = Some(e)
     }
 
     pub fn prevent_inline(&mut self) {

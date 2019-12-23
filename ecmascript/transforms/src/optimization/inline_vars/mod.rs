@@ -736,7 +736,9 @@ impl Inline<'_> {
         }
 
         let v = v.entry(i).or_insert_with(|| VarInfo::new(scope_id));
-        v.set_value(value);
+        if let Some(value) = value {
+            v.set_value(value);
+        }
 
         if kind.is_none() && self.phase == Phase::Analysis {
             v.assign += 1;
