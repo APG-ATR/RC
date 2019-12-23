@@ -564,7 +564,7 @@ impl Inline<'_> {
             return Some(Reason::Cheap);
         }
 
-        if self.phase == Phase::Inlining {
+        if self.phase == Phase::Storage {
             if let Some(ref v) = self.scope.find(i) {
                 //println!(
                 //    "      Scope({}): found var: {}: {:?}",
