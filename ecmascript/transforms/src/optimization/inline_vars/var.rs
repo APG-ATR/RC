@@ -56,7 +56,6 @@ impl VarInfo {
 
     pub fn prevent_inline(&mut self) {
         self.no_inline = true;
-        self.value = None;
     }
 
     pub const fn no_inline(&self) -> bool {
