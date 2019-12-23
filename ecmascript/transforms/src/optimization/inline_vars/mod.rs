@@ -371,7 +371,9 @@ impl Fold<PatOrExpr> for Inline<'_> {
                         Phase::Storage => {}
                         Phase::Inlining => {}
                     },
-                    _ => {}
+                    _ => {
+                        self.required(&p);
+                    }
                 }
 
                 return PatOrExpr::Pat(p);
@@ -401,7 +403,9 @@ impl Fold<AssignExpr> for Inline<'_> {
                 Phase::Inlining => {}
             },
 
-            _ => {}
+            _ => {
+                self.required(&e.left);
+            }
         }
 
         e
@@ -538,16 +542,7 @@ impl Fold<ForOfStmt> for Inline<'_> {
         };
 
         if self.phase == Phase::Analysis {
-            let mut found: Vec<(JsWord, SyntaxContext)> = vec![];
-            let mut v = DestructuringFinder { found: &mut found };
-            s.left.visit_with(&mut v);
-
-            for id in found {
-                let var = self.scope.find(&id);
-                if let Some(mut var) = var {
-                    var.prevent_inline()
-                }
-            }
+            self.required(&s.left);
         }
 
         s
@@ -566,16 +561,7 @@ impl Fold<ForInStmt> for Inline<'_> {
         };
 
         if self.phase == Phase::Analysis {
-            let mut found: Vec<(JsWord, SyntaxContext)> = vec![];
-            let mut v = DestructuringFinder { found: &mut found };
-            s.left.visit_with(&mut v);
-
-            for id in found {
-                let var = self.scope.find(&id);
-                if let Some(mut var) = var {
-                    var.prevent_inline()
-                }
-            }
+            self.required(&s.left);
         }
 
         s
@@ -650,6 +636,23 @@ impl Fold<Expr> for Inline<'_> {
 }
 
 impl Inline<'_> {
+    fn required<T: for<'any> VisitWith<DestructuringFinder<'any, Id>>>(&mut self, node: &T) {
+        if self.phase != Phase::Analysis {
+            return;
+        }
+
+        let mut found = vec![];
+        let mut v = DestructuringFinder { found: &mut found };
+        node.visit_with(&mut v);
+
+        for id in found {
+            let var = self.scope.find(&id);
+            if let Some(mut var) = var {
+                var.mark_as_needed()
+            }
+        }
+    }
+
     fn should_store(&self, i: &Id, e: &Expr) -> Option<Reason> {
         //println!("  should store:");
 
@@ -860,7 +863,7 @@ where
                 }
             }
             Phase::Storage => {
-                for (i, v) in self.scope.vars.borrow().iter() {
+                for (_i, _v) in self.scope.vars.borrow().iter() {
                     //                    debug_assert!(
                     //                        v.value().is_some() ||
                     // v.no_inline(),
