@@ -403,7 +403,7 @@ impl Fold<VarDecl> for Inline<'_> {
                         if scope
                             .find(i)
                             .as_ref()
-                            .map(|var| var.assign == 0 && var.usage == 0)
+                            .map(|var| var.assign == 0 && var.usage <= 1)
                             .unwrap_or(false)
                         {
                             if let Some(ref e) = decl.init {
@@ -424,8 +424,11 @@ impl Fold<VarDecl> for Inline<'_> {
                     _ => return Some(decl),
                 };
 
-                if var.assign == 0 && var.usage == 0 {
-                    println!("Scope({}): removing {:?} as it's not used", id, decl.name);
+                if var.assign == 0 && var.usage <= 1 {
+                    println!(
+                        "Scope({}): removing {:?} as it's used {} times",
+                        id, decl.name, var.usage
+                    );
                     return None;
                 }
 
