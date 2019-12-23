@@ -850,13 +850,14 @@ where
             }
             Phase::Storage => {
                 for (i, v) in self.scope.vars.borrow().iter() {
-                    debug_assert!(
-                        v.value().is_some() || v.no_inline(),
-                        "Scope({}): {:?}: value should be stored. But got {:?}",
-                        self.scope.id,
-                        i,
-                        v
-                    );
+                    //                    debug_assert!(
+                    //                        v.value().is_some() ||
+                    // v.no_inline(),
+                    // "Scope({}): {}: value should be stored. But got {:?}",
+                    //                        self.scope.id,
+                    //                        i,
+                    //                        v
+                    //                    );
                 }
 
                 stmts
