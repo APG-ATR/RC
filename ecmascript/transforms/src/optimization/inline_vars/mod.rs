@@ -522,6 +522,13 @@ impl Fold<Expr> for Inline<'_> {
                         if let Some(mut var) = self.scope.find(&i) {
                             println!("cnt++; {}: usage", i.sym);
                             var.usage += 1;
+
+                            let declared_in_outer_fn = var.scope_id() != self.scope.id
+                                && Some(var.scope_id())
+                                    != self.scope.find_fn_scope().map(|scope| scope.id);
+                            if declared_in_outer_fn {
+                                var.prevent_inline();
+                            }
                         }
                     }
 
