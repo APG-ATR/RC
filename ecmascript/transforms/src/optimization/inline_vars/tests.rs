@@ -1534,8 +1534,7 @@ to_fn!(
     )
 );
 
-to_all!(
-    destructuring,
+to_fn!(
     destructuring_fn,
     "var [a, b, c] = [1, 2, 3]
             var x = a;
