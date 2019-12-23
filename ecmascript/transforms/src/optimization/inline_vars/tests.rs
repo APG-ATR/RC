@@ -1344,7 +1344,7 @@ fn test_issue354() {
 identical_all!(
     closure_compiler_1177_1,
     closure_compiler_1177_1_fn,
-    "function x_64(){var x_7;for(;;);var x_68=x_7=x_7;}"
+    "function x_64(){for(;;);}"
 );
 
 // TODO: Remove var x_7, var_x68;
