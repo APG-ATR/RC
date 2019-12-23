@@ -709,10 +709,10 @@ where
         let top_level = self.top_level;
         self.top_level = false;
 
-        println!(
-            "----- ----- ({}) {:?} ----- -----",
-            self.scope.id, self.phase
-        );
+        //println!(
+        //    "----- ----- ({}) {:?} ----- -----",
+        //    self.scope.id, self.phase
+        //);
 
         let stmts = stmts.fold_children(self);
 
