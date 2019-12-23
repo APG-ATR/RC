@@ -169,7 +169,7 @@ fn test_inline_in_function5() {
     test_same("function baz() { var a = (foo = new obj());foo.x();result = a;}");
 }
 
-to_fn!(block_in_fn_compiled_out, "{ var x = 1; var z = x; }", "");
+to_fn!(block_in_fn_compiled_out, "{ var x = 1; var z = x; }", "{}");
 
 to_fn!(
     block_in_fn,

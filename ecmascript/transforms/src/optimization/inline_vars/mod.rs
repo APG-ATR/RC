@@ -158,9 +158,9 @@ impl Inline<'_> {
                     id_gen: self.id_gen.clone(),
                 };
 
-                self.changed |= c.changed;
-
                 let res = op(&mut c);
+
+                self.changed |= c.changed;
 
                 // Treat children as a ring. Note that we don't remove an empty block statement
                 // to preserve scope order.
@@ -379,6 +379,7 @@ impl Fold<VarDecl> for Inline<'_> {
     fn fold(&mut self, v: VarDecl) -> VarDecl {
         check!(self);
 
+        let id = self.scope.id;
         let kind = v.kind;
         let mut v = v.fold_children(self);
 
@@ -392,7 +393,6 @@ impl Fold<VarDecl> for Inline<'_> {
                 // If variable is used, we can't remove it.
                 let var = match decl.name {
                     Pat::Ident(ref i) => {
-                        let scope_id = self.scope.id;
                         let scope = match self.scope.scope_for(i) {
                             // We can't remove variables in top level
                             Some(v) if v.is_root() => return Some(decl),
@@ -425,6 +425,7 @@ impl Fold<VarDecl> for Inline<'_> {
                 };
 
                 if var.assign == 0 && var.usage == 0 {
+                    println!("Scope({}): removing {:?} as it's not used", id, decl.name);
                     return None;
                 }
 
@@ -729,6 +730,7 @@ where
                         if !self.changed {
                             break;
                         }
+                        self.changed = false;
                     }
                     stmts
                 } else {
