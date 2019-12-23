@@ -46,6 +46,8 @@ impl VarInfo {
     }
 
     pub fn take_value(&mut self) -> Option<Expr> {
+        println!("VarInfo.take_value()");
+
         self.value.take()
     }
 
