@@ -448,7 +448,7 @@ impl Fold<VarDecl> for Inline<'_> {
                     Either::Left(var) => {
                         if var.can_be_removed() {
                             println!(
-                                "Scope({}): removing var {:?} as it's not used",
+                                "Scope({}): removing var {:?} as it's not used (including VarInfo)",
                                 id, decl.name,
                             );
                             return None;
@@ -483,6 +483,15 @@ impl Fold<VarDecl> for Inline<'_> {
         });
 
         v
+    }
+}
+
+impl Fold<VarDeclarator> for Inline<'_> {
+    fn fold(&mut self, v: VarDeclarator) -> VarDeclarator {
+        VarDeclarator {
+            init: v.init.fold_with(self),
+            ..v
+        }
     }
 }
 
@@ -784,7 +793,18 @@ where
                     stmts
                 }
             }
-            Phase::Storage => stmts,
+            Phase::Storage => {
+                for (i, v) in self.scope.vars.borrow().iter() {
+                    debug_assert!(
+                        v.value().is_some() || v.no_inline(),
+                        "{:?}: value should be stored. But got {:?}",
+                        i,
+                        v
+                    );
+                }
+
+                stmts
+            }
             Phase::Inlining => {
                 let is_root = self.scope.is_root();
 
