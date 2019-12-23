@@ -497,6 +497,7 @@ impl Inline<'_> {
     where
         I: IdentLike,
     {
+        let scope_id = self.scope.id;
         let i = i.to_id();
         println!(
             "Scope({}): {:?}: {}: store {:?}",
@@ -539,7 +540,7 @@ impl Inline<'_> {
                     .vars
                     .borrow_mut()
                     .entry(i)
-                    .or_default()
+                    .or_insert_with(|| VarInfo::new(scope_id))
                     .set_value(value);
             }
 
@@ -550,11 +551,11 @@ impl Inline<'_> {
                         .vars
                         .borrow_mut()
                         .entry(i)
-                        .or_default()
+                        .or_insert_with(|| VarInfo::new(scope_id))
                         .set_value(value);
                 } else {
                     let mut v = self.scope.root().vars.borrow_mut();
-                    let v = v.entry(i).or_default();
+                    let v = v.entry(i).or_insert_with(|| VarInfo::new(scope_id));
                     if self.scope.is_root() {
                         v.set_value(value);
                     } else {

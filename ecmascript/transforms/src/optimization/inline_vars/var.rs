@@ -1,8 +1,10 @@
 use ast::*;
 
 /// Lives at here to prevent mistakes.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub(super) struct VarInfo {
+    /// Declared / assigned scope, not stored scope.
+    scope_id: usize,
     /// Count of usage.
     pub usage: i16,
     pub assign: i16,
@@ -11,6 +13,20 @@ pub(super) struct VarInfo {
 }
 
 impl VarInfo {
+    pub const fn new(scope_id: usize) -> Self {
+        VarInfo {
+            scope_id,
+            usage: 0,
+            assign: 0,
+            no_inline: false,
+            value: None,
+        }
+    }
+
+    pub const fn scope_id(&self) -> usize {
+        self.scope_id
+    }
+
     pub fn take_value(&mut self) -> Option<Expr> {
         self.value.take()
     }
