@@ -11,6 +11,7 @@ pub(super) struct VarInfo {
     /// The number of assignment except variable initialization.
     pub assign: u16,
     no_inline: bool,
+    needed: bool,
     ///
     ///   - Analysis phase: None
     ///   - Storage phase: None -> Some()
@@ -22,6 +23,7 @@ impl VarInfo {
     pub fn can_be_removed(&self) -> bool {
         self.assign == 0
             && self.usage == 0
+            && !self.needed
             && ({
                 // Inlined
                 self.value.is_none()
@@ -31,12 +33,17 @@ impl VarInfo {
             })
     }
 
+    pub fn mark_as_needed(&mut self) {
+        self.needed = true;
+    }
+
     pub const fn new(scope_id: usize) -> Self {
         VarInfo {
             scope_id,
             usage: 0,
             assign: 0,
             no_inline: false,
+            needed: false,
             value: None,
         }
     }
