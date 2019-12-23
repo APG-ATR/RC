@@ -350,6 +350,15 @@ impl Fold<SwitchCase> for Inline<'_> {
     }
 }
 
+impl Fold<PatOrExpr> for Inline<'_> {
+    fn fold(&mut self, p: PatOrExpr) -> PatOrExpr {
+        match p {
+            PatOrExpr::Pat(p) => PatOrExpr::Pat(p.fold_with(self)),
+            _ => p,
+        }
+    }
+}
+
 impl Fold<AssignExpr> for Inline<'_> {
     fn fold(&mut self, e: AssignExpr) -> AssignExpr {
         check!(self);
@@ -403,7 +412,7 @@ impl Fold<VarDecl> for Inline<'_> {
                         if scope
                             .find(i)
                             .as_ref()
-                            .map(|var| var.assign == 0 && var.usage <= 1)
+                            .map(|var| var.can_be_removed())
                             .unwrap_or(false)
                         {
                             if let Some(ref e) = decl.init {
@@ -424,16 +433,12 @@ impl Fold<VarDecl> for Inline<'_> {
                     _ => return Some(decl),
                 };
 
-                if var.assign == 0 && var.usage <= 1 {
+                if var.can_be_removed() {
                     println!(
                         "Scope({}): removing var {:?} as it's used {} times",
                         id, decl.name, var.usage
                     );
                     return None;
-                }
-
-                if var.no_inline() {
-                    return Some(decl);
                 }
             }
 
@@ -635,7 +640,8 @@ impl Inline<'_> {
                     Expr::Ident(ref i) => {
                         if let Some(expr) = self.scope.find(i).and_then(|var| var.value().cloned())
                         {
-                            println!("Storage: chaged {:?} -> {:?}", e, expr);
+                            self.scope.drop_usage(&e);
+                            println!("Storage: changed {:?} -> {:?}", e, expr);
                             changed = true;
                             e = expr;
                         }
@@ -679,15 +685,11 @@ impl Inline<'_> {
             }
 
             None => {
-                if let Some(scope) = self.scope.scope_for(&i) {
-                    if scope.id != self.scope.id {
-                        self.prevent_inline(&i)
-                    } else {
-                        if self.phase == Phase::Analysis {
-                            if let Some(v) = scope.vars.borrow_mut().get_mut(&i) {
-                                v.assign += 1;
-                                println!("cnt++; {}; store: assign", i.0)
-                            }
+                if self.phase == Phase::Analysis {
+                    if let Some(scope) = self.scope.scope_for(&i) {
+                        if let Some(v) = scope.vars.borrow_mut().get_mut(&i) {
+                            v.assign += 1;
+                            println!("cnt++; {}; store: assign", i.0)
                         }
                     }
                 }
@@ -699,11 +701,9 @@ impl Inline<'_> {
     where
         I: IdentLike,
     {
-        assert_ne!(
-            self.phase,
-            Phase::Inlining,
-            "prevent_inline() should not be called while inlining"
-        );
+        if self.phase != Phase::Analysis {
+            return;
+        }
 
         if let Some(mut v) = self.scope.find(i) {
             v.prevent_inline()
