@@ -71,8 +71,9 @@ pub struct Config {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Phase {
     Analysis,
+    /// Saving value of variables into the scope.
+    Storage,
     Inlining,
-    // CleanUp.
 }
 
 /// Reason that we should inline a variable.
@@ -141,7 +142,7 @@ impl Inline<'_> {
                 res
             }
 
-            Phase::Inlining => {
+            Phase::Storage | Phase::Inlining => {
                 let mut scope = self.scope.children.get_mut().remove(0);
                 scope.parent = Some(&self.scope);
 
@@ -270,12 +271,15 @@ impl Fold<Function> for Inline<'_> {
 
         let res = self.child(ScopeKind::Fn, |folder| {
             // Hoist vars
-            if folder.phase == Phase::Analysis {
-                let vars = hoister::find_vars(&f);
+            match folder.phase {
+                Phase::Analysis => {
+                    let vars = hoister::find_vars(&f);
 
-                for i in vars {
-                    folder.store(&i, &mut *undefined(DUMMY_SP), Some(VarDeclKind::Var));
+                    for i in vars {
+                        folder.store(&i, &mut *undefined(DUMMY_SP), Some(VarDeclKind::Var));
+                    }
                 }
+                _ => {}
             }
 
             // Handle function
@@ -316,13 +320,16 @@ impl Fold<AssignExpr> for Inline<'_> {
         let mut e = e.fold_children(self);
 
         match e.left {
-            PatOrExpr::Pat(box Pat::Ident(ref i)) => {
-                if e.op == op!("=") {
-                    self.store(i, &mut e.right, None);
-                } else {
-                    self.prevent_inline(i)
+            PatOrExpr::Pat(box Pat::Ident(ref i)) => match self.phase {
+                Phase::Analysis | Phase::Storage => {
+                    if e.op == op!("=") {
+                        self.store(i, &mut e.right, None);
+                    } else {
+                        self.prevent_inline(i)
+                    }
                 }
-            }
+                Phase::Inlining => {}
+            },
 
             _ => {}
         }
@@ -381,14 +388,16 @@ impl Fold<VarDecl> for Inline<'_> {
             }
 
             //
-            match decl.name {
-                Pat::Ident(ref i) => match decl.init {
-                    Some(ref mut e) => {
-                        self.store(i, e, Some(kind));
-                    }
-                    None => self.store(i, &mut *undefined(DUMMY_SP), Some(kind)),
-                },
-                _ => {}
+            if self.phase != Phase::Inlining {
+                match decl.name {
+                    Pat::Ident(ref i) => match decl.init {
+                        Some(ref mut e) => {
+                            self.store(i, e, Some(kind));
+                        }
+                        None => self.store(i, &mut *undefined(DUMMY_SP), Some(kind)),
+                    },
+                    _ => {}
+                }
             }
 
             Some(decl)
@@ -459,6 +468,8 @@ impl Fold<Expr> for Inline<'_> {
                             var.usage += 1;
                         }
                     }
+
+                    Phase::Storage => {}
 
                     Phase::Inlining => {
                         let e = if let Some(mut var) = self.scope.find(&i) {
@@ -564,6 +575,12 @@ impl Inline<'_> {
     where
         I: IdentLike,
     {
+        assert_ne!(
+            self.phase,
+            Phase::Inlining,
+            "store() should not be called while inlining"
+        );
+
         let scope_id = self.scope.id;
         let i = i.to_id();
         //println!(
@@ -652,6 +669,12 @@ impl Inline<'_> {
     where
         I: IdentLike,
     {
+        assert_ne!(
+            self.phase,
+            Phase::Inlining,
+            "prevent_inline() should not be called while inlining"
+        );
+
         if let Some(mut v) = self.scope.find(i) {
             v.prevent_inline()
         }
@@ -673,6 +696,11 @@ where
             Phase::Analysis => {
                 // println!("Scope({}): {:?}", self.scope.id, self.scope.vars);
                 if top_level {
+                    println!("----- ----- ({}) Stroage ----- -----", self.scope.id);
+                    self.phase = Phase::Storage;
+                    // Inline variables
+                    let stmts = stmts.fold_with(self);
+
                     println!("----- ----- ({}) Inlining ----- -----", self.scope.id);
                     self.phase = Phase::Inlining;
                     // Inline variables
@@ -681,6 +709,7 @@ where
                     stmts
                 }
             }
+            Phase::Storage => stmts,
             Phase::Inlining => {
                 let is_root = self.scope.is_root();
 
