@@ -153,12 +153,12 @@ impl Inline<'_> {
 
             Phase::Storage | Phase::Inlining => {
                 let mut scope = self.scope.children.get_mut().pop_front().unwrap();
-                println!(
-                    "child(of {}): Scope({}): {:?}",
-                    self.scope.id,
-                    scope.id,
-                    *scope.vars.borrow()
-                );
+                //println!(
+                //    "child(of {}): Scope({}): {:?}",
+                //    self.scope.id,
+                //    scope.id,
+                //    *scope.vars.borrow()
+                //);
                 scope.parent = Some(&self.scope);
 
                 assert_eq!(kind, scope.kind);
@@ -582,11 +582,15 @@ impl Fold<Expr> for Inline<'_> {
                                 return Expr::Ident(i);
                             }
 
-                            if var.usage == 1 {
+                            if var.assign == 0 && var.usage == 1 {
                                 println!("Taking value of {}", i.sym);
                                 var.take_value()
-                            } else if let Some(e) = var.value() {
-                                Some(e.clone())
+                            } else if var.assign == 0 {
+                                if let Some(e) = var.value() {
+                                    Some(e.clone())
+                                } else {
+                                    None
+                                }
                             } else {
                                 None
                             }
@@ -638,6 +642,7 @@ impl Inline<'_> {
             }
 
             //println!("          not handled");
+            return Some(Reason::Cheap);
         }
 
         match e {
@@ -660,6 +665,7 @@ impl Inline<'_> {
 
         let scope_id = self.scope.id;
         let i = i.to_id();
+
         //println!(
         //    "Scope({}): {:?}: {}: store {:?}",
         //    self.scope.id, self.phase, i.0, kind
@@ -774,27 +780,17 @@ where
         let top_level = self.top_level;
         self.top_level = false;
 
+        let stmts = stmts.fold_children(self);
+
         println!(
-            "----- ----- ({}) {:?} ----- -----",
-            self.scope.id, self.phase
+            "---- ---- ({}) {:?} ---- ----\n{:?}",
+            self.scope.id,
+            self.phase,
+            *self.scope.vars.borrow()
         );
 
         match self.phase {
-            Phase::Inlining => {
-                //                println!(
-                //                    "----- ----- ({}) Removing vars -----
-                // -----\n{:?}",
-                // self.scope.id, self.scope.vars
-                // );
-            }
-            _ => {}
-        }
-
-        let stmts = stmts.fold_children(self);
-
-        match self.phase {
             Phase::Analysis => {
-                // println!("Scope({}): {:?}", self.scope.id, self.scope.vars);
                 if top_level {
                     self.phase = Phase::Storage;
                     // Inline variables
@@ -817,11 +813,11 @@ where
                 }
             }
             Phase::Storage => {
-                println!("Validating");
                 for (i, v) in self.scope.vars.borrow().iter() {
                     debug_assert!(
                         v.value().is_some() || v.no_inline(),
-                        "{:?}: value should be stored. But got {:?}",
+                        "Scope({}): {:?}: value should be stored. But got {:?}",
+                        self.scope.id,
                         i,
                         v
                     );
