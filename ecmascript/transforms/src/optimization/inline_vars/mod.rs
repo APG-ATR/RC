@@ -169,6 +169,14 @@ impl Inline<'_> {
 }
 
 impl Scope<'_> {
+    fn is_root(&self) -> bool {
+        self.parent.is_none()
+    }
+
+    fn root(&self) -> &Self {
+        self.parent.map(|p| p.root()).unwrap_or(self)
+    }
+
     /// Find a scope with kind == ScopeKind::Fn
     fn find_fn_scope(&self) -> Option<&Self> {
         match self.kind {
@@ -552,6 +560,14 @@ impl Inline<'_> {
             Some(VarDeclKind::Var) => {
                 if let Some(fn_scope) = self.scope.find_fn_scope() {
                     fn_scope.vars.borrow_mut().entry(i).or_default().value = value;
+                } else {
+                    self.scope
+                        .root()
+                        .vars
+                        .borrow_mut()
+                        .entry(i)
+                        .or_default()
+                        .value = value;
                 }
             }
 
@@ -591,6 +607,7 @@ where
         self.top_level = false;
 
         let stmts = stmts.fold_children(self);
+        let is_root = self.scope.is_root();
 
         match self.phase {
             Phase::Analysis => {
@@ -625,6 +642,10 @@ where
                                             return None;
                                         }
                                         _ => {}
+                                    }
+
+                                    if is_root {
+                                        return Some(decl);
                                     }
 
                                     // If variable is used, we can't remove it.
