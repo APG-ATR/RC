@@ -420,13 +420,13 @@ impl Fold<Expr> for Inline<'_> {
                                 return e;
                             }
 
-                            println!(
-                                "Scope({}): inlining: {}: found var: {:?}",
-                                self.scope.id, i.sym, var
-                            );
                             if var.value().is_some() {
                                 // Variable is inlined
                                 var.usage -= 1;
+                                println!(
+                                    "Scope({}): inlining: {}: found var: {:?}",
+                                    self.scope.id, i.sym, var
+                                );
                             }
 
                             if let Some(e) = var.value() {
@@ -547,19 +547,22 @@ impl Inline<'_> {
             // Hoisted
             Some(VarDeclKind::Var) => {
                 if let Some(fn_scope) = self.scope.find_fn_scope() {
-                    fn_scope
-                        .vars
-                        .borrow_mut()
-                        .entry(i)
-                        .or_insert_with(|| VarInfo::new(scope_id))
-                        .set_value(value);
+                    let mut v = fn_scope.vars.borrow_mut();
+
+                    let v = v.entry(i).or_insert_with(|| VarInfo::new(scope_id));
+
+                    v.set_value(value);
+                    if scope_id != v.scope_id() {
+                        v.prevent_inline()
+                    }
                 } else {
                     let mut v = self.scope.root().vars.borrow_mut();
                     let v = v.entry(i).or_insert_with(|| VarInfo::new(scope_id));
                     if self.scope.is_root() {
                         v.set_value(value);
-                    } else {
-                        v.prevent_inline();
+                    }
+                    if scope_id != v.scope_id() {
+                        v.prevent_inline()
                     }
                 }
             }
@@ -599,13 +602,12 @@ where
         self.top_level = false;
 
         let stmts = stmts.fold_children(self);
-        let is_root = self.scope.is_root();
 
         match self.phase {
             Phase::Analysis => {
                 // println!("Scope({}): {:?}", self.scope.id, self.scope.vars);
                 if top_level {
-                    println!("----- ----- ----- ----- -----");
+                    println!("----- ----- ({}) Inlining ----- -----", self.scope.id);
                     self.phase = Phase::Inlining;
                     // Inline variables
                     stmts.fold_with(self)
@@ -614,6 +616,10 @@ where
                 }
             }
             Phase::Inlining => {
+                let is_root = self.scope.is_root();
+
+                println!("----- ----- ({}) Removing vars ----- -----", self.scope.id);
+
                 stmts.move_flat_map(|stmt| {
                     // Remove unused variables
 
@@ -624,7 +630,8 @@ where
                             }
                             Stmt::Empty(..) => return None,
 
-                            Stmt::Decl(Decl::Var(mut v)) => {
+                            // We can't remove variables in top level
+                            Stmt::Decl(Decl::Var(mut v)) if !is_root => {
                                 let kind = v.kind;
 
                                 v.decls = v.decls.move_flat_map(|decl| {
@@ -636,14 +643,10 @@ where
                                         _ => {}
                                     }
 
-                                    // We can't remove variables in top level
-                                    if is_root {
-                                        return Some(decl);
-                                    }
-
                                     // If variable is used, we can't remove it.
                                     let var = match decl.name {
                                         Pat::Ident(ref i) => {
+                                            let scope_id = self.scope.id;
                                             let scope = match self.scope.scope_for(i) {
                                                 // We can't remove variables in top level
                                                 Some(v) if v.is_root() => return Some(decl),
@@ -652,10 +655,10 @@ where
                                             };
 
                                             if let Some(var) = scope.take_var(i) {
-                                                if var.no_inline() {
-                                                    return Some(decl);
-                                                }
-
+                                                println!(
+                                                    "Scope({}, {}): {}: {:?}",
+                                                    scope_id, scope.id, i.sym, var
+                                                );
                                                 var
                                             } else {
                                                 return Some(decl);
@@ -667,6 +670,10 @@ where
 
                                     if var.assign == 0 && var.usage == 0 {
                                         return None;
+                                    }
+
+                                    if var.no_inline() {
+                                        return Some(decl);
                                     }
 
                                     // At here, variable is not used.
