@@ -8,6 +8,7 @@ pub(super) struct VarInfo {
     scope_id: usize,
     /// Count of usage.
     pub usage: u16,
+    /// The number of assignment except variable initialization.
     pub assign: u16,
     no_inline: bool,
     value: Option<Expr>,
