@@ -9,7 +9,7 @@ use fxhash::FxHashMap;
 use serde::Deserialize;
 use std::{
     cell::{RefCell, RefMut},
-    collections::hash_map::Entry,
+    collections::{hash_map::Entry, VecDeque},
 };
 use swc_atoms::JsWord;
 use swc_common::{
@@ -91,7 +91,7 @@ struct Scope<'a> {
     kind: ScopeKind,
     /// Stored only if value is statically known.
     vars: RefCell<FxHashMap<Id, VarInfo>>,
-    children: RefCell<Vec<Scope<'static>>>,
+    children: RefCell<VecDeque<Scope<'static>>>,
 }
 
 #[derive(Debug)]
@@ -133,7 +133,7 @@ impl Inline<'_> {
                     (res, c.scope.vars, c.scope.children)
                 };
 
-                self.scope.children.borrow_mut().push(Scope {
+                self.scope.children.borrow_mut().push_back(Scope {
                     id,
                     parent: None,
                     kind,
@@ -145,7 +145,7 @@ impl Inline<'_> {
             }
 
             Phase::Storage | Phase::Inlining => {
-                let mut scope = self.scope.children.get_mut().remove(0);
+                let mut scope = self.scope.children.get_mut().pop_front().unwrap();
                 scope.parent = Some(&self.scope);
 
                 assert_eq!(kind, scope.kind);
@@ -164,7 +164,7 @@ impl Inline<'_> {
 
                 // Treat children as a ring. Note that we don't remove an empty block statement
                 // to preserve scope order.
-                self.scope.children.borrow_mut().push(Scope {
+                self.scope.children.borrow_mut().push_back(Scope {
                     id: c.scope.id,
                     parent: None,
                     kind,
