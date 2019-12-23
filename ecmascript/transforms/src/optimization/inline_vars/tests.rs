@@ -664,12 +664,15 @@ to_fn!(
     "function f() { bar(4); baz(4); }"
 );
 
-#[test]
-fn test_no_inline_getprop_into_call() {
-    test("var a = b; a();", "b();");
-    test("var a = b.c; f(a);", "f(b.c);");
-    test_same("var a = b.c; a();");
-}
+to_fn!(no_inline_getprop_into_call_1, "var a = b; a();", "b();");
+
+to_fn!(
+    no_inline_getprop_into_call_2,
+    "var a = b.c; f(a);",
+    "f(b.c);"
+);
+
+identical_fn!(no_inline_getprop_into_call_3, "var a = b.c; a();");
 
 #[test]
 fn test_inline_function_declaration() {
