@@ -7,8 +7,8 @@ pub(super) struct VarInfo {
     /// Declared / assigned scope, not stored scope.
     scope_id: usize,
     /// Count of usage.
-    pub usage: i16,
-    pub assign: i16,
+    pub usage: u16,
+    pub assign: u16,
     no_inline: bool,
     value: Option<Expr>,
 }
@@ -17,8 +17,7 @@ impl VarInfo {
     pub fn can_be_removed(&self) -> bool {
         self.assign == 0
             && self.usage == 0
-            && self.value.is_some()
-            && !self.value.as_ref().unwrap().may_have_side_effects()
+            && (self.value.is_none() || !self.value.as_ref().unwrap().may_have_side_effects())
     }
 
     pub const fn new(scope_id: usize) -> Self {

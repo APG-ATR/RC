@@ -183,6 +183,7 @@ impl Scope<'_> {
         match e {
             Expr::Ident(i) => {
                 if let Some(mut v) = self.find(i) {
+                    println!("cnt--; {}: usage", i.sym);
                     v.usage -= 1;
                 }
             }
@@ -527,12 +528,14 @@ impl Fold<Expr> for Inline<'_> {
                     Phase::Storage => {}
 
                     Phase::Inlining => {
-                        let e: Option<Expr> = if let Some(var) = self.scope.find(&i) {
+                        let e: Option<Expr> = if let Some(mut var) = self.scope.find(&i) {
                             if var.no_inline() {
                                 return Expr::Ident(i);
                             }
 
-                            if let Some(e) = var.value() {
+                            if var.usage == 1 {
+                                var.take_value()
+                            } else if let Some(e) = var.value() {
                                 Some(e.clone())
                             } else {
                                 None
@@ -640,8 +643,8 @@ impl Inline<'_> {
                     Expr::Ident(ref i) => {
                         if let Some(expr) = self.scope.find(i).and_then(|var| var.value().cloned())
                         {
-                            self.scope.drop_usage(&e);
                             println!("Storage: changed {:?} -> {:?}", e, expr);
+                            // self.scope.drop_usage(&e);
                             changed = true;
                             e = expr;
                         }
