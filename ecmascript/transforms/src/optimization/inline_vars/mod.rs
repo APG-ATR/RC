@@ -685,67 +685,7 @@ where
                             Stmt::Empty(..) => return None,
 
                             // We can't remove variables in top level
-                            Stmt::Decl(Decl::Var(mut v)) if !is_root => {
-                                let kind = v.kind;
-
-                                v.decls = v.decls.move_flat_map(|decl| {
-                                    match decl.init {
-                                        // Remove inlined variables (single usage).
-                                        Some(box Expr::Invalid(..)) => {
-                                            return None;
-                                        }
-                                        _ => {}
-                                    }
-
-                                    // If variable is used, we can't remove it.
-                                    let var = match decl.name {
-                                        Pat::Ident(ref i) => {
-                                            let scope_id = self.scope.id;
-                                            let scope = match self.scope.scope_for(i) {
-                                                // We can't remove variables in top level
-                                                Some(v) if v.is_root() => return Some(decl),
-                                                Some(v) => v,
-                                                None => return Some(decl),
-                                            };
-
-                                            if let Some(var) = scope.take_var(i) {
-                                                println!(
-                                                    "Scope({}, {}): {}: {:?}",
-                                                    scope_id, scope.id, i.sym, var
-                                                );
-                                                var
-                                            } else {
-                                                return Some(decl);
-                                            }
-                                        }
-                                        // Be conservative
-                                        _ => return Some(decl),
-                                    };
-
-                                    if var.assign == 0 && var.usage == 0 {
-                                        return None;
-                                    }
-
-                                    if var.no_inline() {
-                                        return Some(decl);
-                                    }
-
-                                    // At here, variable is not used.
-                                    if decl.init.is_none()
-                                        || !decl.init.as_ref().unwrap().may_have_side_effects()
-                                    {
-                                        if match kind {
-                                            VarDeclKind::Const | VarDeclKind::Let => true,
-                                            VarDeclKind::Var if !top_level => true,
-                                            _ => false,
-                                        } {
-                                            return None;
-                                        }
-                                    }
-
-                                    Some(decl)
-                                });
-
+                            Stmt::Decl(Decl::Var(v)) if !is_root => {
                                 if v.decls.is_empty() {
                                     return None;
                                 }

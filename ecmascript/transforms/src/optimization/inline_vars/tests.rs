@@ -209,10 +209,13 @@ to_fn!(
     "if (true) { var x = 1; } use(x); use(x);"
 );
 
-identical_all!(
-    cond_true_2,
+identical!(cond_true_2, "if (true) var x = 1; var z = x;");
+
+// TODO: Remove x
+to_fn!(
     cond_true_2_fn,
-    "if (true) var x = 1; var z = x;"
+    "if (true) var x = 1; var z = x;",
+    "if (true) var x = 1;"
 );
 
 identical!(cond_true_3, "var x; if (true) x=1; var z = x;");
