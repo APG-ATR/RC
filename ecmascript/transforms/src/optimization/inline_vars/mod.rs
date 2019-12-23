@@ -1,4 +1,4 @@
-use self::var::VarInfo;
+use self::{preventer::Preventer, var::VarInfo};
 use crate::{
     pass::Pass,
     scope::ScopeKind,
@@ -18,6 +18,7 @@ use swc_common::{
 };
 
 mod hoister;
+mod preventer;
 #[cfg(test)]
 mod tests;
 mod var;
@@ -503,6 +504,24 @@ impl Fold<VarDecl> for Inline<'_> {
         }
 
         v
+    }
+}
+
+impl Fold<IfStmt> for Inline<'_> {
+    fn fold(&mut self, s: IfStmt) -> IfStmt {
+        let s = s.fold_children(self);
+
+        let mut ids: Vec<Id> = vec![];
+        let mut v = Preventer { found: &mut ids };
+        s.cons.visit_with(&mut v);
+
+        for i in ids {
+            if let Some(mut var) = self.scope.find(&i) {
+                var.prevent_inline();
+            }
+        }
+
+        s
     }
 }
 
