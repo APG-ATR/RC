@@ -48,19 +48,25 @@ impl Gen {
 /// Ported from [`InlineVariables`](https://github.com/google/closure-compiler/blob/master/src/com/google/javascript/jscomp/InlineVariables.java)
 /// of the google closure compiler.
 pub fn inline_vars(_: Config) -> impl 'static + Pass {
-    Inline {
-        scope: Scope {
-            id: 0,
-            parent: None,
-            // This is important.
-            kind: ScopeKind::Block,
-            vars: Default::default(),
-            children: Default::default(),
-        },
-        phase: Phase::Analysis,
-        changed: false,
-        top_level: true,
-        id_gen: Default::default(),
+    Inline::root()
+}
+
+impl Inline<'static> {
+    fn root() -> Self {
+        Inline {
+            scope: Scope {
+                id: 0,
+                parent: None,
+                // This is important.
+                kind: ScopeKind::Block,
+                vars: Default::default(),
+                children: Default::default(),
+            },
+            phase: Phase::Analysis,
+            changed: false,
+            top_level: true,
+            id_gen: Default::default(),
+        }
     }
 }
 
@@ -273,6 +279,8 @@ impl Scope<'_> {
             Entry::Vacant(..) => self.parent.and_then(|p| p.take_var(i)),
         }?;
 
+        println!("take_var({}): {:?}", i.sym, var);
+
         Some(var)
     }
 }
@@ -339,33 +347,32 @@ impl Fold<SwitchCase> for Inline<'_> {
     }
 }
 
-impl Fold<Pat> for Inline<'_> {
-    fn fold(&mut self, p: Pat) -> Pat {
-        let p = p.fold_children(self);
-
+/// Handle lhs of AssignExpr
+impl Fold<PatOrExpr> for Inline<'_> {
+    fn fold(&mut self, p: PatOrExpr) -> PatOrExpr {
         match p {
-            Pat::Ident(ref i) => match self.phase {
-                Phase::Analysis => {
-                    if let Some(mut var) = self.scope.find(i) {
-                        var.assign += 1;
-                    }
+            PatOrExpr::Pat(p) => {
+                let p = p.fold_with(self);
+
+                match *p {
+                    Pat::Ident(ref i) => match self.phase {
+                        Phase::Analysis => {
+                            if let Some(mut var) = self.scope.find(i) {
+                                var.assign += 1;
+                            }
+                        }
+                        Phase::Storage => {}
+                        Phase::Inlining => {}
+                    },
+                    _ => {}
                 }
-                Phase::Storage => {}
-                Phase::Inlining => {}
-            },
+
+                return PatOrExpr::Pat(p);
+            }
             _ => {}
         }
 
         p
-    }
-}
-
-impl Fold<PatOrExpr> for Inline<'_> {
-    fn fold(&mut self, p: PatOrExpr) -> PatOrExpr {
-        match p {
-            PatOrExpr::Pat(p) => PatOrExpr::Pat(p.fold_with(self)),
-            _ => p,
-        }
     }
 }
 
@@ -402,96 +409,93 @@ impl Fold<VarDecl> for Inline<'_> {
         let kind = v.kind;
         let mut v = v.fold_children(self);
 
-        v.decls = v.decls.move_flat_map(|mut decl| {
-            match decl.init {
-                Some(box Expr::Invalid(..)) => return None,
-                _ => {}
+        match self.phase {
+            Phase::Analysis | Phase::Storage => {
+                for decl in &mut v.decls {
+                    match decl.name {
+                        Pat::Ident(ref i) => match decl.init {
+                            Some(ref mut e) => {
+                                self.store(i, e, Some(kind));
+                            }
+                            None => self.store(i, &mut *undefined(DUMMY_SP), Some(kind)),
+                        },
+                        _ => {}
+                    }
+                }
             }
+            Phase::Inlining => {
+                v.decls = v.decls.move_flat_map(|mut decl| {
+                    match decl.init {
+                        Some(box Expr::Invalid(..)) => return None,
+                        _ => {}
+                    }
 
-            if self.phase == Phase::Inlining {
-                // If variable is used, we can't remove it.
-                let var = match decl.name {
-                    Pat::Ident(ref i) => {
-                        let scope = match self.scope.scope_for(i) {
-                            // We can't remove variables in top level
-                            Some(v) if v.is_root() => return Some(decl),
-                            Some(v) => v,
-                            None => return Some(decl),
+                    if self.phase == Phase::Inlining {
+                        // If variable is used, we can't remove it.
+                        let var = match decl.name {
+                            Pat::Ident(ref i) => {
+                                let scope = match self.scope.scope_for(i) {
+                                    // We can't remove variables in top level
+                                    Some(v) if v.is_root() => return Some(decl),
+                                    Some(v) => v,
+                                    None => return Some(decl),
+                                };
+
+                                let remove = scope
+                                    .find(i)
+                                    .as_ref()
+                                    .map(|var| var.can_be_removed())
+                                    .unwrap_or(false);
+                                if remove {
+                                    if let Some(ref e) = decl.init {
+                                        self.changed = true;
+                                        scope.drop_usage(&e);
+                                    }
+                                }
+
+                                if remove {
+                                    Either::Left(scope.take_var(i).unwrap())
+                                } else if let Some(var) = scope.find(i) {
+                                    // println!("Scope({}, {}): {}: {:?}", scope_id, scope.id,
+                                    // i.sym, var);
+                                    Either::Right(var)
+                                } else {
+                                    return Some(decl);
+                                }
+                            }
+                            // Be conservative
+                            _ => return Some(decl),
                         };
 
-                        let remove = scope
-                            .find(i)
-                            .as_ref()
-                            .map(|var| var.can_be_removed())
-                            .unwrap_or(false);
-                        if remove {
-                            if let Some(ref e) = decl.init {
-                                self.changed = true;
-                                scope.drop_usage(&e);
+                        match var {
+                            Either::Left(var) => {
+                                if var.can_be_removed() {
+                                    println!(
+                                        "Scope({}): removing var {:?} as it's not used (including \
+                                         {:?})",
+                                        id, decl.name, var
+                                    );
+                                    return None;
+                                }
+                            }
+                            Either::Right(var) => {
+                                if var.can_be_removed() {
+                                    println!(
+                                        "Scope({}): removing var {:?} as it's not used ({:?})",
+                                        id, decl.name, *var
+                                    );
+                                    return None;
+                                }
                             }
                         }
+                    }
 
-                        if remove {
-                            Either::Left(scope.take_var(i).unwrap())
-                        } else if let Some(var) = scope.find(i) {
-                            // println!("Scope({}, {}): {}: {:?}", scope_id, scope.id, i.sym, var);
-                            Either::Right(var)
-                        } else {
-                            return Some(decl);
-                        }
-                    }
-                    // Be conservative
-                    _ => return Some(decl),
-                };
-
-                match var {
-                    Either::Left(var) => {
-                        if var.can_be_removed() {
-                            println!(
-                                "Scope({}): removing var {:?} as it's not used (including VarInfo)",
-                                id, decl.name,
-                            );
-                            return None;
-                        }
-                    }
-                    Either::Right(var) => {
-                        if var.can_be_removed() {
-                            println!(
-                                "Scope({}): removing var {:?} as it's not used",
-                                id, decl.name,
-                            );
-                            return None;
-                        }
-                    }
-                }
+                    Some(decl)
+                });
             }
-
-            //
-            if self.phase != Phase::Inlining {
-                match decl.name {
-                    Pat::Ident(ref i) => match decl.init {
-                        Some(ref mut e) => {
-                            self.store(i, e, Some(kind));
-                        }
-                        None => self.store(i, &mut *undefined(DUMMY_SP), Some(kind)),
-                    },
-                    _ => {}
-                }
-            }
-
-            Some(decl)
-        });
+        }
 
         v
-    }
-}
-
-impl Fold<VarDeclarator> for Inline<'_> {
-    fn fold(&mut self, v: VarDeclarator) -> VarDeclarator {
-        VarDeclarator {
-            init: v.init.fold_with(self),
-            ..v
-        }
     }
 }
 
@@ -573,6 +577,7 @@ impl Fold<Expr> for Inline<'_> {
                             }
 
                             if var.usage == 1 {
+                                println!("Taking value of {}", i.sym);
                                 var.take_value()
                             } else if let Some(e) = var.value() {
                                 Some(e.clone())
@@ -698,44 +703,43 @@ impl Inline<'_> {
             None
         };
 
-        match kind {
+        if self.phase == Phase::Storage {
+            assert!(value.is_some());
+        }
+
+        let mut v = match kind {
             // Not hoisted
-            Some(VarDeclKind::Let) | Some(VarDeclKind::Const) => {
-                self.scope
-                    .vars
-                    .borrow_mut()
-                    .entry(i)
-                    .or_insert_with(|| VarInfo::new(scope_id))
-                    .set_value(value);
-            }
+            Some(VarDeclKind::Let) | Some(VarDeclKind::Const) => self.scope.vars.borrow_mut(),
 
             // Hoisted
             Some(VarDeclKind::Var) => {
                 if let Some(fn_scope) = self.scope.find_fn_scope() {
-                    let mut v = fn_scope.vars.borrow_mut();
-
-                    let v = v.entry(i).or_insert_with(|| VarInfo::new(scope_id));
-
-                    v.set_value(value);
+                    fn_scope.vars.borrow_mut()
                 } else {
-                    let mut v = self.scope.root().vars.borrow_mut();
-                    let v = v.entry(i).or_insert_with(|| VarInfo::new(scope_id));
-                    if self.scope.is_root() {
-                        v.set_value(value);
-                    }
+                    self.scope.root().vars.borrow_mut()
                 }
             }
 
             None => {
-                if self.phase == Phase::Analysis {
-                    if let Some(scope) = self.scope.scope_for(&i) {
-                        if let Some(v) = scope.vars.borrow_mut().get_mut(&i) {
-                            v.assign += 1;
-                            println!("cnt++; {}; store: assign", i.0)
-                        }
-                    }
-                }
+                let scope = self
+                    .scope
+                    .scope_for(&i)
+                    .unwrap_or_else(|| self.scope.root());
+
+                scope.vars.borrow_mut()
             }
+        };
+
+        if self.phase == Phase::Storage {
+            assert!(v.get(&i).is_some(), "{:?}", v);
+            assert!(value.is_some());
+        }
+
+        let v = v.entry(i).or_insert_with(|| VarInfo::new(scope_id));
+        v.set_value(value);
+
+        if kind.is_none() && self.phase == Phase::Analysis {
+            v.assign += 1;
         }
     }
 
@@ -766,6 +770,16 @@ where
         //    "----- ----- ({}) {:?} ----- -----",
         //    self.scope.id, self.phase
         //);
+
+        match self.phase {
+            Phase::Inlining => {
+                println!(
+                    "----- ----- ({}) Removing vars ----- -----\n{:?}",
+                    self.scope.id, self.scope.vars
+                );
+            }
+            _ => {}
+        }
 
         let stmts = stmts.fold_children(self);
 
@@ -807,11 +821,6 @@ where
             }
             Phase::Inlining => {
                 let is_root = self.scope.is_root();
-
-                println!(
-                    "----- ----- ({}) Removing vars ----- -----\n{:?}",
-                    self.scope.id, self.scope.vars
-                );
 
                 stmts.move_flat_map(|stmt| {
                     // Remove unused variables
