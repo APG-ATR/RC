@@ -562,7 +562,7 @@ fn test_inline_into_function() {
 
 #[test]
 fn test_no_inline_into_named_function() {
-    test_same("f(); var x = false; function f() { alert(x); };");
+    test_same("f(); var x = false; function f() { alert(x); }");
 }
 
 #[test]
