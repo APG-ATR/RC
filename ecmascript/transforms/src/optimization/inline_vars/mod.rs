@@ -5,6 +5,7 @@ use crate::{
     util::{id, ident::IdentLike, undefined, DestructuringFinder, Id, StmtLike},
 };
 use ast::*;
+use either::Either;
 use fxhash::FxHashMap;
 use serde::Deserialize;
 use std::{
@@ -274,19 +275,6 @@ impl Scope<'_> {
 
         Some(var)
     }
-
-    //    fn remove(&self, i: &Ident) {
-    //        fn rem(s: &Scope, i: Id) {
-    //            s.vars.borrow_mut().remove(&i);
-    //
-    //            match s.parent {
-    //                Some(ref p) => rem(p, i),
-    //                _ => {}
-    //            }
-    //        }
-    //
-    //        rem(self, id(i))
-    //    }
 }
 
 impl Fold<UpdateExpr> for Inline<'_> {
@@ -410,22 +398,23 @@ impl Fold<VarDecl> for Inline<'_> {
                             None => return Some(decl),
                         };
 
-                        if scope
+                        let remove = scope
                             .find(i)
                             .as_ref()
                             .map(|var| var.can_be_removed())
-                            .unwrap_or(false)
-                        {
+                            .unwrap_or(false);
+                        if remove {
                             if let Some(ref e) = decl.init {
                                 self.changed = true;
                                 scope.drop_usage(&e);
                             }
                         }
 
-                        if let Some(var) = scope.find(i) {
+                        if remove {
+                            Either::Left(scope.take_var(i).unwrap())
+                        } else if let Some(var) = scope.find(i) {
                             // println!("Scope({}, {}): {}: {:?}", scope_id, scope.id, i.sym, var);
-
-                            var
+                            Either::Right(var)
                         } else {
                             return Some(decl);
                         }
@@ -434,12 +423,25 @@ impl Fold<VarDecl> for Inline<'_> {
                     _ => return Some(decl),
                 };
 
-                if var.can_be_removed() {
-                    println!(
-                        "Scope({}): removing var {:?} as it's used {} times",
-                        id, decl.name, var.usage
-                    );
-                    return None;
+                match var {
+                    Either::Left(var) => {
+                        if var.can_be_removed() {
+                            println!(
+                                "Scope({}): removing var {:?} as it's not used",
+                                id, decl.name,
+                            );
+                            return None;
+                        }
+                    }
+                    Either::Right(var) => {
+                        if var.can_be_removed() {
+                            println!(
+                                "Scope({}): removing var {:?} as it's not used",
+                                id, decl.name,
+                            );
+                            return None;
+                        }
+                    }
                 }
             }
 
