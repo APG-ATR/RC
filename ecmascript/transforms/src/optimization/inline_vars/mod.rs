@@ -561,13 +561,14 @@ impl Inline<'_> {
                 if let Some(fn_scope) = self.scope.find_fn_scope() {
                     fn_scope.vars.borrow_mut().entry(i).or_default().value = value;
                 } else {
-                    self.scope
-                        .root()
-                        .vars
-                        .borrow_mut()
-                        .entry(i)
-                        .or_default()
-                        .value = value;
+                    let mut v = self.scope.root().vars.borrow_mut();
+                    let v = v.entry(i).or_default();
+                    if self.scope.is_root() {
+                        v.value = value;
+                    } else {
+                        v.value = None;
+                        v.no_inline = true;
+                    }
                 }
             }
 
@@ -644,6 +645,7 @@ where
                                         _ => {}
                                     }
 
+                                    // We can't remove variables in top level
                                     if is_root {
                                         return Some(decl);
                                     }
@@ -651,7 +653,14 @@ where
                                     // If variable is used, we can't remove it.
                                     let var = match decl.name {
                                         Pat::Ident(ref i) => {
-                                            if let Some(var) = self.scope.take_var(i) {
+                                            let scope = match self.scope.scope_for(i) {
+                                                // We can't remove variables in top level
+                                                Some(v) if v.is_root() => return Some(decl),
+                                                Some(v) => v,
+                                                None => return Some(decl),
+                                            };
+
+                                            if let Some(var) = scope.take_var(i) {
                                                 if var.no_inline {
                                                     return Some(decl);
                                                 }
