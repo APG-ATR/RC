@@ -153,6 +153,12 @@ impl Inline<'_> {
 
             Phase::Storage | Phase::Inlining => {
                 let mut scope = self.scope.children.get_mut().pop_front().unwrap();
+                println!(
+                    "child(of {}): Scope({}): {:?}",
+                    self.scope.id,
+                    scope.id,
+                    *scope.vars.borrow()
+                );
                 scope.parent = Some(&self.scope);
 
                 assert_eq!(kind, scope.kind);
@@ -768,17 +774,18 @@ where
         let top_level = self.top_level;
         self.top_level = false;
 
-        //println!(
-        //    "----- ----- ({}) {:?} ----- -----",
-        //    self.scope.id, self.phase
-        //);
+        println!(
+            "----- ----- ({}) {:?} ----- -----",
+            self.scope.id, self.phase
+        );
 
         match self.phase {
             Phase::Inlining => {
-                println!(
-                    "----- ----- ({}) Removing vars ----- -----\n{:?}",
-                    self.scope.id, self.scope.vars
-                );
+                //                println!(
+                //                    "----- ----- ({}) Removing vars -----
+                // -----\n{:?}",
+                // self.scope.id, self.scope.vars
+                // );
             }
             _ => {}
         }
@@ -810,6 +817,7 @@ where
                 }
             }
             Phase::Storage => {
+                println!("Validating");
                 for (i, v) in self.scope.vars.borrow().iter() {
                     debug_assert!(
                         v.value().is_some() || v.no_inline(),
