@@ -339,6 +339,27 @@ impl Fold<SwitchCase> for Inline<'_> {
     }
 }
 
+impl Fold<Pat> for Inline<'_> {
+    fn fold(&mut self, p: Pat) -> Pat {
+        let p = p.fold_children(self);
+
+        match p {
+            Pat::Ident(ref i) => match self.phase {
+                Phase::Analysis => {
+                    if let Some(mut var) = self.scope.find(i) {
+                        var.assign += 1;
+                    }
+                }
+                Phase::Storage => {}
+                Phase::Inlining => {}
+            },
+            _ => {}
+        }
+
+        p
+    }
+}
+
 impl Fold<PatOrExpr> for Inline<'_> {
     fn fold(&mut self, p: PatOrExpr) -> PatOrExpr {
         match p {
