@@ -57,6 +57,7 @@ pub fn inline_vars(_: Config) -> impl 'static + Pass {
             children: Default::default(),
         },
         phase: Phase::Analysis,
+        changed: false,
         top_level: true,
         id_gen: Default::default(),
     }
@@ -96,6 +97,7 @@ struct Scope<'a> {
 #[derive(Debug)]
 struct Inline<'a> {
     phase: Phase,
+    changed: bool,
     scope: Scope<'a>,
     top_level: bool,
     id_gen: Gen,
@@ -122,12 +124,12 @@ impl Inline<'_> {
                             children: Default::default(),
                         },
                         phase: self.phase,
+                        changed: false,
                         top_level: false,
                         id_gen: self.id_gen.clone(),
                     };
 
                     let res = op(&mut c);
-
                     (res, c.scope.vars, c.scope.children)
                 };
 
@@ -152,8 +154,11 @@ impl Inline<'_> {
                     scope,
                     phase: self.phase,
                     top_level: false,
+                    changed: self.changed,
                     id_gen: self.id_gen.clone(),
                 };
+
+                self.changed |= c.changed;
 
                 let res = op(&mut c);
 
@@ -402,6 +407,7 @@ impl Fold<VarDecl> for Inline<'_> {
                             .unwrap_or(false)
                         {
                             if let Some(ref e) = decl.init {
+                                self.changed = true;
                                 scope.drop_usage(&e);
                             }
                         }
@@ -528,6 +534,7 @@ impl Fold<Expr> for Inline<'_> {
                         if let Some(e) = e {
                             println!("Scope({}): inlined '{}'", self.scope.id, i.sym);
 
+                            self.changed = true;
                             self.scope.drop_usage(&Expr::Ident(i));
 
                             // Inline again if required.
@@ -698,21 +705,32 @@ where
         let top_level = self.top_level;
         self.top_level = false;
 
+        println!(
+            "----- ----- ({}) {:?} ----- -----",
+            self.scope.id, self.phase
+        );
+
         let stmts = stmts.fold_children(self);
 
         match self.phase {
             Phase::Analysis => {
                 // println!("Scope({}): {:?}", self.scope.id, self.scope.vars);
                 if top_level {
-                    println!("----- ----- ({}) Stroage ----- -----", self.scope.id);
                     self.phase = Phase::Storage;
                     // Inline variables
                     let stmts = stmts.fold_with(self);
 
-                    println!("----- ----- ({}) Inlining ----- -----", self.scope.id);
                     self.phase = Phase::Inlining;
                     // Inline variables
-                    stmts.fold_with(self)
+                    let mut stmts = stmts;
+                    loop {
+                        stmts = stmts.fold_with(self);
+
+                        if !self.changed {
+                            break;
+                        }
+                    }
+                    stmts
                 } else {
                     stmts
                 }
