@@ -3,7 +3,10 @@ use ast::*;
 use swc_common::{Visit, VisitWith};
 
 /// Finds all variables declared as `var` of a function (before full analysis)
-pub(super) fn find_vars(f: &Function) -> Vec<Id> {
+pub(super) fn find_vars<T>(f: &T) -> Vec<Id>
+where
+    T: for<'any> VisitWith<Hoister<'any>>,
+{
     let mut vars = vec![];
     let mut v = Hoister { vars: &mut vars };
     f.visit_children(&mut v);
@@ -11,7 +14,7 @@ pub(super) fn find_vars(f: &Function) -> Vec<Id> {
     vars
 }
 
-struct Hoister<'a> {
+pub(super) struct Hoister<'a> {
     vars: &'a mut Vec<Id>,
 }
 
