@@ -1,4 +1,4 @@
-use self::{preventer::Preventer, var::VarInfo};
+use self::{preventer::prevent, var::VarInfo};
 use crate::{
     pass::Pass,
     scope::ScopeKind,
@@ -515,14 +515,17 @@ impl Fold<IfStmt> for Inline<'_> {
     fn fold(&mut self, s: IfStmt) -> IfStmt {
         let s = s.fold_children(self);
 
-        let mut ids: Vec<Id> = vec![];
-        let mut v = Preventer { found: &mut ids };
-        s.cons.visit_with(&mut v);
+        match self.phase {
+            Phase::Analysis => {
+                let mut ids = prevent(&s.cons);
 
-        for i in ids {
-            if let Some(mut var) = self.scope.find(&i) {
-                var.prevent_inline();
+                for i in ids {
+                    if let Some(mut var) = self.scope.find(&i) {
+                        var.prevent_inline();
+                    }
+                }
             }
+            _ => {}
         }
 
         s

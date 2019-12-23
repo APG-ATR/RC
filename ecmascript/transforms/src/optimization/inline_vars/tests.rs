@@ -190,7 +190,7 @@ fn test_same(s: &str) {
 }
 
 identical!(
-    does_not_produce_invalid_code_1,
+    t_does_not_produce_invalid_code_1,
     "function f(x = void 0) {
   var z;
     {
@@ -203,7 +203,7 @@ identical!(
 );
 
 identical!(
-    does_not_produce_invalid_code_2,
+    t_does_not_produce_invalid_code_2,
     "function f(x = void 0) {{var z;const y = {};x && (y['x'] = x);z = y;}return z;}"
 );
 
@@ -323,7 +323,7 @@ identical!(t_cond_true_2, "if (true) var x = 1; var z = x;");
 to_fn!(
     t_cond_true_2_fn,
     "if (true) var x = 1; var z = x;",
-    "if (true) var x = 1;"
+    "if (true) ;"
 );
 
 identical!(t_cond_true_3, "var x; if (true) x=1; var z = x;");
@@ -392,7 +392,7 @@ to_fn!(only_read_at_initialization_1, "var a; a = foo();", "foo();");
 fn test_only_read_at_initialization() {
     test(
         "var a; if (a = foo()) { alert(3); }",
-        "if (foo()) { alert(3); }",
+        "var a; if (a = foo()) { alert(3); }",
     );
     test("var a; switch (a = foo()) {}", "switch(foo()) {}");
     test(
@@ -698,12 +698,7 @@ fn test_inline_immutable_multiple_times() {
 }
 
 #[test]
-fn test_no_inline_string_multiple_times_if_not_worthwhile() {
-    test_same("var x = 'abcdefghijklmnopqrstuvwxyz'; var y = x, z = x;");
-}
-
-#[test]
-fn test_inline_string_multiple_times_when_aliasing_all_strings() {
+fn test_inline_string_multiple_times() {
     test(
         "var x = 'abcdefghijklmnopqrstuvwxyz'; var y = x, z = x;",
         "var y = 'abcdefghijklmnopqrstuvwxyz',     z = 'abcdefghijklmnopqrstuvwxyz';",
@@ -1213,7 +1208,7 @@ fn test_inline_this() {
 }
 
 #[test]
-fn test_var_in_block1() {
+fn var_in_block1() {
     test(
         "function f(x) { if (true) {var y = x; y; y;} }",
         "function f(x) { if (true) {x; x;} }",
@@ -1221,7 +1216,7 @@ fn test_var_in_block1() {
 }
 
 #[test]
-fn test_var_in_block2() {
+fn var_in_block2() {
     test(
         "function f(x) { switch (0) { case 0: { var y = x; y; y; } } }",
         "function f(x) { switch (0) { case 0: { x; x; } } }",
@@ -1572,7 +1567,13 @@ to_all!(
 
 identical_all!(for_of_1, for_of_1_fn, "var i = 0; for(i of n) {}");
 
-identical_all!(for_of_2, for_of_2_fn, "for( var i of n) { var x = i; }");
+identical!(for_of_2, "for( var i of n) { var x = i; }");
+
+to_fn!(
+    for_of_2_fn,
+    "for( var i of n) { var x = i; }",
+    "for( var i of n) { }"
+);
 
 to_fn!(
     tpl_lit_1,
