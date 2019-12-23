@@ -154,7 +154,19 @@ impl Inline<'_> {
                     id_gen: self.id_gen.clone(),
                 };
 
-                op(&mut c)
+                let res = op(&mut c);
+
+                // Treat children as a ring. Note that we don't remove an empty block statement
+                // to preserve scope order.
+                self.scope.children.borrow_mut().push(Scope {
+                    id: c.scope.id,
+                    parent: None,
+                    kind,
+                    vars: c.scope.vars,
+                    children: c.scope.children,
+                });
+
+                res
             }
         }
     }
@@ -679,9 +691,9 @@ where
 
                     Some(match stmt.try_into_stmt() {
                         Ok(stmt) => T::from_stmt(match stmt {
-                            Stmt::Block(BlockStmt { ref stmts, .. }) if stmts.is_empty() => {
-                                return None
-                            }
+                            //Stmt::Block(BlockStmt { ref stmts, .. }) if stmts.is_empty() => {
+                            //    return None
+                            //}
                             Stmt::Empty(..) => return None,
 
                             // We can't remove variables in top level
