@@ -413,6 +413,7 @@ impl Fold<VarDecl> for Inline<'_> {
 
         let id = self.scope.id;
         let kind = v.kind;
+        let is_root = self.scope.is_root();
         let mut v = v.fold_children(self);
 
         match self.phase {
@@ -436,7 +437,7 @@ impl Fold<VarDecl> for Inline<'_> {
                         _ => {}
                     }
 
-                    if self.phase == Phase::Inlining {
+                    if self.phase == Phase::Inlining && !is_root {
                         // If variable is used, we can't remove it.
                         let var = match decl.name {
                             Pat::Ident(ref i) => {
@@ -771,6 +772,22 @@ impl Inline<'_> {
     }
 }
 
+/// Removes empty variable statement.
+impl Fold<Stmt> for Inline<'_> {
+    fn fold(&mut self, s: Stmt) -> Stmt {
+        let s = s.fold_children(self);
+
+        match s {
+            Stmt::Decl(Decl::Var(ref v)) if v.decls.is_empty() => {
+                return Stmt::Empty(EmptyStmt { span: v.span })
+            }
+            _ => {}
+        }
+
+        s
+    }
+}
+
 impl<T: StmtLike> Fold<Vec<T>> for Inline<'_>
 where
     T: FoldWith<Self>,
@@ -826,26 +843,12 @@ where
                 stmts
             }
             Phase::Inlining => {
-                let is_root = self.scope.is_root();
-
                 stmts.move_flat_map(|stmt| {
                     // Remove unused variables
 
                     Some(match stmt.try_into_stmt() {
                         Ok(stmt) => T::from_stmt(match stmt {
-                            //Stmt::Block(BlockStmt { ref stmts, .. }) if stmts.is_empty() => {
-                            //    return None
-                            //}
                             Stmt::Empty(..) => return None,
-
-                            // We can't remove variables in top level
-                            Stmt::Decl(Decl::Var(v)) if !is_root => {
-                                if v.decls.is_empty() {
-                                    return None;
-                                }
-
-                                Stmt::Decl(Decl::Var(v))
-                            }
 
                             _ => stmt,
                         }),
