@@ -615,25 +615,40 @@ impl Inline<'_> {
             if let Some(mut info) = self.scope.find(&i) {
                 info.prevent_inline()
             }
-
             return;
         };
 
-        let value = if self.phase == Phase::Inlining {
-            Some(if reason == Reason::SingleUse {
+        let value = if self.phase == Phase::Storage {
+            let e = if reason == Reason::SingleUse {
                 //                replace(e, Expr::Invalid(Invalid { span }))
                 e.clone()
             } else {
                 e.clone()
-            })
+            };
+            let mut changed = true;
+            let mut e = e;
+
+            while changed {
+                changed = false;
+
+                match e {
+                    Expr::Ident(ref i) => {
+                        if let Some(expr) = self.scope.find(i).and_then(|var| var.value().cloned())
+                        {
+                            println!("Storage: chaged {:?} -> {:?}", e, expr);
+                            changed = true;
+                            e = expr;
+                        }
+                    }
+
+                    _ => {}
+                };
+            }
+
+            Some(e)
         } else {
             None
         };
-
-        match value {
-            Some(Expr::Invalid(..)) => unreachable!(),
-            _ => {}
-        }
 
         match kind {
             // Not hoisted
@@ -654,17 +669,11 @@ impl Inline<'_> {
                     let v = v.entry(i).or_insert_with(|| VarInfo::new(scope_id));
 
                     v.set_value(value);
-                    if scope_id != v.scope_id() {
-                        v.prevent_inline()
-                    }
                 } else {
                     let mut v = self.scope.root().vars.borrow_mut();
                     let v = v.entry(i).or_insert_with(|| VarInfo::new(scope_id));
                     if self.scope.is_root() {
                         v.set_value(value);
-                    }
-                    if scope_id != v.scope_id() {
-                        v.prevent_inline()
                     }
                 }
             }
