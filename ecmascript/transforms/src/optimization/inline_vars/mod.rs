@@ -323,10 +323,51 @@ impl Fold<VarDecl> for Inline<'_> {
     fn fold(&mut self, v: VarDecl) -> VarDecl {
         check!(self);
 
-        let mut v = v.fold_children(self);
         let kind = v.kind;
+        let mut v = v.fold_children(self);
 
         v.decls = v.decls.move_flat_map(|mut decl| {
+            match decl.init {
+                Some(box Expr::Invalid(..)) => return None,
+                _ => {}
+            }
+
+            if self.phase == Phase::Inlining {
+                // If variable is used, we can't remove it.
+                let var = match decl.name {
+                    Pat::Ident(ref i) => {
+                        let scope_id = self.scope.id;
+                        let scope = match self.scope.scope_for(i) {
+                            // We can't remove variables in top level
+                            Some(v) if v.is_root() => return Some(decl),
+                            Some(v) => v,
+                            None => return Some(decl),
+                        };
+
+                        if let Some(var) = scope.take_var(i) {
+                            println!("Scope({}, {}): {}: {:?}", scope_id, scope.id, i.sym, var);
+                            var
+                        } else {
+                            return Some(decl);
+                        }
+                    }
+                    // Be conservative
+                    _ => return Some(decl),
+                };
+
+                if var.assign == 0 && var.usage == 0 {
+                    match decl.init {
+                        Some(e) => self.drop_usage(*e),
+                        None => {}
+                    }
+                    return None;
+                }
+
+                if var.no_inline() {
+                    return Some(decl);
+                }
+            }
+
             //
             match decl.name {
                 Pat::Ident(ref i) => match decl.init {
@@ -336,13 +377,6 @@ impl Fold<VarDecl> for Inline<'_> {
                     None => self.store(i, &mut *undefined(DUMMY_SP), Some(kind)),
                 },
                 _ => {}
-            }
-
-            if self.phase == Phase::Inlining {
-                match decl.init {
-                    Some(box Expr::Invalid(..)) => return None,
-                    _ => {}
-                }
             }
 
             Some(decl)
@@ -405,28 +439,19 @@ impl Fold<Expr> for Inline<'_> {
         let e = e.fold_children(self);
 
         match e {
-            Expr::Ident(ref i) => {
+            Expr::Ident(i) => {
                 match self.phase {
                     Phase::Analysis => {
-                        if let Some(mut var) = self.scope.find(i) {
+                        if let Some(mut var) = self.scope.find(&i) {
                             println!("cnt++; {}: usage", i.sym);
                             var.usage += 1;
                         }
                     }
 
                     Phase::Inlining => {
-                        let e = if let Some(mut var) = self.scope.find(i) {
+                        let e = if let Some(mut var) = self.scope.find(&i) {
                             if var.no_inline() {
-                                return e;
-                            }
-
-                            if var.value().is_some() {
-                                // Variable is inlined
-                                var.usage -= 1;
-                                println!(
-                                    "Scope({}): inlining: {}: found var: {:?}",
-                                    self.scope.id, i.sym, var
-                                );
+                                return Expr::Ident(i);
                             }
 
                             if let Some(e) = var.value() {
@@ -438,19 +463,17 @@ impl Fold<Expr> for Inline<'_> {
                             None
                         };
                         if let Some(e) = e {
-                            match e {
-                                Expr::Invalid(..) => unreachable!(),
-                                _ => {}
-                            }
+                            println!("Scope({}): inlined '{}'", self.scope.id, i.sym);
+
+                            self.drop_usage(Expr::Ident(i));
 
                             // Inline again if required.
-                            return match e.fold_with(self) {
-                                Expr::Invalid(..) => unreachable!(),
-                                e => e,
-                            };
+                            return e.fold_with(self);
                         }
                     }
                 }
+
+                return Expr::Ident(i);
             }
             _ => {}
         }
@@ -460,8 +483,19 @@ impl Fold<Expr> for Inline<'_> {
 }
 
 impl Inline<'_> {
+    fn drop_usage(&mut self, e: Expr) {
+        match e {
+            Expr::Ident(i) => {
+                if let Some(mut v) = self.scope.find(&i) {
+                    v.usage -= 1;
+                }
+            }
+            _ => {}
+        }
+    }
+
     fn should_store(&self, i: &Id, e: &Expr) -> Option<Reason> {
-        println!("  should store:");
+        //println!("  should store:");
 
         if self.phase == Phase::Analysis {
             return Some(Reason::Cheap);
@@ -469,10 +503,10 @@ impl Inline<'_> {
 
         if self.phase == Phase::Inlining {
             if let Some(ref v) = self.scope.find(i) {
-                println!(
-                    "      Scope({}): found var: {}: {:?}",
-                    self.scope.id, i.0, v
-                );
+                //println!(
+                //    "      Scope({}): found var: {}: {:?}",
+                //    self.scope.id, i.0, v
+                //);
                 if v.no_inline() {
                     return None;
                 }
@@ -482,7 +516,7 @@ impl Inline<'_> {
                 }
             }
 
-            println!("          not handled");
+            //println!("          not handled");
         }
 
         match e {
@@ -499,16 +533,16 @@ impl Inline<'_> {
     {
         let scope_id = self.scope.id;
         let i = i.to_id();
-        println!(
-            "Scope({}): {:?}: {}: store {:?}",
-            self.scope.id, self.phase, i.0, kind
-        );
+        //println!(
+        //    "Scope({}): {:?}: {}: store {:?}",
+        //    self.scope.id, self.phase, i.0, kind
+        //);
 
         let reason = if let Some(reason) = self.should_store(&i, e) {
-            println!("  reason: {:?}", reason);
+            //println!("  reason: {:?}", reason);
             reason
         } else {
-            println!("  no_inline");
+            //println!("  no_inline");
             if let Some(mut info) = self.scope.find(&i) {
                 info.prevent_inline()
             }
@@ -518,7 +552,6 @@ impl Inline<'_> {
 
         let value = if self.phase == Phase::Inlining {
             Some(if reason == Reason::SingleUse {
-                println!("  Taking");
                 //                replace(e, Expr::Invalid(Invalid { span }))
                 e.clone()
             } else {
