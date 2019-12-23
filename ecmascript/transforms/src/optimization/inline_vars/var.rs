@@ -17,7 +17,13 @@ impl VarInfo {
     pub fn can_be_removed(&self) -> bool {
         self.assign == 0
             && self.usage == 0
-            && (self.value.is_none() || !self.value.as_ref().unwrap().may_have_side_effects())
+            && ({
+                // Inlined
+                self.value.is_none()
+            } || {
+                // Safely removable
+                !self.value.as_ref().unwrap().may_have_side_effects()
+            })
     }
 
     pub const fn new(scope_id: usize) -> Self {
