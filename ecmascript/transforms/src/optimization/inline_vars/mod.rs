@@ -426,7 +426,7 @@ impl Fold<VarDecl> for Inline<'_> {
 
                 if var.assign == 0 && var.usage <= 1 {
                     println!(
-                        "Scope({}): removing {:?} as it's used {} times",
+                        "Scope({}): removing var {:?} as it's used {} times",
                         id, decl.name, var.usage
                     );
                     return None;
@@ -683,9 +683,11 @@ impl Inline<'_> {
                     if scope.id != self.scope.id {
                         self.prevent_inline(&i)
                     } else {
-                        if let Some(v) = scope.vars.borrow_mut().get_mut(&i) {
-                            v.assign += 1;
-                            println!("cnt++; {}; store: assign", i.0)
+                        if self.phase == Phase::Analysis {
+                            if let Some(v) = scope.vars.borrow_mut().get_mut(&i) {
+                                v.assign += 1;
+                                println!("cnt++; {}; store: assign", i.0)
+                            }
                         }
                     }
                 }
