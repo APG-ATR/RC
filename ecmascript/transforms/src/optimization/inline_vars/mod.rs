@@ -2,7 +2,7 @@ use self::var::VarInfo;
 use crate::{
     pass::Pass,
     scope::ScopeKind,
-    util::{id, ident::IdentLike, undefined, DestructuringFinder, ExprExt, Id, StmtLike},
+    util::{id, ident::IdentLike, undefined, DestructuringFinder, Id, StmtLike},
 };
 use ast::*;
 use fxhash::FxHashMap;
@@ -174,6 +174,38 @@ impl Inline<'_> {
 }
 
 impl Scope<'_> {
+    fn drop_usage(&self, e: &Expr) {
+        match e {
+            Expr::Ident(i) => {
+                if let Some(mut v) = self.find(i) {
+                    v.usage -= 1;
+                }
+            }
+
+            Expr::Assign(e) => {
+                self.drop_assign(&e.left);
+                self.drop_usage(&e.right);
+            }
+
+            _ => {}
+        }
+    }
+
+    fn drop_assign(&self, p: &PatOrExpr) {
+        match p {
+            PatOrExpr::Pat(box p) => match p {
+                Pat::Ident(i) => {
+                    if let Some(mut v) = self.find(i) {
+                        v.assign -= 1;
+                    }
+                }
+                _ => {}
+            },
+
+            _ => {}
+        }
+    }
+
     fn is_root(&self) -> bool {
         self.parent.is_none()
     }
@@ -363,8 +395,20 @@ impl Fold<VarDecl> for Inline<'_> {
                             None => return Some(decl),
                         };
 
-                        if let Some(var) = scope.take_var(i) {
-                            println!("Scope({}, {}): {}: {:?}", scope_id, scope.id, i.sym, var);
+                        if scope
+                            .find(i)
+                            .as_ref()
+                            .map(|var| var.assign == 0 && var.usage == 0)
+                            .unwrap_or(false)
+                        {
+                            if let Some(ref e) = decl.init {
+                                scope.drop_usage(&e);
+                            }
+                        }
+
+                        if let Some(var) = scope.find(i) {
+                            // println!("Scope({}, {}): {}: {:?}", scope_id, scope.id, i.sym, var);
+
                             var
                         } else {
                             return Some(decl);
@@ -375,10 +419,6 @@ impl Fold<VarDecl> for Inline<'_> {
                 };
 
                 if var.assign == 0 && var.usage == 0 {
-                    match decl.init {
-                        Some(e) => self.drop_usage(*e),
-                        None => {}
-                    }
                     return None;
                 }
 
@@ -472,7 +512,7 @@ impl Fold<Expr> for Inline<'_> {
                     Phase::Storage => {}
 
                     Phase::Inlining => {
-                        let e = if let Some(mut var) = self.scope.find(&i) {
+                        let e: Option<Expr> = if let Some(var) = self.scope.find(&i) {
                             if var.no_inline() {
                                 return Expr::Ident(i);
                             }
@@ -488,7 +528,7 @@ impl Fold<Expr> for Inline<'_> {
                         if let Some(e) = e {
                             println!("Scope({}): inlined '{}'", self.scope.id, i.sym);
 
-                            self.drop_usage(Expr::Ident(i));
+                            self.scope.drop_usage(&Expr::Ident(i));
 
                             // Inline again if required.
                             return e.fold_with(self);
@@ -506,38 +546,6 @@ impl Fold<Expr> for Inline<'_> {
 }
 
 impl Inline<'_> {
-    fn drop_usage(&mut self, e: Expr) {
-        match e {
-            Expr::Ident(i) => {
-                if let Some(mut v) = self.scope.find(&i) {
-                    v.usage -= 1;
-                }
-            }
-
-            Expr::Assign(e) => {
-                self.drop_assign(e.left);
-                self.drop_usage(*e.right);
-            }
-
-            _ => {}
-        }
-    }
-
-    fn drop_assign(&mut self, p: PatOrExpr) {
-        match p {
-            PatOrExpr::Pat(box p) => match p {
-                Pat::Ident(i) => {
-                    if let Some(mut v) = self.scope.find(&i) {
-                        v.assign -= 1;
-                    }
-                }
-                _ => {}
-            },
-
-            _ => {}
-        }
-    }
-
     fn should_store(&self, i: &Id, e: &Expr) -> Option<Reason> {
         //println!("  should store:");
 
@@ -713,7 +721,10 @@ where
             Phase::Inlining => {
                 let is_root = self.scope.is_root();
 
-                println!("----- ----- ({}) Removing vars ----- -----", self.scope.id);
+                println!(
+                    "----- ----- ({}) Removing vars ----- -----\n{:?}",
+                    self.scope.id, self.scope.vars
+                );
 
                 stmts.move_flat_map(|stmt| {
                     // Remove unused variables
