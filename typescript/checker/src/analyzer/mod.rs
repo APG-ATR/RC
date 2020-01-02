@@ -10,7 +10,7 @@ use crate::{
     loader::Load,
     ty::{self, Alias, ClassInstance, Param, Tuple, Type, TypeRef, TypeRefExt},
     util::{IntoCow, ModuleItemLike, StmtLike},
-    Rule,
+    Info, Rule,
 };
 use fxhash::{FxHashMap, FxHashSet};
 use log::debug;
@@ -422,12 +422,6 @@ impl<'a, 'b> Analyzer<'a, 'b> {
             loader,
         )
     }
-}
-
-#[derive(Debug, Default)]
-pub struct Info {
-    pub exports: FxHashMap<JsWord, Arc<Type<'static>>>,
-    pub errors: Vec<Error>,
 }
 
 #[derive(Debug, PartialEq, Eq)]

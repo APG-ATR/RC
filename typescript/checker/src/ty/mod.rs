@@ -1,7 +1,8 @@
 use crate::{
-    analyzer::Info,
     util::{EqIgnoreNameAndSpan, IntoCow},
+    Exports,
 };
+use chashmap::CHashMap;
 use fxhash::FxHashMap;
 use std::{borrow::Cow, mem::transmute, sync::Arc};
 use swc_atoms::{js_word, JsWord};
@@ -152,7 +153,7 @@ pub enum Type<'a> {
 pub struct Module {
     pub span: Span,
     #[fold(ignore)]
-    pub exports: FxHashMap<JsWord, Arc<Type<'static>>>,
+    pub exports: Exports<FxHashMap<JsWord, Arc<Type<'static>>>>,
 }
 
 #[derive(Debug, Fold, Clone, PartialEq, Spanned)]
@@ -196,8 +197,41 @@ pub struct ClassInstance<'a> {
 pub enum ClassMember<'a> {
     Constructor(Constructor<'a>),
     Method(Method<'a>),
-    ClassProp(ClassProp),
+    Property(ClassProperty<'a>),
     TsIndexSignature(TsIndexSignature),
+}
+
+#[derive(Debug, Fold, Clone, PartialEq, Spanned)]
+pub struct ClassProperty<'a> {
+    pub span: Span,
+    pub key: Box<Expr>,
+
+    pub is_static: bool,
+    pub computed: bool,
+    pub accessibility: Option<Accessibility>,
+
+    pub is_abstract: bool,
+    pub is_optional: bool,
+    pub readonly: bool,
+
+    pub type_ann: Option<TypeRef<'a>>,
+}
+
+#[derive(Debug, Fold, Clone, PartialEq, Spanned)]
+pub struct MethodProperty<'a> {
+    #[span(lo)]
+    pub key: PropName,
+
+    #[span(hi)]
+    pub function: Function<'a>,
+}
+
+#[derive(Debug, Fold, Clone, PartialEq, Spanned)]
+pub struct GetterSetterProperty<'a> {
+    pub span: Span,
+    pub getter: GetterProp,
+    pub setter: SetterProp,
+    pub ty: Option<TypeRef<'a>>,
 }
 
 #[derive(Debug, Fold, Clone, PartialEq, Spanned)]
@@ -1000,8 +1034,24 @@ impl ClassMember<'_> {
         match self {
             ClassMember::Constructor(v) => ClassMember::Constructor(v.into_static()),
             ClassMember::Method(v) => ClassMember::Method(v.into_static()),
-            ClassMember::ClassProp(v) => ClassMember::ClassProp(v),
+            ClassMember::Property(v) => ClassMember::Property(v.into_static()),
             ClassMember::TsIndexSignature(v) => ClassMember::TsIndexSignature(v),
+        }
+    }
+}
+
+impl ClassProperty<'_> {
+    pub fn into_static(self) -> ClassProperty<'static> {
+        ClassProperty {
+            span: self.span,
+            key: self.key,
+            is_static: self.is_static,
+            computed: self.computed,
+            accessibility: self.accessibility,
+            is_abstract: self.is_abstract,
+            is_optional: self.is_optional,
+            readonly: self.readonly,
+            type_ann: self.type_ann.map(|v| v.to_static().owned()),
         }
     }
 }

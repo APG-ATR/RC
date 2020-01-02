@@ -13,9 +13,11 @@
 extern crate swc_common;
 
 pub use self::builtin_types::Lib;
-use self::{analyzer::Info, errors::Error, resolver::Resolver};
+use self::{errors::Error, resolver::Resolver};
+use crate::ty::Type;
 use chashmap::CHashMap;
 use std::{path::PathBuf, sync::Arc};
+use swc_atoms::JsWord;
 use swc_common::{errors::Handler, Globals, SourceMap};
 use swc_ecma_ast::Module;
 use swc_ecma_parser::{
@@ -42,6 +44,30 @@ pub struct Config {
 
     pub rule: Rule,
     pub libs: Vec<Lib>,
+}
+
+#[derive(Debug, Default)]
+pub struct Info {
+    pub exports: Exports<CHashMap<JsWord, Arc<Type<'static>>>>,
+    pub errors: Vec<Error>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Exports<T> {
+    pub vars: T,
+    pub types: T,
+}
+
+impl<T> Exports<T> {
+    pub fn map<F, Ret>(self, mut op: F) -> Exports<Ret>
+    where
+        F: FnMut(T) -> Ret,
+    {
+        Exports {
+            vars: op(self.vars),
+            types: op(self.types),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]

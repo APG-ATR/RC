@@ -1,8 +1,4 @@
-use super::{
-    control_flow::{Comparator, RemoveTypes},
-    export::pat_to_ts_fn_param,
-    Analyzer,
-};
+use super::{control_flow::RemoveTypes, export::pat_to_ts_fn_param, Analyzer};
 use crate::{
     analyzer::instantiate_class,
     builtin_types,
@@ -17,9 +13,8 @@ use crate::{
 };
 use std::{borrow::Cow, iter::once};
 use swc_atoms::{js_word, JsWord};
-use swc_common::{util::iter::IteratorExt as _, Fold, FoldWith, Span, Spanned};
+use swc_common::{Fold, FoldWith, Span, Spanned};
 use swc_ecma_ast::*;
-use swc_ts_checker_macros::validator;
 
 mod bin;
 mod call_new;
@@ -879,7 +874,7 @@ impl Analyzer<'_, '_> {
             Type::Class(ref c) => {
                 for v in c.body.iter() {
                     match v {
-                        ClassMember::ClassProp(ref class_prop) => {
+                        ClassMember::Property(ref class_prop) => {
                             match *class_prop.key {
                                 Expr::Ident(ref i) => {
                                     if self.scope.declaring_prop.as_ref() == Some(&i.sym) {
@@ -1054,7 +1049,7 @@ impl Analyzer<'_, '_> {
                 for m in &cls.body {
                     //
                     match *m {
-                        ClassMember::ClassProp(ref p) => {
+                        ClassMember::Property(ref p) => {
                             // TODO: normalized string / ident
                             if (&*p.key).eq_ignore_name_and_span(&prop) {
                                 if let Some(ref ty) = p.type_ann {
@@ -1261,7 +1256,7 @@ impl Analyzer<'_, '_> {
                             })
                         }
                         swc_ecma_ast::ClassMember::PrivateMethod(_) => return None,
-                        swc_ecma_ast::ClassMember::ClassProp(v) => ClassMember::ClassProp(v),
+                        swc_ecma_ast::ClassMember::ClassProp(v) => ClassMember::Property(v),
                         swc_ecma_ast::ClassMember::PrivateProp(_) => return None,
                         swc_ecma_ast::ClassMember::TsIndexSignature(v) => {
                             ClassMember::TsIndexSignature(v)

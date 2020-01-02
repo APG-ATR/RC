@@ -3,7 +3,7 @@
 use super::Analyzer;
 use crate::{
     errors::Error,
-    ty::{Enum, EnumVariant, Type, TypeRef},
+    ty::{Enum, Type, TypeRef},
 };
 use std::convert::TryInto;
 use swc_common::{Fold, FoldWith, Spanned, Visit, VisitWith};

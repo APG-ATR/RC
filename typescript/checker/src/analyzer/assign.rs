@@ -3,7 +3,7 @@ use crate::{
     errors::Error,
     ty::{
         Array, Class, ClassInstance, ClassMember, Constructor, EnumVariant, Function, Interface,
-        Intersection, Param, Tuple, Type, TypeElement, TypeLit, TypeRef, TypeRefExt, Union,
+        Intersection, Param, Tuple, Type, TypeElement, TypeLit, TypeRefExt, Union,
     },
     util::{EqIgnoreNameAndSpan, EqIgnoreSpan},
 };
@@ -362,7 +362,7 @@ impl Analyzer<'_, '_> {
                                 TypeElement::Property(ref lp) => {
                                     for rm in body {
                                         match rm {
-                                            ClassMember::ClassProp(ref rp) => {
+                                            ClassMember::Property(ref rp) => {
                                                 if is_key_eq(&lp.key, &rp.key) {
                                                     continue 'l;
                                                 }

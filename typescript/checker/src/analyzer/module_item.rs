@@ -1,7 +1,4 @@
-use crate::{
-    analyzer::{scope::ScopeKind, Analyzer},
-    errors::Error,
-};
+use crate::{analyzer::Analyzer, errors::Error};
 use swc_common::{Fold, FoldWith};
 use swc_ecma_ast::*;
 

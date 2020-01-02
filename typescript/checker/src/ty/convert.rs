@@ -4,7 +4,7 @@ use super::{
     PropertySignature, TsExpr, Tuple, Type, TypeElement, TypeLit, TypeParam, TypeParamDecl,
     TypeParamInstantiation, Union,
 };
-use crate::{errors::Error, util::IntoCow};
+use crate::{errors::Error, ty::ClassProperty, util::IntoCow};
 use std::convert::TryFrom;
 use swc_common::Spanned;
 use swc_ecma_ast::*;

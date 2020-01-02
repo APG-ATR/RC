@@ -13,7 +13,7 @@ use std::{
     sync::Arc,
 };
 use swc_atoms::JsWord;
-use swc_common::{Span, VisitWith, DUMMY_SP};
+use swc_common::{FoldWith, Span, VisitWith, DUMMY_SP};
 use swc_ecma_ast::*;
 use swc_ts_builtin_types::load;
 pub use swc_ts_builtin_types::Lib;
@@ -48,181 +48,11 @@ fn merge(ls: &[Lib]) -> &'static Merged {
 
         let mut merged = box Merged::default();
 
-        for module in load(ls) {
-            match *module.body {
-                TsNamespaceBody::TsModuleBlock(TsModuleBlock { ref body, .. }) => {
-                    for item in body {
-                        match item {
-                            ModuleItem::ModuleDecl(ref md) => unreachable!("ModuleDecl: {:#?}", md),
-                            ModuleItem::Stmt(ref stmt) => match *stmt {
-                                Stmt::Decl(Decl::Var(VarDecl { ref decls, .. })) => {
-                                    assert_eq!(decls.len(), 1);
-                                    let decl = decls.iter().next().unwrap();
-                                    let name = match decl.name {
-                                        Pat::Ident(ref i) => i,
-                                        _ => unreachable!(),
-                                    };
-                                    merged.vars.insert(
-                                        name.sym.clone(),
-                                        name.type_ann.clone().unwrap().into(),
-                                    );
-                                }
+        let mut analyzer = Analyzer::for_builtin(&ls, &Noop);
 
-                                Stmt::Decl(Decl::Fn(FnDecl {
-                                    ref ident,
-                                    ref function,
-                                    ..
-                                })) => {
-                                    merged.types.insert(
-                                        ident.sym.clone(),
-                                        ty::Function {
-                                            span: DUMMY_SP,
-                                            params: function
-                                                .params
-                                                .iter()
-                                                .cloned()
-                                                .map(pat_to_ts_fn_param)
-                                                .collect(),
-                                            type_params: function
-                                                .type_params
-                                                .clone()
-                                                .map(From::from),
-                                            ret_ty: box function
-                                                .return_type
-                                                .clone()
-                                                .map(|v| v.type_ann.into())
-                                                .unwrap_or_else(|| Type::any(DUMMY_SP))
-                                                .owned(),
-                                        }
-                                        .into(),
-                                    );
-                                }
+        let modules = load(ls);
 
-                                Stmt::Decl(Decl::Class(ref c)) => {
-                                    debug_assert_eq!(merged.types.get(&c.ident.sym), None);
-
-                                    // builtin libraries does not contain a class which extends
-                                    // other class.
-                                    debug_assert_eq!(c.class.super_class, None);
-                                    debug_assert_eq!(c.class.implements, vec![]);
-                                    let ty = Type::Class(Class {
-                                        span: c.class.span,
-                                        name: Some(c.ident.sym.clone()),
-                                        is_abstract: c.class.is_abstract,
-                                        body: c
-                                            .class
-                                            .body
-                                            .clone()
-                                            .into_iter()
-                                            .map(|v| {
-                                                //
-                                                match v {
-                                                    swc_ecma_ast::ClassMember::Constructor(v) => {
-                                                        ClassMember::Constructor(v.into())
-                                                    }
-                                                    swc_ecma_ast::ClassMember::Method(v) => {
-                                                        ClassMember::Method(Method {
-                                                            span: Default::default(),
-                                                            key: v.key,
-                                                            is_static: v.is_static,
-                                                            type_params: v
-                                                                .function
-                                                                .type_params
-                                                                .map(From::from),
-                                                            params: v.function.params,
-                                                            ret_ty: box Type::from(
-                                                                v.function.return_type.unwrap(),
-                                                            )
-                                                            .owned(),
-                                                        })
-                                                    }
-                                                    swc_ecma_ast::ClassMember::PrivateMethod(_) => {
-                                                        unreachable!()
-                                                    }
-                                                    swc_ecma_ast::ClassMember::ClassProp(v) => {
-                                                        ClassMember::ClassProp(v)
-                                                    }
-                                                    swc_ecma_ast::ClassMember::PrivateProp(_) => {
-                                                        unreachable!()
-                                                    }
-                                                    swc_ecma_ast::ClassMember::TsIndexSignature(
-                                                        v,
-                                                    ) => ClassMember::TsIndexSignature(v),
-                                                }
-                                            })
-                                            .collect(),
-                                        super_class: None,
-                                        // implements: vec![],
-                                        type_params: c.class.type_params.clone().map(From::from),
-                                    });
-
-                                    merged.types.insert(c.ident.sym.clone(), ty);
-                                }
-
-                                Stmt::Decl(Decl::TsModule(ref m)) => {
-                                    let id = match m.id {
-                                        TsModuleName::Ident(ref i) => i.sym.clone(),
-                                        _ => unreachable!(),
-                                    };
-
-                                    let mut analyzer = Analyzer::for_builtin(&ls, &Noop);
-
-                                    m.body.visit_with(&mut analyzer);
-
-                                    match merged.types.entry(id) {
-                                        Entry::Occupied(mut e) => match e.get_mut() {
-                                            ty::Type::Module(module) => {
-                                                //
-                                                module.exports.extend(analyzer.info.exports)
-                                            }
-
-                                            ref e => unimplemented!("Merging module with {:?}", e),
-                                        },
-                                        Entry::Vacant(e) => {
-                                            e.insert(
-                                                Module {
-                                                    span: DUMMY_SP,
-                                                    exports: analyzer.info.exports,
-                                                }
-                                                .into(),
-                                            );
-                                        }
-                                    }
-                                }
-
-                                Stmt::Decl(Decl::TsTypeAlias(ref a)) => {
-                                    debug_assert_eq!(merged.types.get(&a.id.sym), None);
-
-                                    merged.types.insert(a.id.sym.clone(), a.clone().into());
-                                }
-
-                                // Merge interface
-                                Stmt::Decl(Decl::TsInterface(ref i)) => {
-                                    match merged.types.entry(i.id.sym.clone()) {
-                                        Entry::Occupied(mut e) => match *e.get_mut() {
-                                            ty::Type::Interface(ref mut v) => {
-                                                v.body.extend(
-                                                    i.body.body.clone().into_iter().map(From::from),
-                                                );
-                                            }
-                                            _ => unreachable!(
-                                                "cannot merge interface with other type"
-                                            ),
-                                        },
-                                        Entry::Vacant(e) => {
-                                            e.insert(i.clone().into());
-                                        }
-                                    }
-                                }
-
-                                _ => panic!("{:#?}", item),
-                            },
-                        }
-                    }
-                }
-                _ => unreachable!(),
-            }
-        }
+        modules.fold_with(&mut analyzer);
 
         Some(Box::leak(merged))
     });
