@@ -68,10 +68,6 @@ impl Scope<'_> {
         for (name, var) in from.vars.drain() {
             if var.kind == VarDeclKind::Var {
                 let previous = self.vars.insert(name, var);
-
-                if previous.is_some() {
-                    unimplemented!("modifying a variable from information from child")
-                }
             }
         }
     }
