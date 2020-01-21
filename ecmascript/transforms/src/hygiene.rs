@@ -39,7 +39,7 @@ impl<'a> Hygiene<'a> {
             .borrow_mut()
             .entry(sym.clone())
             .or_insert_with(Vec::new)
-            .push(ctxt);
+            .push((ctxt, Kind::Binding));
 
         if can_declare_without_renaming {
             // skip if previous symbol is declared on the same level.
@@ -56,13 +56,25 @@ impl<'a> Hygiene<'a> {
         let ctxt = ident.span.ctxt();
 
         // We rename declaration instead of usage
-        let conflicts = self.current.conflicts(ident.sym.clone(), ctxt);
+        let (conflicts, is_all_usage) = self.current.conflicts(ident.sym.clone(), ctxt);
 
         if cfg!(debug_assertions) && LOG && !conflicts.is_empty() {
             eprintln!("Renaming from usage");
         }
-        for cx in conflicts {
-            self.rename(ident.sym.clone(), cx)
+
+        self.current
+            .declared_symbols
+            .borrow_mut()
+            .entry(ident.sym.clone())
+            .or_insert_with(Vec::new)
+            .push((ctxt, Kind::Ref));
+
+        if is_all_usage && !conflicts.is_empty() {
+            self.rename(ident.sym.clone(), ctxt)
+        } else {
+            for cx in conflicts {
+                self.rename(ident.sym.clone(), cx)
+            }
         }
     }
 
@@ -104,17 +116,18 @@ impl<'a> Hygiene<'a> {
 
         let old = declared_symbols.entry(sym.clone()).or_default();
         assert!(
-            old.contains(&ctxt),
+            old.contains(&(ctxt, Kind::Binding)) || old.contains(&(ctxt, Kind::Ref)),
             "{:?} does not contain {}{:?}",
             declared_symbols,
             sym,
             ctxt
         );
-        old.retain(|c| *c != ctxt);
+        old.retain(|c| c.0 != ctxt);
         debug_assert!(old.is_empty() || old.len() == 1);
 
         let new = declared_symbols.entry(renamed.clone()).or_default();
-        new.push(ctxt);
+        // TODO:
+        new.push((ctxt, Kind::Binding));
         debug_assert!(new.len() == 1);
 
         scope.ops.borrow_mut().push(ScopeOp::Rename {
@@ -222,6 +235,8 @@ impl<'a> Hygiene<'a> {
         folder.ident_type = IdentType::Ref;
         node.body = node.body.map(|stmt| stmt.fold_children(&mut folder));
 
+        dbg!(&folder.current.ops);
+
         folder.apply_ops(node)
     }
 }
@@ -304,6 +319,12 @@ impl<'a> Fold<Expr> for Hygiene<'a> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum Kind {
+    Ref,
+    Binding,
+}
+
 #[derive(Debug)]
 struct Scope<'a> {
     /// Parent scope of this scope
@@ -312,8 +333,8 @@ struct Scope<'a> {
     /// Kind of the scope.
     pub kind: ScopeKind,
 
-    /// All references declared in this scope
-    pub declared_symbols: RefCell<HashMap<JsWord, Vec<SyntaxContext>>>,
+    /// All references used or declared in this scope
+    pub declared_symbols: RefCell<HashMap<JsWord, Vec<(SyntaxContext, Kind)>>>,
 
     pub(crate) ops: RefCell<Vec<ScopeOp>>,
 }
@@ -337,7 +358,7 @@ impl<'a> Scope<'a> {
 
     fn scope_of(&self, sym: JsWord, ctxt: SyntaxContext) -> &'a Scope<'_> {
         if let Some(prev) = self.declared_symbols.borrow().get(&sym) {
-            if prev.contains(&ctxt) {
+            if prev.contains(&(ctxt, Kind::Binding)) || prev.contains(&(ctxt, Kind::Ref)) {
                 return self;
             }
         }
@@ -359,7 +380,7 @@ impl<'a> Scope<'a> {
         }
 
         if let Some(ctxts) = self.declared_symbols.borrow().get(&sym) {
-            ctxts.contains(&ctxt)
+            ctxts.contains(&(ctxt, Kind::Binding)) || ctxts.contains(&(ctxt, Kind::Ref))
         } else {
             // No variable named `sym` is declared
             true
@@ -370,8 +391,11 @@ impl<'a> Scope<'a> {
     ///
     /// It other words, all `SyntaxContext`s with same `sym` will be returned,
     /// even when defined on parent scope.
-
-    fn conflicts(&mut self, sym: JsWord, ctxt: SyntaxContext) -> Contexts {
+    ///
+    /// returned bool is true if all conflicting symbol is usage, not
+    /// declaration
+    fn conflicts(&mut self, sym: JsWord, ctxt: SyntaxContext) -> (Contexts, bool) {
+        let mut is_all_usage = true;
         if cfg!(debug_assertions) && LOG {
             eprintln!("Finding conflicts for {}{:?} ", sym, ctxt);
         }
@@ -381,8 +405,15 @@ impl<'a> Scope<'a> {
         let mut ctxts = smallvec![];
         {
             if let Some(cxs) = self.declared_symbols.get_mut().get(&sym) {
-                if cxs.len() != 1 || cxs[0] != ctxt {
-                    ctxts.extend_from_slice(&cxs);
+                if cxs.len() != 1 || cxs[0].0 != ctxt {
+                    ctxts.reserve(cxs.len());
+                    ctxts.extend(cxs.iter().map(|(cx, kind)| {
+                        if *kind == Kind::Binding {
+                            is_all_usage = false;
+                        }
+
+                        *cx
+                    }));
                 }
             }
         }
@@ -391,8 +422,15 @@ impl<'a> Scope<'a> {
 
         while let Some(scope) = cur {
             if let Some(cxs) = scope.declared_symbols.borrow().get(&sym) {
-                if cxs.len() != 1 || cxs[0] != ctxt {
-                    ctxts.extend_from_slice(&cxs);
+                if cxs.len() != 1 || cxs[0].0 != ctxt {
+                    ctxts.reserve(cxs.len());
+                    ctxts.extend(cxs.iter().map(|(cx, kind)| {
+                        if *kind == Kind::Binding {
+                            is_all_usage = false;
+                        }
+
+                        *cx
+                    }));
                 }
             }
 
@@ -401,7 +439,7 @@ impl<'a> Scope<'a> {
 
         ctxts.retain(|c| *c != ctxt);
 
-        ctxts
+        (ctxts, is_all_usage)
     }
 
     fn change_symbol(&self, mut sym: JsWord, ctxt: SyntaxContext) -> JsWord {
