@@ -1,4 +1,5 @@
 use super::*;
+use crate::tests::HygieneVisualizer;
 use std::collections::HashMap;
 use swc_common::{hygiene::*, Fold, DUMMY_SP};
 use swc_ecma_parser::Syntax;
@@ -72,6 +73,14 @@ where
         let module = op(tester)?;
 
         let module = module.fold_with(&mut hygiene());
+
+        match ::std::env::var("PRINT_HYGIENE") {
+            Ok(ref s) if s == "1" => {
+                let hygiene_src = tester.print(&module.clone().fold_with(&mut HygieneVisualizer));
+                println!("----- Hygiene -----\n{}", hygiene_src);
+            }
+            _ => {}
+        }
 
         let actual = tester.print(&module);
 
