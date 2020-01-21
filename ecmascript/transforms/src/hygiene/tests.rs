@@ -72,8 +72,6 @@ where
     crate::tests::Tester::run(|tester| {
         let module = op(tester)?;
 
-        let module = module.fold_with(&mut hygiene());
-
         match ::std::env::var("PRINT_HYGIENE") {
             Ok(ref s) if s == "1" => {
                 let hygiene_src = tester.print(&module.clone().fold_with(&mut HygieneVisualizer));
@@ -81,6 +79,8 @@ where
             }
             _ => {}
         }
+
+        let module = module.fold_with(&mut hygiene());
 
         let actual = tester.print(&module);
 
