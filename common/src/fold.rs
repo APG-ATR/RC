@@ -248,7 +248,7 @@ impl<F> VisitWith<F> for String {
     fn visit_children(&self, _: &mut F) {}
 }
 
-impl<F, S: StaticAtomSet> FoldWith<F> for Atom<S> {
+impl<F: ?Sized, S: StaticAtomSet> FoldWith<F> for Atom<S> {
     /// No op.
 
     fn fold_children(self, _: &mut F) -> Self {
@@ -256,7 +256,7 @@ impl<F, S: StaticAtomSet> FoldWith<F> for Atom<S> {
     }
 }
 
-impl<F, S: StaticAtomSet> VisitWith<F> for Atom<S> {
+impl<F: ?Sized, S: StaticAtomSet> VisitWith<F> for Atom<S> {
     /// No op.
 
     fn visit_children(&self, _: &mut F) {}
