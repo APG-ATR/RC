@@ -168,7 +168,7 @@ where
     }
 }
 
-impl<T, F> FoldWith<F> for Box<T>
+impl<T, F: ?Sized> FoldWith<F> for Box<T>
 where
     F: Fold<T>,
 {
@@ -177,7 +177,7 @@ where
     }
 }
 
-impl<T: ?Sized, F> VisitWith<F> for Box<T>
+impl<T: ?Sized, F: ?Sized> VisitWith<F> for Box<T>
 where
     F: Visit<T>,
 {
@@ -214,7 +214,7 @@ where
     }
 }
 
-impl<T, F> FoldWith<F> for Option<T>
+impl<T, F: ?Sized> FoldWith<F> for Option<T>
 where
     F: Fold<T>,
 {
@@ -223,7 +223,7 @@ where
     }
 }
 
-impl<T, F> VisitWith<F> for Option<T>
+impl<T, F: ?Sized> VisitWith<F> for Option<T>
 where
     F: Visit<T>,
 {
