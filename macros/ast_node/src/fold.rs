@@ -224,7 +224,7 @@ pub fn derive(input: DeriveInput) -> Quote {
                     #[inline(always)]
                     #[allow(clippy::needless_return)]
                     default fn fold_children(self, _f: &mut __Fold) -> Self {
-                        <Self as swc_common::FoldWith<&mut dyn swc_common::Fold<_>>>::fold_children(
+                        <Self as swc_common::FoldWith<&mut dyn swc_common::Fold<Self>>>::fold_children(
                             self,
                             &mut (_f as _),
                         )
