@@ -88,7 +88,7 @@ where
     }
 }
 
-impl<T, F> Fold<T> for F
+impl<T, F: ?Sized> Fold<T> for F
 where
     T: FoldWith<F>,
 {
@@ -97,7 +97,7 @@ where
     }
 }
 
-impl<T: ?Sized, F> Visit<T> for F
+impl<T: ?Sized, F: ?Sized> Visit<T> for F
 where
     T: VisitWith<F>,
 {
@@ -186,7 +186,7 @@ where
     }
 }
 
-impl<T, F> FoldWith<F> for Vec<T>
+impl<T, F: ?Sized> FoldWith<F> for Vec<T>
 where
     F: Fold<T>,
 {
@@ -196,7 +196,7 @@ where
     }
 }
 
-impl<T, F> VisitWith<F> for Vec<T>
+impl<T, F: ?Sized> VisitWith<F> for Vec<T>
 where
     F: Visit<T>,
 {
