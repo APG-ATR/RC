@@ -8,7 +8,7 @@ use crate::{
 use swc_common::{ast_node, Span};
 
 #[ast_node]
-#[fold(dynamic)]
+#[cfg_attr(feature = "fold", fold(dynamic))]
 pub enum ModuleDecl {
     #[tag("ImportDeclaration")]
     Import(ImportDecl),

@@ -16,7 +16,7 @@ pub struct BlockStmt {
 }
 
 #[ast_node]
-#[fold(dynamic)]
+#[cfg_attr(feature = "fold", fold(dynamic))]
 pub enum Stmt {
     #[tag("BlockStatement")]
     Block(BlockStmt),
