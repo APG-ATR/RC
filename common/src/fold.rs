@@ -9,7 +9,7 @@ pub mod and_then;
 /// Folder based on a type system.
 ///
 /// This trait requires `#![feature(specialization)]`.
-pub trait Fold<T> {
+pub trait Fold<T: ?Sized> {
     /// By default, this folds fields of `node`
     ///  and reconstruct `node` with folded fields
     fn fold(&mut self, node: T) -> T;
@@ -117,7 +117,7 @@ where
 /// because it would encourage mistakes. Use new type instead.
 ///
 /// `#[fold(ignore)]` can be used to ignore a field.
-pub trait FoldWith<F>: Sized {
+pub trait FoldWith<F: ?Sized>: Sized {
     /// This is used by default implementation of `Fold<Self>::fold`.
     fn fold_children(self, f: &mut F) -> Self;
 
@@ -144,15 +144,17 @@ pub trait FoldWith<F>: Sized {
 /// because it would encourage mistakes. Use new type instead.
 ///
 /// `#[fold(ignore)]` can be used to ignore a field.
-pub trait VisitWith<F> {
+pub trait VisitWith<F: ?Sized> {
     /// This is used by default implementation of `Visit<Self>::visit`.
     fn visit_children(&self, f: &mut F);
 
     /// Call `f.visit(self)`.
     ///
     /// This bypasses a type inference bug which is caused by specialization.
-
-    fn visit_with(&self, f: &mut F) {
+    fn visit_with(&self, f: &mut F)
+    where
+        F: Visit<Self>,
+    {
         f.visit(self)
     }
 }
