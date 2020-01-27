@@ -30,6 +30,8 @@ mod visit;
 ///
 /// ## `#[fold(dynamic)]`
 ///
+/// This should be applied to items.
+///
 /// Use dynamic dispatch
 #[proc_macro_derive(Fold, attributes(fold))]
 pub fn derive_fold(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
