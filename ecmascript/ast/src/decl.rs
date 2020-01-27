@@ -12,6 +12,7 @@ use swc_common::Fold;
 use swc_common::{ast_node, Span};
 
 #[ast_node]
+#[fold(dynamic)]
 pub enum Decl {
     #[tag("ClassDeclaration")]
     Class(ClassDecl),
