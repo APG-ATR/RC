@@ -5,7 +5,7 @@
 #![deny(trivial_numeric_casts)]
 #![deny(unreachable_pub)]
 #![deny(variant_size_differences)]
-#![feature(specialization)]
+#![cfg_attr(feature = "fold", feature(specialization))]
 
 pub use self::{
     class::{
