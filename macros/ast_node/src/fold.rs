@@ -5,7 +5,7 @@ use syn::*;
 
 #[derive(Debug, FromField)]
 #[darling(attributes(fold))]
-struct FieldAttrs {
+pub(crate) struct FieldAttrs {
     ///
     #[darling(default)]
     pub ignore: bool,
@@ -15,7 +15,13 @@ struct FieldAttrs {
     pub bound: bool,
 }
 
-pub fn derive(input: DeriveInput) -> ItemImpl {
+pub fn use_dynamic_dispatch(attrs: &[Attribute]) -> bool {
+    attrs
+        .iter()
+        .any(|attr| is_attr_name(attr, "fold") && (attr.tokens.to_string().contains("dynamic")))
+}
+
+pub fn derive(input: DeriveInput) -> Quote {
     let mut derive_generics = Derive::new(&input);
 
     let preds = derive_generics
@@ -37,6 +43,8 @@ pub fn derive(input: DeriveInput) -> ItemImpl {
                 .parse()
         });
     derive_generics.add_where_predicates(preds);
+
+    let dynamic = use_dynamic_dispatch(&input.attrs);
 
     let arms = Binder::new_from(&input)
         .variants()
@@ -162,24 +170,73 @@ pub fn derive(input: DeriveInput) -> ItemImpl {
         arms,
     });
 
-    let item = Quote::new(def_site::<Span>())
-        .quote_with(smart_quote!(
-            Vars {
-                Type: &input.ident,
-                body,
-            },
-            {
-                impl<__Fold> swc_common::FoldWith<__Fold> for Type {
-                    #[inline]
-                    #[allow(clippy::needless_return)]
-                    fn fold_children(self, _f: &mut __Fold) -> Self {
-                        body
+    let item = if dynamic {
+        Quote::new(def_site::<Span>())
+            .quote_with(smart_quote!(
+                Vars {
+                    Type: &input.ident,
+                    body,
+                },
+                {
+                    impl<'a, T> swc_common::FoldWith<&'a mut dyn swc_common::Fold<T>> for Type {
+                        #[inline]
+                        #[allow(clippy::needless_return)]
+                        fn fold_children(self, _f: &mut &mut dyn swc_common::Fold<T>) -> Self {
+                            body
+                        }
                     }
                 }
-            }
-        ))
-        .parse();
-    derive_generics.append_to(item)
+            ))
+            .parse()
+    } else {
+        Quote::new(def_site::<Span>())
+            .quote_with(smart_quote!(
+                Vars {
+                    Type: &input.ident,
+                    body,
+                },
+                {
+                    impl<__Fold> swc_common::FoldWith<__Fold> for Type {
+                        #[inline]
+                        #[allow(clippy::needless_return)]
+                        fn fold_children(self, _f: &mut __Fold) -> Self {
+                            body
+                        }
+                    }
+                }
+            ))
+            .parse()
+    };
+    let item = derive_generics.clone().append_to(item);
+
+    let mut q = Quote::new_call_site();
+    q.push_tokens(&item);
+
+    if dynamic {
+        // We create two impl block.
+        //
+        // One for actual dispatch (dynamic one)
+        // And one to match bounds (#[inline(always)])
+
+        let item = Quote::new(def_site::<Span>())
+            .quote_with(smart_quote!(Vars { Type: &input.ident }, {
+                impl<__Fold> swc_common::FoldWith<__Fold> for Type {
+                    #[inline(always)]
+                    #[allow(clippy::needless_return)]
+                    default fn fold_children(self, _f: &mut __Fold) -> Self {
+                        <Self as swc_common::FoldWith<&mut dyn swc_common::Fold<_>>>::fold_children(
+                            self,
+                            &mut (_f as _),
+                        )
+                    }
+                }
+            }))
+            .parse();
+        let item = derive_generics.append_to(item);
+        q.push_tokens(&item)
+    }
+
+    q
 }
 
 fn should_skip_field(field: &Field) -> bool {
@@ -190,8 +247,8 @@ fn should_skip_field(field: &Field) -> bool {
 
     let ty_str = field.ty.dump().to_string();
     match &*ty_str {
-        "bool" | "usize" | "u128" | "u64" | "u32" | "u16" | "u8" | "isize" | "i128" | "i64"
-        | "i32" | "i16" | "i8" | "f64" | "f32" | "String" => return true,
+        "bool" | "char" | "usize" | "u128" | "u64" | "u32" | "u16" | "u8" | "isize" | "i128"
+        | "i64" | "i32" | "i16" | "i8" | "f64" | "f32" | "String" => return true,
         _ => {}
     }
 
