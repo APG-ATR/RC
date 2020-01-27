@@ -1,21 +1,10 @@
+use crate::fold::{use_dynamic_dispatch, FieldAttrs};
 use darling::FromField;
 use pmutil::{smart_quote, Quote, ToTokensExt};
 use swc_macros_common::prelude::*;
 use syn::*;
 
-#[derive(Debug, FromField)]
-#[darling(attributes(fold))]
-struct FieldAttrs {
-    ///
-    #[darling(default)]
-    pub ignore: bool,
-
-    /// Should we add bound for the field's type?
-    #[darling(default)]
-    pub bound: bool,
-}
-
-pub fn derive(input: DeriveInput) -> ItemImpl {
+pub fn derive(input: DeriveInput) -> Quote {
     let mut derive_generics = Derive::new(&input);
 
     let preds = derive_generics
@@ -37,6 +26,8 @@ pub fn derive(input: DeriveInput) -> ItemImpl {
                 .parse()
         });
     derive_generics.add_where_predicates(preds);
+
+    let dynamic = use_dynamic_dispatch(&input.attrs);
 
     let arms = Binder::new_from(&input)
         .variants()
@@ -131,23 +122,73 @@ pub fn derive(input: DeriveInput) -> ItemImpl {
         arms,
     });
 
-    let item = Quote::new(def_site::<Span>())
-        .quote_with(smart_quote!(
-            Vars {
-                Type: &input.ident,
-                body,
-            },
-            {
-                impl<__V> swc_common::VisitWith<__V> for Type {
-                    #[inline]
-                    fn visit_children(&self, _v: &mut __V) {
-                        body
+    let item = if dynamic {
+        Quote::new(def_site::<Span>())
+            .quote_with(smart_quote!(
+                Vars {
+                    Type: &input.ident,
+                    body,
+                },
+                {
+                    impl<'a, T> swc_common::VisitWith<&'a mut dyn swc_common::Visit<T>> for Type {
+                        #[inline]
+                        #[allow(clippy::needless_return)]
+                        fn visit_children(&self, _v: &mut &mut dyn swc_common::Visit<T>) {
+                            body
+                        }
                     }
                 }
-            }
-        ))
-        .parse();
-    derive_generics.append_to(item)
+            ))
+            .parse()
+    } else {
+        Quote::new(def_site::<Span>())
+            .quote_with(smart_quote!(
+                Vars {
+                    Type: &input.ident,
+                    body,
+                },
+                {
+                    impl<__V> swc_common::VisitWith<__V> for Type {
+                        #[inline]
+                        fn visit_children(&self, _v: &mut __V) {
+                            body
+                        }
+                    }
+                }
+            ))
+            .parse()
+    };
+
+    let item = derive_generics.clone().append_to(item);
+
+    let mut q = Quote::new_call_site();
+    q.push_tokens(&item);
+
+    if dynamic {
+        // We create two impl block.
+        //
+        // One for actual dispatch (dynamic one)
+        // And one to match bounds (#[inline(always)])
+
+        let item = Quote::new(def_site::<Span>())
+            .quote_with(smart_quote!(Vars { Type: &input.ident }, {
+                impl<__Visit> swc_common::VisitWith<__Visit> for Type {
+                    #[inline(always)]
+                    #[allow(clippy::needless_return)]
+                    default fn visit_children(&self, _v: &mut __Visit)  {
+                        <Self as swc_common::VisitWith<&mut dyn swc_common::Visit<Self>>>::visit_children(
+                            &self,
+                            &mut (_v as _),
+                        )
+                    }
+                }
+            }))
+            .parse();
+        let item = derive_generics.append_to(item);
+        q.push_tokens(&item)
+    }
+
+    q
 }
 
 fn should_skip_field(field: &Field) -> bool {
