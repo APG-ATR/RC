@@ -74,7 +74,8 @@ where
     F: Fold<T>,
 {
     fn fold(&mut self, node: T) -> T {
-        (**self).fold(node)
+        println!("Fold<T>: &'a mut F");
+        <F as Fold<T>>::fold(self, node)
     }
 }
 
@@ -93,6 +94,7 @@ where
     T: FoldWith<F>,
 {
     default fn fold(&mut self, t: T) -> T {
+        println!("Fold<{}>: default", std::any::type_name::<T>());
         t.fold_children(self)
     }
 }

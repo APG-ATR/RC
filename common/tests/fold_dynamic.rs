@@ -25,6 +25,7 @@ pub enum ExprKind {
     Rec2(Vec<Option<Box<Expr>>>),
 
     Lit(Lit),
+    B(B),
 }
 
 #[derive(Debug, Fold, PartialEq)]
@@ -41,13 +42,30 @@ pub struct B {
 
 impl Fold<B> for LitFold {
     fn fold(&mut self, mut node: B) -> B {
+        println!("Fold<B>");
         node.called = true;
         node
     }
 }
 
 #[test]
-fn test() {
+fn single() {
+    let e = Expr {
+        node: ExprKind::B(B { called: false }),
+    };
+
+    let e = e.fold_with(&mut LitFold);
+
+    assert_eq!(
+        e,
+        Expr {
+            node: ExprKind::B(B { called: true }),
+        }
+    )
+}
+
+#[test]
+fn double() {
     let e = Expr {
         node: ExprKind::Lit(Lit::B(B { called: false })),
     };

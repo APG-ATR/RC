@@ -182,6 +182,10 @@ pub fn derive(input: DeriveInput) -> Quote {
                         #[inline]
                         #[allow(clippy::needless_return)]
                         fn fold_children(self, _f: &mut &mut dyn swc_common::Fold<T>) -> Self {
+                            println!(
+                                "Fold<T>: &'a mut dyn swc_common::Fold<{}>",
+                                std::any::type_name::<T>()
+                            );
                             body
                         }
                     }
@@ -224,6 +228,8 @@ pub fn derive(input: DeriveInput) -> Quote {
                     #[inline(always)]
                     #[allow(clippy::needless_return)]
                     default fn fold_children(self, _f: &mut __Fold) -> Self {
+                        println!("Fold<{}>: __Fold", std::any::type_name::<Self>());
+
                         <Self as swc_common::FoldWith<&mut dyn swc_common::Fold<Self>>>::fold_children(
                             self,
                             &mut (_f as _),
